@@ -1,0 +1,229 @@
+<html>
+    <head>
+        <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    </head>
+    <body>
+        <input type="text" name="text" id="get_stat_by_title" placeholder='Page title'>
+        <input type="text" name="text" id="get_stat_by_title_platform" placeholder='xwiki'>
+        <input type="button" id="btn" value="Get page stats by title">
+        <br>
+        <br>
+        <input type="text" name="text" id="get_stat_by_user" placeholder='User name'>
+        <input type="button" id="btn2" value="Get user stats (!= Karma) by name ">
+        <input type="button" id="btn4" value="Get user karma by name">
+        <input type="button" id="btn5" value="Get user detailed karma by name">
+        <input type="button" id="btn6" value="Make new karma slice by username">
+        <br>
+        <br>
+        <input type="text" name="text" id="vote_for_page_as_user_page_name" placeholder='Page title'>
+        <input type="text" name="text" id="vote_for_page_as_user_user_name" placeholder='User name'>
+        <label for="vote_direction" datalabel="vote_direction">direction</label>
+        <select name="vote_direction" id="vote_direction">
+            <option value="1">+</option>
+            <option value="0">-</option>
+        </select>
+        <input type="button" id="btn3" value="Request 'vote_for_page_as_user'">
+        <br>
+        <br>
+        <input type="text" name="text" placeholder='User name' id="get_all_karma_slices_by_user_name_and_dates_username">
+        <input type="text" name="text" placeholder='Date start, %d-%m-%Y' id="get_all_karma_slices_by_user_name_and_dates_date_start">
+        <input type="text" name="text" placeholder='Date end, %d-%m-%Y' id="get_all_karma_slices_by_user_name_and_dates_date_end">
+        <label for="Eugenes_style" datalabel="vote_direction">use Eugene's style?</label>
+                <select name="Eugenes_style" id="Eugenes_style">
+            <option value="true">true</option>
+            <option value="false">false</option>
+        </select>
+        <input type="button" id="btn7" value="Get all karma slices between two dates by user name">
+        <div id="servermsg"><h1>Message log:</h1></div>
+        <script>
+        function EpochToDate(epoch) {
+            if (epoch < 10000000000){
+                epoch *= 1000;} // convert to milliseconds (Epoch is usually expressed in seconds, but Javascript uses Milliseconds)
+            var epoch = epoch + (new Date().getTimezoneOffset() * -1); //for timeZone
+            return new Date(epoch);
+        }
+        $('#btn7').click(function(e) {
+                var username = $('#get_all_karma_slices_by_user_name_and_dates_username').val();
+                var date_start = $('#get_all_karma_slices_by_user_name_and_dates_date_start').val();
+                var date_end = $('#get_all_karma_slices_by_user_name_and_dates_date_end').val();
+                var Eugenes_style = $('#Eugenes_style').val();
+                var data = {
+                        method: "get_karma_slices_by_user_and_dates",
+                        user: username,
+                        date_start: date_start,
+                        date_end: date_end
+                    };
+                if (Eugenes_style == "true") {
+                        console.log('true')
+                        data.reverse_array = "true" //there is no diff what to send, only key itself must exist
+                    } else {
+                    console.log('false')
+                    }
+
+                $.ajax({
+                    type: 'POST',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    data: data,
+                    dataType: 'json',
+                    success: function (data) {
+                        console.log(data);
+                        servermsg.innerHTML = servermsg.innerHTML + "<br>Karma score of user <b> " + username+"</b> between <b>"+date_start+" </b>and <b>"+ date_end+":</b><br>";
+                        if (data.Error != 0) {
+                            servermsg.innerHTML = servermsg.innerHTML  +  "<br>Error: <b>" + data[Object.keys(data)[0]]+"</b>"
+                        } else {
+                            jQuery.each(data.result, function(i, val) {
+                                servermsg.innerHTML = servermsg.innerHTML  + " " +  val  + ": " + i + "<br>" //EpochToDate(val)
+                                });
+                        }
+                    }
+                });
+            });
+            $('#btn').click(function(e) {
+                var text = $('#get_stat_by_title').val();
+                var platform = $('#get_stat_by_title_platform').val();
+                $.ajax({ 
+                    type: 'POST', 
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8080', 
+                    data: {
+                        method: "get_stat_by_title",
+                        title: text,
+                        platform: platform
+                    },
+                    dataType: 'json',
+                    success: function (data) {
+                        console.log(data);
+                        servermsg.innerHTML = servermsg.innerHTML + "<br>Requested by get_stat_by_title:<b> " + text+"</b>";
+                        var element_one = data[Object.keys(data)[0]];
+                        if (data.Error != 0) {
+                            servermsg.innerHTML = servermsg.innerHTML  +  "<br>Error: <b>" + data[Object.keys(data)[0]]+"</b>"
+                        } else {
+                            var keys = Object.keys(data.contributors_percents)
+                            servermsg.innerHTML = servermsg.innerHTML + "<br>page_karma_score: <b>" + data.page_karma_score +", up_votes: " +data.up_votes +", down_votes " + data.down_votes+"</b><br>contributors in percent:<br>" ;
+                            jQuery.each(data.contributors_percents, function(i, val) {
+                                servermsg.innerHTML = servermsg.innerHTML  + "<b>" +  i  + ": " + val + "%</b><br>"
+                                });
+                        }
+                    }
+                });
+            });
+            $('#btn2').click(function(e) {
+                var text = $('#get_stat_by_user').val();
+                $.ajax({
+                    type: 'POST',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    data: {
+                        method: "get_stat_by_user",
+                        user: text
+                    },
+                    dataType: 'json',
+                    success: function (data) {
+                        console.log(data);
+                        servermsg.innerHTML = servermsg.innerHTML + "<br>Requested by get_stat_by_title:<b> " + text+"</b>";
+                        if (data.Error != 0) {
+                            servermsg.innerHTML = servermsg.innerHTML  +  "<br>Error: <b>" + data[Object.keys(data)[0]]+"</b>"
+                        } else {
+                            var keys = Object.keys(data.raw_karma)
+                            servermsg.innerHTML = servermsg.innerHTML + "<br>userID: <b>" + data.userID + "</b><br>karma_score: <b>" + data.karma_score + "</b><br>Karma detailed:<br>" ;
+                            jQuery.each(data.raw_karma, function(i, val) {
+                                servermsg.innerHTML = servermsg.innerHTML  + "&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;<b>" +  i  + ": " + val + "</b><br>"
+                                });
+                        }
+                    }
+                });
+            });
+            $('#btn4').click(function(e) {
+                var text = $('#get_stat_by_user').val();
+                $.ajax({
+                    type: 'POST',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    data: {
+                        method: "get_karma_score_by_user",
+                        user: text
+                    },
+                    dataType: 'json',
+                    success: function (data) {
+                        console.log(data);
+                        servermsg.innerHTML = servermsg.innerHTML + "<br>Requested by get_stat_by_title:<b> " + text+"</b>";
+                        if (data.Error != 0) {
+                            servermsg.innerHTML = servermsg.innerHTML  +  "<br>Error: <b>" + data[Object.keys(data)[0]]+"</b>"
+                        } else {
+                            servermsg.innerHTML = servermsg.innerHTML + "<br>userID: <b>" + data.userID + "</b><br>karma_score: <b>" + data.karma_score + "</b>" ;
+                            }
+                    }
+                });
+            });
+            $('#btn5').click(function(e) {
+                var text = $('#get_stat_by_user').val();
+                $.ajax({
+                    type: 'POST',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    data: {
+                        method: "get_user_karma_current_score_detailed_by_user",
+                        user: text
+                    },
+                    dataType: 'json',
+                    success: function (data) {
+                        console.log(data);
+                        servermsg.innerHTML = servermsg.innerHTML + "<br>Requested by get_stat_by_title:<b> " + text+"</b>";
+                        if (data.Error != 0) {
+                            servermsg.innerHTML = servermsg.innerHTML  +  "<br>Error: <b>" + data[Object.keys(data)[0]]+"</b>"
+                        } else {
+                            servermsg.innerHTML = servermsg.innerHTML + "<br>userID: <b>" + data.userID + "</b><br>Current Karma score: <b>" + data.karma_score + "</b><br>Karma detailed:<br>"
+                            jQuery.each(data.detailed_karma_score, function(i, val) {
+                                servermsg.innerHTML = servermsg.innerHTML  +i+" ("+val.page_id+"), Result: "+val.result+", #UP: "+val.up+", #DOWN: "+val.down+", To Karma:"+val.gained_karma+"<br>"
+                                }); ;
+                            }
+                    }
+                });
+            });
+            $('#btn6').click(function(e) {
+                var text = $('#get_stat_by_user').val();
+                $.ajax({
+                    type: 'POST',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    data: {
+                        method: "make_new_karma_slice_by_user",
+                        user: text
+                    },
+                    dataType: 'json',
+                    success: function (data) {
+                        console.log(data);
+                        servermsg.innerHTML = servermsg.innerHTML + "<br>Requested by make_new_karma_slice_by_user:<b> " + text+"</b>";
+                        if (data.Error != 0) {
+                            servermsg.innerHTML = servermsg.innerHTML  +  "<br>Error: <b>" + data.result+"</b>"
+                        } else {
+                            servermsg.innerHTML = servermsg.innerHTML + "<br>userID: <b>" + data.userID + "</b><br>Result: new slice created, actual Karma: <b>" + data.result + ""
+                            }
+                    }
+                });
+            });
+            $('#btn3').click(function(e) {
+                var page_name = $('#vote_for_page_as_user_page_name').val();
+                var user_name = $('#vote_for_page_as_user_user_name').val();
+                var direction = $('#vote_direction').val();
+                $.ajax({
+                    type: 'POST',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    data: {
+                        method: "vote_for_page_as_user",
+                        page_title: page_name,
+                        user_name: user_name,
+                        direction: direction
+                    },
+                    dataType: 'json',
+                    success: function (data) {
+                        console.log(data);
+                        servermsg.innerHTML = servermsg.innerHTML + "<br>Requested by vote_for_page_as_user:<b> " + page_name +" as user "+ user_name+"</b>";
+                        var element_one = data[Object.keys(data)[0]];
+                        if (data.Error != 0) {
+                            servermsg.innerHTML = servermsg.innerHTML  +  "<br>Error: <b>" + data.Error+"</b>"
+                        } else {
+                            servermsg.innerHTML = servermsg.innerHTML  +  "<br>Result: <b>" + data.result+"</b>"
+                        }
+                    }
+                });
+            });
+
+        </script>
+    </body>
+</html>
