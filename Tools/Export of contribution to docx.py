@@ -9,8 +9,8 @@ SQLConnector = SQLConnector(SQLConfig)
 xWikiConfig = Configuration.xWikiConfig('Migration pool')
 xWikiClient = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
 
-PageTitle = 'OS typical builds and versions'
-platform = 'xWIKI'
+PageTitle = 'Linux basics'
+platform = 'confluence'
 SQLQuery = SQLConnector.GetDatagramsByPageTitleandPlatform(PageTitle,platform)
 datagram = SQLQuery[0]
 contributors_datagram = SQLQuery[1]

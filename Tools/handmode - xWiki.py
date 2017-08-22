@@ -10,7 +10,7 @@ PAGE_CREATOR = PageCreator(ConfluenceConfig, MediaWIKIConfig, xWikiConfig)
 SQLConnector = SQLConnector(SQLConfig)
 CustomLogging = CustomLogging('NotSilent')
 
-CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform('OS typical builds and versions', 'xWIKI')
+CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform('VixDiskLibSample', 'xWIKI')
 if CurrentPage is None:
     print('Page wasn\'t found in provided spaces. Try to search in [\'Blog\', \'Main\', \'Sandbox\', \'XWiki\']')
     exit()
@@ -34,8 +34,8 @@ if CurrentPage.dbVersion == None:
     ContribBuilder.Initialcompare(CurrentPage)
     CurrentPage.TOTALCharacters = len(CurrentPage.VersionsGlobalArray)
     for VersionNum in range(1, CurrentPage.page_versions + 1):
-        #print(CurrentPage.contributors[VersionNum] +' has contributed ' + str(len(UserXContribute)) + ' in version ' + str(VersionNum))
         UserXContribute = [x for x in CurrentPage.VersionsGlobalArray if x[1] == VersionNum]
+        #print(CurrentPage.contributors[VersionNum] +' has contributed ' + str(len(UserXContribute)) + ' in version ' + str(VersionNum))
         if CurrentPage.TotalContribute.get(CurrentPage.contributors[VersionNum]) == None:
             CurrentPage.TotalContribute.update({CurrentPage.contributors[VersionNum]: len(UserXContribute)})
         else:

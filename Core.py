@@ -4,12 +4,11 @@ import Configuration
 import pickle
 from Mechanics import PageCreator, SQLConnector, ContribBuilder, CustomLogging, ExclusionsDict
 
-
 ContribBuilder = ContribBuilder()
 SQLConfig = Configuration.SQLConfig()
 ConfluenceConfig = Configuration.ConfluenceConfig()
 MediaWIKIConfig = Configuration.MediaWIKIConfig()
-xWikiConfig = Configuration.xWikiConfig(['Main', 'Sandbox', 'Migration pool'])
+xWikiConfig = Configuration.xWikiConfig()
 PAGE_CREATOR = PageCreator(ConfluenceConfig, MediaWIKIConfig, xWikiConfig)
 SQLConnector = SQLConnector(SQLConfig)
 CustomLogging = CustomLogging('NOTsilent')
@@ -21,23 +20,24 @@ confluenceAPI = ConfluenceAPI(ConfluenceConfig.USER, ConfluenceConfig.PASS, Conf
 #    MediaWIKI: just all
 #    xWIKI: ['Blog', 'Main', 'Sandbox', 'XWiki']
 Task = {
-    #'VB': 'Confluence',
-    #'WB': 'Confluence',
-    #'GZ': 'Confluence',
-    #'ALL mWIKI': 'MediaWIKI',
-    'Main': 'xWIKI',
-    'Sandbox': 'xWIKI',
-    'Migration pool': 'xWIKI'
+    'VB': 'Confluence',
+    'WB': 'Confluence',
+    'GZ': 'Confluence',
+    'ALL mWIKI': 'MediaWIKI'
+    #'Main': 'xWIKI',
+    #'Sandbox': 'xWIKI',
+    #'Migration pool': 'xWIKI'
 }
 TaskExclusions = ExclusionsDict()
 TaskExclusions['Confluence'] = None
 TaskExclusions['MediaWIKI'] = 'Found Bugs'
 TaskExclusions['MediaWIKI'] = 'Registry values B&R'
 TaskExclusions['MediaWIKI'] = 'Veeam ONE Registry Keys'
-TaskExclusions['MediaWIKI'] = 'Bug%'
-TaskExclusions['MediaWIKI'] = 'BUG%'
-TaskExclusions['MediaWIKI'] = 'bug%'
+#TaskExclusions['MediaWIKI'] = 'Bug%'
+#TaskExclusions['MediaWIKI'] = 'BUG%'
+#TaskExclusions['MediaWIKI'] = 'bug%'
 TaskExclusions['MediaWIKI'] = 'Case Handling'
+TaskExclusions['MediaWIKI'] = 'Team Members'
 TaskExclusions['xWIKI'] = None
 toAnalyze = []
 TaskPages = {}
