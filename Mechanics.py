@@ -10,6 +10,7 @@ import copy
 import sys
 import mysql.connector
 import Configuration
+import re
 sys.setrecursionlimit(10**6)
 
 
@@ -203,6 +204,14 @@ class SQLConnector:
             'DRIVER=' + SQLConfig.Driver + ';PORT=1433;SERVER=' + SQLConfig.Server + ';PORT=1443;DATABASE='
             + SQLConfig.Database + ';UID=' + SQLConfig.Username + ';PWD=' + SQLConfig.Password)
         self.cursor = self.connection.cursor()
+    def GetPageID_by_title_and_platform(self, page_title, platform):
+        self.cursor.execute(
+            "select page_id FROM [Karma].[dbo].[KnownPages] where [page_title] = ? and [platform]= ?", page_title, platform)
+        raw = self.cursor.fetchone()
+        if raw is not None:
+            return raw[0]
+        else:
+            return None
     def GetPageSQLID(self, CurrentPage):
         self.cursor.execute(
             "select [id] from [dbo].[KnownPages] where [page_id] = '" + str(CurrentPage.page_id) + "'")
@@ -642,7 +651,7 @@ class xWikiClient:
 
     def _make_put_with_no_header(self, path, data):
         url = self._build_url(path)
-        print(url)
+        #print(url)
         #data['media'] = 'json'
 
         auth = None
@@ -656,8 +665,8 @@ class xWikiClient:
     def _make_put(self, path, data, headers):
         url = self._build_url(path)
         #data['media'] = 'json'
-        print(url)
-        print(data)
+        #print(url)
+        #print(data)
         auth = None
         if self.auth_user and self.auth_pass:
             auth = self.auth_user,self.auth_pass
@@ -682,7 +691,7 @@ class xWikiClient:
         auth = None
         if self.auth_user and self.auth_pass:
             auth = self.auth_user,self.auth_pass
-        print(url)
+        #print(url)
         response = requests.post(url, data=data, auth=auth, headers=headers)
         response.raise_for_status()
         return response.status_code
@@ -782,12 +791,13 @@ class xWikiClient:
         elif status == 304:
             return "Unmodified"
 
-    def add_tag_to_page(self, space, page, tags, title=None, parent=None):
+    def add_tag_to_page(self, space, page, tags=list, title=None, parent=None):
         path = ['spaces', space, 'pages', page, 'tags']
-        xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' \
-              '<tags xmlns="http://www.xwiki.org">' \
-              '<tag name="' + tags + '"></tag>' \
-                                '</tags>'
+        xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        xml +=  '<tags xmlns="http://www.xwiki.org">'
+        for tag in tags:
+            xml +=  '<tag name="' + tag + '"></tag>'
+        xml += '</tags>'
         headers = {'Content-Type': 'application/xml'}
         status = self._make_put(path, xml, headers)
         if status == 202:
@@ -800,7 +810,7 @@ class xWikiClient:
         data = tag
         status = self._make_put_with_no_header(path, data)
         if status == 202:
-            return "Created"
+            return "Added"
         elif status == 401:
             return "Failed"
 
@@ -923,7 +933,7 @@ class MysqlConnector(object):
             'XWR_DOCID': XWD_ID
         }
         self.cursor.execute(query, data)
-        print('update xwikircs done, affected rows = {}'.format(self.cursor.rowcount))
+        # print('update xwikircs done, affected rows = {}'.format(self.cursor.rowcount))
         if test is True:
             self.cnx.rollback()
             print(query,data)
@@ -938,7 +948,7 @@ class MysqlConnector(object):
                 'XWD_CONTENT_AUTHOR': author,
             }
             self.cursor.execute(query, data)
-            print('update XWD_SYNTAX_ID in xwikidoc done, affected rows = {}'.format(self.cursor.rowcount))
+            #print('update XWD_SYNTAX_ID in xwikidoc done, affected rows = {}'.format(self.cursor.rowcount))
             if test is True:
                 self.cnx.rollback()
                 print(query,data)
@@ -953,10 +963,30 @@ class MysqlConnector(object):
                 'XWD_SYNTAX_ID': syntax
             }
             self.cursor.execute(query, data)
-            print('update XWD_SYNTAX_ID in xwikircs done, affected rows = {}'.format(self.cursor.rowcount))
+            #print('update XWD_SYNTAX_ID in xwikircs done, affected rows = {}'.format(self.cursor.rowcount))
             if test is True:
                 self.cnx.rollback()
                 print(query,data)
             else:
                 self.cnx.commit()
         return True
+
+class Migrator(object):
+    def __init__(self, ConfluenceConfig: Configuration.ConfluenceConfig):
+        self.confluenceAPI = ConfluenceAPI(ConfluenceConfig.USER, ConfluenceConfig.PASS, ConfluenceConfig.ULR)
+        self.tag_list = []
+    def get_tags(self, platform: str, id: str=None, test_str: str=None):
+        if test_str==None and id == None: return False
+        if platform == 'Confluence':
+            result = self.confluenceAPI.get_content_labels(id, prefix=None, start=None, limit=None, callback=None)
+            for each in result['results']:
+                self.tag_list.append(each['name'])
+            return self.tag_list
+        elif  platform == 'MediaWIKI':
+            regex = r"\[\[Category:(.[^\]]*)\]\]"
+            matches = re.finditer(regex, test_str)
+            for matchNum, match in enumerate(matches):
+                matchNum = matchNum + 1
+                match = match.group(1)
+                self.tag_list.append(match)
+            return self.tag_list

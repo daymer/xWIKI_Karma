@@ -4,6 +4,7 @@ import Configuration
 import pickle
 from Mechanics import PageCreator, SQLConnector, ContribBuilder, CustomLogging, ExclusionsDict
 
+
 ContribBuilder = ContribBuilder()
 SQLConfig = Configuration.SQLConfig()
 ConfluenceConfig = Configuration.ConfluenceConfig()
@@ -100,6 +101,7 @@ for title, platform in TaskPages.items():
     if CurrentPage.page_id is None:
         CustomLogging.skip_some_page(title)
         continue
+    # TODO: add page rename into DB
     # incremental or full mode
     CurrentPage.dbVersion = SQLConnector.CheckExistencebyID(CurrentPage)
     CurrentPage.page_versions = PAGE_CREATOR.collect_page_history(CurrentPage)
