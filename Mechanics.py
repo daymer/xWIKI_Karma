@@ -636,7 +636,6 @@ class xWikiClient:
     def _build_url(self, path):
         url = self.api_root + "/".join(path)
         return url
-
     def _make_request(self, path, data):
         url = self._build_url(path)
         data['media'] = 'json'
@@ -648,7 +647,6 @@ class xWikiClient:
         response = requests.get(url, params=data, auth=auth)
         response.raise_for_status()
         return response.json()
-
     def _make_put_with_no_header(self, path, data):
         url = self._build_url(path)
         #print(url)
@@ -661,7 +659,6 @@ class xWikiClient:
         response = requests.put(url, data=data, auth=auth)
         response.raise_for_status()
         return response.status_code
-
     def _make_put(self, path, data, headers):
         url = self._build_url(path)
         #data['media'] = 'json'
@@ -669,7 +666,7 @@ class xWikiClient:
         #print(data)
         auth = None
         if self.auth_user and self.auth_pass:
-            auth = self.auth_user,self.auth_pass
+            auth = self.auth_user, self.auth_pass
 
         response = requests.put(url, data=data, auth=auth, headers=headers)
         response.raise_for_status()
@@ -790,7 +787,6 @@ class xWikiClient:
             return "Updated"
         elif status == 304:
             return "Unmodified"
-
     def add_tag_to_page(self, space, page, tags=list, title=None, parent=None):
         path = ['spaces', space, 'pages', page, 'tags']
         xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -804,7 +800,6 @@ class xWikiClient:
             return "Created"
         elif status == 401:
             return "Failed"
-
     def add_tag_to_page_as_plane(self, space, page, tag, title=None, parent=None):
         path = ['spaces', space, 'pages', page, 'tags']
         data = tag
@@ -813,7 +808,6 @@ class xWikiClient:
             return "Added"
         elif status == 401:
             return "Failed"
-
     def delete_page(self, space, page, title=None, parent=None ):
         path = ['spaces', space, 'pages', page]
         xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'\
@@ -837,7 +831,16 @@ class xWikiClient:
         content = self._make_request(path, data)
         print(content)
         return content['content'], content['author']
-
+    def add_new_attach(self, space, page, attach_name, path_to_attach):
+        path = ['spaces', space, 'pages', page, 'attachments', attach_name]
+        data = path_to_attach
+        status = self._make_put_with_no_header(path, data)
+        if status == 201:
+            return "Created"
+        elif status == 202:
+            return "Updated"
+        elif status == 401:
+            return "Not authorized"
 
 class ExclusionsDict(dict):
     def __setitem__(self, key, value):

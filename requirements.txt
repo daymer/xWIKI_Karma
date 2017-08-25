@@ -1,7 +1,7 @@
+mysql
 anyjson==0.3.3
 Babel==2.3.4
 BasicHttpServer==1.0.0
-cffi==1.8.3
 click==6.7
 configobj==5.0.6
 Confluence-py==1.0.1
@@ -56,7 +56,7 @@ pycparser==2.14
 pycryptodomex==3.4.2
 pycurl==7.43.0
 pyodbc==3.1.1
-pyOpenSSL==16.1.0
+pyOpenSSL==16.2.0
 pyparsing==2.1.10
 python-docx==0.8.6
 Python-EasyConfig==0.1.6
