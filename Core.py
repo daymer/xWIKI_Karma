@@ -12,7 +12,7 @@ MediaWIKIConfig = Configuration.MediaWIKIConfig()
 xWikiConfig = Configuration.xWikiConfig()
 PAGE_CREATOR = PageCreator(ConfluenceConfig, MediaWIKIConfig, xWikiConfig)
 SQLConnector = SQLConnector(SQLConfig)
-CustomLogging = CustomLogging('NOTsilent')
+CustomLogging = CustomLogging('silent')
 #getting all pages in Confluence:
 confluenceAPI = ConfluenceAPI(ConfluenceConfig.USER, ConfluenceConfig.PASS, ConfluenceConfig.ULR)
 
