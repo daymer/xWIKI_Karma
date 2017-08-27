@@ -415,7 +415,7 @@ class SQLConnector:
         if CurrentPage.page_versions == CurrentPage.dbVersion:
             try:
                 self.cursor.execute(
-                    "update [dbo].[KnownPages] set [is_uptodate]=1, [last_check]=CONVERT(datetime,'?') where [page_id]=?",
+                    "update [dbo].[KnownPages] set [is_uptodate]=1, [last_check]=CONVERT(datetime,?) where [page_id]=?",
                     str(datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S.%f")[:-3]), str(CurrentPage.page_id))
                 self.connection.commit()
             except:
@@ -423,7 +423,7 @@ class SQLConnector:
                 error_handler = traceback.format_exc()
                 print(datetime.now(),
                       'Update of last_check status of ' + CurrentPage.page_title + ' rolled back due to the following error:\n' + error_handler)
-                print('query:', "update [dbo].[KnownPages] set [is_uptodate]=1, [last_check]=CONVERT(datetime,'"+str(datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S.%f")[:-3])+"') where [page_id] ="+str(CurrentPage.page_id))
+                print('query:', "update [dbo].[KnownPages] set [is_uptodate]=1, [last_check]="+str(datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S.%f")[:-3])+" where [page_id] ="+str(CurrentPage.page_id))
         else:
             try:
                 self.cursor.execute(
