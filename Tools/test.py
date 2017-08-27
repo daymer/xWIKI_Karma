@@ -1,26 +1,21 @@
-import Configuration
-from  Users import Users
-from Configuration import MySQLConfig, ConfluenceConfig
+from Configuration import MySQLConfig, ConfluenceConfig, MediaWIKIConfig, xWikiConfig, SQLConfig
 from Mechanics import SQLConnector, xWikiClient, MysqlConnector, Migrator
 
 
+
+MySQLconfig_INSTANCE = MySQLConfig()
+MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
+
+SQLConfig = SQLConfig()
+SQLConnector = SQLConnector(SQLConfig)
 ConfluenceConfig = ConfluenceConfig()
-Migrator = Migrator(ConfluenceConfig)
-xWikiConfig = Configuration.xWikiConfig('Migration pool')
+MediaWIKIConfig = MediaWIKIConfig()
+xWikiConfig = xWikiConfig('Migration pool')
 xWikiClient = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
-PageTitle = 'Bug 74213 - Storage snapshot only jobs run an additional day if synthetic full was enabled before changing the repository to NetApp'
-platform = 'MediaWIKI'
+Migrator = Migrator(ConfluenceConfig=ConfluenceConfig, MediaWIKIConfig=MediaWIKIConfig, xWikiConfig=xWikiConfig)
 
-path_to_attach = 'http://wiki.support.veeam.local/files/d/d7/Case01759022_normal_repo.png'
-attach_name = 'Case01759022 normal repo.png'
-space = 'Migration pool'
-page = PageTitle
-
-result = xWikiClient.add_new_attach(space, page, attach_name, path_to_attach)
-print(result)
-
-#http://lists.xwiki.org/pipermail/users/2010-February/015251.html
-
-#http://wiki.support.veeam.local/files/d/d7/Case01759022_normal_repo.png
-#http://wiki.support.veeam.local/files/7/72/Case01759022_netapp_repo.png
-#http://server/xwiki/rest/wikis/{wiki}/spaces/{space}/pages/{page}/attachments
+PageTitle = 'Investigating error "The storage file was not verified."'
+platform = 'Confluence'
+page_id = SQLConnector.GetPageID_by_title_and_platform(PageTitle, platform)
+Migrator.current_page_id = page_id
+attachments = Migrator.make_and_attach(platform=platform, file_name='image2017-1-24 12:28:38.png', page=PageTitle, space='Migration pool')

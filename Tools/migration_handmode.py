@@ -1,8 +1,8 @@
 import Configuration
-from  Users import Users
-from Configuration import MySQLConfig, ConfluenceConfig
+from Users import Users
+from Configuration import MySQLConfig, ConfluenceConfig, MediaWIKIConfig
 from Mechanics import SQLConnector, xWikiClient, MysqlConnector, Migrator
-
+import traceback
 
 MySQLconfig_INSTANCE = MySQLConfig()
 MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
@@ -10,12 +10,18 @@ MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
 SQLConfig = Configuration.SQLConfig()
 SQLConnector = SQLConnector(SQLConfig)
 ConfluenceConfig = ConfluenceConfig()
-Migrator = Migrator(ConfluenceConfig)
+MediaWIKIConfig = MediaWIKIConfig()
 xWikiConfig = Configuration.xWikiConfig('Migration pool')
 xWikiClient = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
+Migrator = Migrator(ConfluenceConfig=ConfluenceConfig, MediaWIKIConfig=MediaWIKIConfig, xWikiConfig=xWikiConfig)
 UserList = Users()
-PageTitle = 'Bug 102730 - Object reference not set to an instance of an object, tape medium not found'
+'''
+PageTitle = 'Diskspd (performance tester)'
 platform = 'MediaWIKI'
+'''
+PageTitle = 'Investigating error "The storage file was not verified."'
+platform = 'Confluence'
+
 SQLQuery = SQLConnector.GetDatagramsByPageTitleandPlatform(PageTitle, platform)
 datagram = SQLQuery[0]
 contributors_datagram = SQLQuery[1]
@@ -89,15 +95,34 @@ if latest_text is not None and last_version is not None:
         )
     MysqlConnector_INSTANCE.add_new_version(*DataTuple)
     tags = False
+    files = False
     if platform == 'Confluence':
         page_id = SQLConnector.GetPageID_by_title_and_platform(PageTitle, platform)
         tags = Migrator.get_tags(platform=platform, id=page_id, test_str=None)
+        files = Migrator.get_files(platform=platform, id=page_id, test_str=latest_text)
     elif platform == 'MediaWIKI':
         tags = Migrator.get_tags(platform=platform, id=None, test_str=latest_text)
+        files = Migrator.get_files(platform=platform, id=None, test_str=latest_text)
     if PageTitle.startswith('Bug') or PageTitle.startswith('bug') or PageTitle.startswith('BUG'):
         tags.append('bug')
+    print(files)
+    # Doing tags
     if tags is not False:
         result = xWikiClient.add_tag_to_page(dict(DataTuple)['space'], dict(DataTuple)['title'], tags, title=None, parent=None)
         print(result, len(tags), 'tags:', tags)
     else:
         print('No tags were found')
+    # Doing attachments
+    if files is not False and len(files) != 0:
+        for file in files:
+            try:
+                result = Migrator.make_and_attach(platform, file_name=file, page=PageTitle,
+                                                  space='Migration pool')
+                print(result, 'file:', file)
+            except Exception as e:
+                print('Failed on file:', file)
+                print(traceback.format_exc())
+                print('Failed on file:', file)
+        print('Total proceed:', len(files))
+    else:
+        print('No files were found')

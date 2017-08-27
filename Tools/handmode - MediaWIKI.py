@@ -10,7 +10,7 @@ PAGE_CREATOR = PageCreator(ConfluenceConfig, MediaWIKIConfig, xWikiConfig)
 SQLConnector = SQLConnector(SQLConfig)
 CustomLogging = CustomLogging('NotSilent')
 
-CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform('VixDiskLibSample', 'MediaWIKI')
+CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform('Diskspd (performance tester)', 'MediaWIKI')
 if CurrentPage is None:
     print('Page not found')
     exit()

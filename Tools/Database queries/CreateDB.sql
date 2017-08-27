@@ -257,8 +257,10 @@ END
 FETCH NEXT FROM @CURSOR INTO @page_id, @persent
 END
 CLOSE @CURSOR
-select * from #Temp
+select * from #Temp;
 --select sum(added_to_karma) from #Temp
+GO
+
 
 USE Karma;  
 GO 

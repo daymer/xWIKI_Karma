@@ -1,4 +1,4 @@
-from PythonConfluenceAPI import ConfluenceAPI
+from PythonConfluenceAPI import ConfluenceAPI  #http://htmlpreview.github.io/?https://github.com/pushrodtechnology/PythonConfluenceAPI/blob/master/doc/html/index.html
 from mwclient import Site
 import difflib
 import pyodbc
@@ -137,6 +137,7 @@ class PageCreator:
             PageVersion = response[0]
             Contributor = response[1]
             return VersionNumber, PageVersion, Contributor
+
     def check_exclusions(self, page, platform, TaskExclusions):
         excluded = True
         try:
@@ -149,8 +150,8 @@ class PageCreator:
                 if exclusion.endswith('%'):
                     if page.startswith(exclusion[:-1]):
                         excluded = True
-                        self.TotalExcluded +=1
         if excluded == True:
+            self.TotalExcluded += 1
             return False
         else:
             return True
@@ -831,10 +832,38 @@ class xWikiClient:
         content = self._make_request(path, data)
         print(content)
         return content['content'], content['author']
-    def add_new_attach(self, space, page, attach_name, path_to_attach):
+    def add_new_attach_as_plane(self, space, page, attach_name, path_to_attach):
+        # http://lists.xwiki.org/pipermail/users/2010-February/015251.html
         path = ['spaces', space, 'pages', page, 'attachments', attach_name]
         data = path_to_attach
         status = self._make_put_with_no_header(path, data)
+        if status == 201:
+            return "Created"
+        elif status == 202:
+            return "Updated"
+        elif status == 401:
+            return "Not authorized"
+    def add_new_attach(self, space, page, attach_name, path_to_attach):
+        path = ['spaces', space, 'pages', page, 'attachments', attach_name]
+        xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'\
+        '<attachment xmlns="http://www.xwiki.org">'\
+        '<AttachmentSummary>'+ path_to_attach +'</AttachmentSummary>'\
+        '</attachment>'
+        headers = {'Content-Type': 'application/xml'}
+        status = self._make_put(path, xml, headers)
+        if status == 201:
+            return "Created"
+        elif status == 202:
+            return "Updated"
+        elif status == 401:
+            return "Not authorized"
+    def add_new_attach_application(self, space, page, attach_name, attach_content):
+        path = ['spaces', space, 'pages', page, 'attachments', attach_name]
+        xml = attach_content
+        headers = {'Content-Type': 'application/octet-stream',
+                   'Content-Disposition': 'attachment; filename=%attach_name' %attach_name}
+        #Application/octet-stream means that the sender of the data (probably an HTTP server) had no idea what the data is. It's just an arbitrary data dump.
+        status = self._make_put(path, xml, headers)
         if status == 201:
             return "Created"
         elif status == 202:
@@ -974,18 +1003,28 @@ class MysqlConnector(object):
                 self.cnx.commit()
         return True
 
+
 class Migrator(object):
-    def __init__(self, ConfluenceConfig: Configuration.ConfluenceConfig):
+
+    def __init__(self, ConfluenceConfig: Configuration.ConfluenceConfig, MediaWIKIConfig: Configuration.MediaWIKIConfig, xWikiConfig: Configuration.xWikiConfig):
         self.confluenceAPI = ConfluenceAPI(ConfluenceConfig.USER, ConfluenceConfig.PASS, ConfluenceConfig.ULR)
+        self.ConfluenceConfig = ConfluenceConfig
+        self.MediaWIKIConfig = MediaWIKIConfig
+        self.xWikiConfig = xWikiConfig
+        self.xWikiClient = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
         self.tag_list = []
+        self.file_list = []
+        self.current_page_id = None
+
     def get_tags(self, platform: str, id: str=None, test_str: str=None):
-        if test_str==None and id == None: return False
+        if test_str is None and id is None: return False
         if platform == 'Confluence':
+            self.current_page_id = id
             result = self.confluenceAPI.get_content_labels(id, prefix=None, start=None, limit=None, callback=None)
             for each in result['results']:
                 self.tag_list.append(each['name'])
             return self.tag_list
-        elif  platform == 'MediaWIKI':
+        elif platform == 'MediaWIKI':
             regex = r"\[\[Category:(.[^\]]*)\]\]"
             matches = re.finditer(regex, test_str)
             for matchNum, match in enumerate(matches):
@@ -993,3 +1032,62 @@ class Migrator(object):
                 match = match.group(1)
                 self.tag_list.append(match)
             return self.tag_list
+
+    def get_files(self, platform: str, id: str = None, test_str: str = None):
+        if test_str is None and id is None: return False
+        if platform == 'Confluence':
+            self.current_page_id = id
+            regex = r"\<ri\:attachment ri\:filename=\"(.[^\"]*)\" \/\>"
+            matches = re.finditer(regex, test_str)
+            for matchNum, match in enumerate(matches):
+                matchNum = matchNum + 1
+                match = match.group(1)
+                self.file_list.append(match)
+            self.file_list = list(set(self.file_list))
+            return self.file_list
+        elif platform == 'MediaWIKI':
+            regex = r"\[\[File:((\w|\d|-|\.[^\|])*).*"
+            matches = re.finditer(regex, test_str)
+            #print(test_str)
+            for matchNum, match in enumerate(matches):
+                matchNum = matchNum + 1
+                match = match.group(1)
+                self.file_list.append(match)
+            return self.file_list
+
+    def make_and_attach(self, platform: str, file_name: str, page, space):
+        source_url = None
+        if platform == 'Confluence':
+            if self.current_page_id is None:
+                print('current_page_id is still None')
+                return False
+            attachment = self.confluenceAPI.get_content_attachments(self.current_page_id, expand=None, start=None, limit=None, filename=file_name, media_type=None, callback=None)
+            source_url = self.ConfluenceConfig.ULR + attachment['results'][0]['_links']['download']
+        elif platform == 'MediaWIKI':
+            # so, now we need to locate the attachment
+            # http://wiki.support.veeam.local/api.php?action=query&titles=File:Case01759022%20normal%20repo.png&prop=imageinfo&iiprop=url&format=json
+            request_url = self.MediaWIKIConfig.APIPath_long + 'action=query&titles=File:' + file_name + '&prop=imageinfo&iiprop=url&format=json'
+            r = requests.get(request_url, stream=True)
+            if r.status_code == 200:
+                respond = r.json()
+                answer = str(respond['query']['pages'])
+                regex = r"'url': '(.[^']*)'"
+                matches = matches = re.finditer(regex, answer)
+                for matchNum, match in enumerate(matches):
+                    matchNum = matchNum + 1
+                    match = match.group(1)
+                    source_url = match
+                    break  # using only the fist link
+            else:
+                print('ERROR: unable to find the source link for', file_name, request_url)
+                return False
+        if source_url is None:
+            return None
+        r = requests.get(source_url, stream=True)
+        file_content = None
+        if r.status_code == 200:
+            file_content = r.content
+        if file_content is not None:
+            result = self.xWikiClient.add_new_attach_application(space=space, page=page, attach_name=file_name,
+                                                            attach_content=file_content)
+            return result

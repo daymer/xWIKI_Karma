@@ -34,6 +34,7 @@ TaskExclusions['Confluence'] = None
 TaskExclusions['MediaWIKI'] = 'Found Bugs'
 TaskExclusions['MediaWIKI'] = 'Registry values B&R'
 TaskExclusions['MediaWIKI'] = 'Veeam ONE Registry Keys'
+TaskExclusions['MediaWIKI'] = 'Patches and fixes for B&R'
 #TaskExclusions['MediaWIKI'] = 'Bug%'
 #TaskExclusions['MediaWIKI'] = 'BUG%'
 #TaskExclusions['MediaWIKI'] = 'bug%'
@@ -48,7 +49,7 @@ for space, platform in Task.items():
         respond = confluenceAPI.get_content('page', space, None, 'current', None, None, 0, 500)
         size = respond['size']
         TotalSize += size
-        print(size, 'Confluence pages were found in space',space)
+        print(size, 'Confluence pages were found in space', space)
         toAnalyze = respond['results']
         for page in toAnalyze:
             if TaskExclusions[platform] is not None:
@@ -65,7 +66,7 @@ for space, platform in Task.items():
         for page in PAGE_CREATOR.MediaWikiAPI.allpages():
             if TaskExclusions[platform] is not None:
                 if not PAGE_CREATOR.check_exclusions(page.name, platform, TaskExclusions):
-                    #print(page.name, 'was excluded')
+                    print(page.name, 'was excluded, total excluded:', PAGE_CREATOR.TotalExcluded)
                     continue
                 else:
                     TaskPages.update({page.name: platform})
@@ -73,7 +74,7 @@ for space, platform in Task.items():
             else:
                 TaskPages.update({page.name: platform})
                 size += 1
-        print(size, 'MediaWIKI pages were found in space', space)
+        #print(size, 'MediaWIKI pages were found in space', space)
         TotalSize += size
     if platform == 'xWIKI':
         size = 0
@@ -89,7 +90,8 @@ for space, platform in Task.items():
                 size += 1
         print(size, 'xWIKI pages were found in space', space)
         TotalSize += size
-CustomLogging.log_task_start(TotalSize,PAGE_CREATOR.TotalExcluded)
+CustomLogging.log_task_start(TotalSize, PAGE_CREATOR.TotalExcluded)
+
 #startin main process
 for title, platform in TaskPages.items():
     CustomLogging.page_analysis_started(title)
