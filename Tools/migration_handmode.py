@@ -6,7 +6,6 @@ import traceback
 
 MySQLconfig_INSTANCE = MySQLConfig()
 MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
-
 SQLConfig = Configuration.SQLConfig()
 SQLConnector = SQLConnector(SQLConfig)
 ConfluenceConfig = ConfluenceConfig()
@@ -16,13 +15,16 @@ xWikiClient = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConf
 Migrator = Migrator(ConfluenceConfig=ConfluenceConfig, MediaWIKIConfig=MediaWIKIConfig, xWikiConfig=xWikiConfig)
 UserList = Users()
 '''
-PageTitle = 'Diskspd (performance tester)'
+title = 'Diskspd (performance tester)'
 platform = 'MediaWIKI'
 '''
-PageTitle = 'Investigating error "The storage file was not verified."'
+title = 'Investigating error "The storage file was not verified."'
 platform = 'Confluence'
 
-SQLQuery = SQLConnector.GetDatagramsByPageTitleandPlatform(PageTitle, platform)
+SQLQuery = SQLConnector.GetDatagramsByPageTitleandPlatform(title, platform)
+if SQLQuery is None:
+    print('Page isn\'t indexed yet')
+    exit()
 datagram = SQLQuery[0]
 contributors_datagram = SQLQuery[1]
 
@@ -66,7 +68,7 @@ for idx, author in enumerate(UniqueUsers):
     DataTuple = (
         ('space', 'Migration pool'),
         ('parent', 'Migration pool'),
-        ('title', PageTitle),
+        ('title', title),
         ('content', text),
         ('author', author),
         ('version', version),
@@ -84,7 +86,7 @@ if latest_text is not None and last_version is not None:
     DataTuple = (
             ('space', 'Migration pool'),
             ('parent', 'Migration pool'),
-            ('title', PageTitle),
+            ('title', title),
             ('content', content),
             ('author', "XWiki.TestTest"),
             ('version', last_version),
@@ -97,13 +99,13 @@ if latest_text is not None and last_version is not None:
     tags = False
     files = False
     if platform == 'Confluence':
-        page_id = SQLConnector.GetPageID_by_title_and_platform(PageTitle, platform)
+        page_id = SQLConnector.GetPageID_by_title_and_platform(title, platform)
         tags = Migrator.get_tags(platform=platform, id=page_id, test_str=None)
         files = Migrator.get_files(platform=platform, id=page_id, test_str=latest_text)
     elif platform == 'MediaWIKI':
         tags = Migrator.get_tags(platform=platform, id=None, test_str=latest_text)
         files = Migrator.get_files(platform=platform, id=None, test_str=latest_text)
-    if PageTitle.startswith('Bug') or PageTitle.startswith('bug') or PageTitle.startswith('BUG'):
+    if title.startswith('Bug') or title.startswith('bug') or title.startswith('BUG'):
         tags.append('bug')
     print(files)
     # Doing tags
@@ -116,7 +118,7 @@ if latest_text is not None and last_version is not None:
     if files is not False and len(files) != 0:
         for file in files:
             try:
-                result = Migrator.make_and_attach(platform, file_name=file, page=PageTitle,
+                result = Migrator.make_and_attach(platform, file_name=file, page=title,
                                                   space='Migration pool')
                 print(result, 'file:', file)
             except Exception as e:

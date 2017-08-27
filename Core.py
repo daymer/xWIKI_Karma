@@ -30,7 +30,7 @@ Task = {
     #'Migration pool': 'xWIKI'
 }
 TaskExclusions = ExclusionsDict()
-TaskExclusions['Confluence'] = None
+TaskExclusions['Confluence'] = 'List of all KBs'
 TaskExclusions['MediaWIKI'] = 'Found Bugs'
 TaskExclusions['MediaWIKI'] = 'Registry values B&R'
 TaskExclusions['MediaWIKI'] = 'Veeam ONE Registry Keys'
