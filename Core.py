@@ -66,7 +66,7 @@ for space, platform in Task.items():
         for page in PAGE_CREATOR.MediaWikiAPI.allpages():
             if TaskExclusions[platform] is not None:
                 if not PAGE_CREATOR.check_exclusions(page.name, platform, TaskExclusions):
-                    print(page.name, 'was excluded, total excluded:', PAGE_CREATOR.TotalExcluded)
+                    #print(page.name, 'was excluded, total excluded:', PAGE_CREATOR.TotalExcluded)
                     continue
                 else:
                     TaskPages.update({page.name: platform})
