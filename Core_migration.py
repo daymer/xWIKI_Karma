@@ -9,28 +9,29 @@ import traceback
 #                      Test variables                        #
 UseTestVarsSwitch = False
 TestVars = {
-    'title': '',
-    'platform': ''
+    'title': 'Diskspd (performance tester)',
+    'platform': 'MediaWIKI',
+    'target_pool': 'Migration pool',
+    'iparent': 'Migration pool'
 }
 #                                                            #
 ##############################################################
 
-
 def print_help():
-        print('Core_migration.py v1.0')
+        print('Core_migration.py v1.1')
         print('Usage:')
         print(
-            'Core_migration.py -t <title> -p <platform>')
+            'Core_migration.py -t <title> -p <platform> -t <target pool> -i <iparent>')
         print('------------------------------Examples------------------------------------------')
-        print('Core_migration .py -t "Diskspd (performance tester)" -p "MediaWIKI"')
+        print('Core_migration .py -t "Diskspd (performance tester)" -p "MediaWIKI" -t "Migration pool" -i "Migration pool"')
 
 
 def startup(argv):
         title = ''
         platform = ''
         try:
-            opts, args = getopt.getopt(argv, "h:t:p:",
-                                       ["help=", "title=", "platform="])
+            opts, args = getopt.getopt(argv, "h:t:p:t:i:",
+                                       ["help=", "title=", "platform=", "target=", "iparent="])
         except getopt.GetoptError:
             print_help()
             sys.exit(2)
@@ -42,13 +43,19 @@ def startup(argv):
                 title = arg
             elif opt in ("-p", "--platform"):
                 platform = arg
-        if title == '' or platform == '':
+            elif opt in ("-t", "--target"):
+                target_pool = arg
+            elif opt in ("-i", "--iparent"):
+                parent = arg
+        if title == '' or platform == '' or target_pool == '' or parent == '':
             print('Invalid arguments supplied. See help.')
             print('title:', title)
             print('platform:', platform)
+            print('target:', target_pool)
+            print('iparent:', parent)
             sys.exit(2)
         else:
-            return title, platform
+            return title, platform, target_pool, parent
 
 # Initial vars
 if not sys.argv[1:]:
@@ -57,13 +64,15 @@ if not sys.argv[1:]:
         # Test vars
         title = TestVars['title']
         platform = TestVars['platform']
+        target_pool = TestVars['target_pool']
+        parent = TestVars['iparent']
     else:
         sys.exit(2)
         ###
 else:
     title = str(startup(sys.argv[1:])[0])
     platform = str(startup(sys.argv[1:])[1])
-
+    target_pool = str(startup(sys.argv[1:])[2])
 
 # Initializing agent
 print('Initializing agent')
@@ -73,7 +82,7 @@ SQLConfig = Configuration.SQLConfig()
 SQLConnector = SQLConnector(SQLConfig)
 ConfluenceConfig = ConfluenceConfig()
 MediaWIKIConfig = MediaWIKIConfig()
-xWikiConfig = Configuration.xWikiConfig('Migration pool')
+xWikiConfig = Configuration.xWikiConfig(target_pool)
 xWikiClient = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
 Migrator = Migrator(ConfluenceConfig=ConfluenceConfig, MediaWIKIConfig=MediaWIKIConfig, xWikiConfig=xWikiConfig)
 UserList = Users()
@@ -126,8 +135,8 @@ for idx, author in enumerate(UniqueUsers):
     else:
         syntax = 'xwiki/2.1'
     DataTuple = (
-        ('space', 'Migration pool'),
-        ('parent', 'Migration pool'),
+        ('space', target_pool),
+        ('parent', parent),
         ('title', title),
         ('content', text),
         ('author', author),
@@ -144,8 +153,8 @@ for idx, author in enumerate(UniqueUsers):
 if latest_text is not None and last_version is not None:
     content = latest_text + ' '
     DataTuple = (
-            ('space', 'Migration pool'),
-            ('parent', 'Migration pool'),
+            ('space', target_pool),
+            ('parent', parent),
             ('title', title),
             ('content', content),
             ('author', "XWiki.TestTest"),
