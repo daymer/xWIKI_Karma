@@ -9,10 +9,10 @@ import traceback
 #                      Test variables                        #
 UseTestVarsSwitch = False
 TestVars = {
-    'title': 'Diskspd (performance tester)',
+    'title': 'Bug 100183 - Error: No partition found for System Recovery partiotions during VEOR/SEVSQL',
     'platform': 'MediaWIKI',
-    'target_pool': 'Migration pool',
-    'iparent': 'Migration pool'
+    'target_pool': 'Migrated Bugs',
+    'iparent': 'Migrated Bugs'
 }
 #                                                            #
 ##############################################################
@@ -21,7 +21,7 @@ def print_help():
         print('Core_migration.py v1.1')
         print('Usage:')
         print(
-            'Core_migration.py -t <title> -p <platform> -t <target pool> -i <iparent>')
+            'Core_migration.py -t <title> -p <platform> -z <target pool> -i <iparent>')
         print('------------------------------Examples------------------------------------------')
         print('Core_migration .py -t "Diskspd (performance tester)" -p "MediaWIKI" -t "Migration pool" -i "Migration pool"')
 
@@ -29,8 +29,10 @@ def print_help():
 def startup(argv):
         title = ''
         platform = ''
+        target_pool = ''
+        parent = ''
         try:
-            opts, args = getopt.getopt(argv, "h:t:p:t:i:",
+            opts, args = getopt.getopt(argv, "h:t:p:z:i:",
                                        ["help=", "title=", "platform=", "target=", "iparent="])
         except getopt.GetoptError:
             print_help()
@@ -43,7 +45,7 @@ def startup(argv):
                 title = arg
             elif opt in ("-p", "--platform"):
                 platform = arg
-            elif opt in ("-t", "--target"):
+            elif opt in ("-z", "--ztarget"):
                 target_pool = arg
             elif opt in ("-i", "--iparent"):
                 parent = arg
@@ -51,7 +53,7 @@ def startup(argv):
             print('Invalid arguments supplied. See help.')
             print('title:', title)
             print('platform:', platform)
-            print('target:', target_pool)
+            print('ztarget:', target_pool)
             print('iparent:', parent)
             sys.exit(2)
         else:
@@ -73,6 +75,8 @@ else:
     title = str(startup(sys.argv[1:])[0])
     platform = str(startup(sys.argv[1:])[1])
     target_pool = str(startup(sys.argv[1:])[2])
+    parent = str(startup(sys.argv[1:])[3])
+
 
 # Initializing agent
 print('Initializing agent')
@@ -96,7 +100,6 @@ if SQLQuery is None:
     sys.exit(2)
 datagram = SQLQuery[0]
 contributors_datagram = SQLQuery[1]
-
 UniqueUsers = set(contributors_datagram.values())
 # print(UniqueUsers)
 # print(contributors_datagram)
@@ -146,6 +149,7 @@ for idx, author in enumerate(UniqueUsers):
         ('only_update', False),
         ('last_run', False),
     )
+    #print('title goes to add_new_version ', dict(DataTuple)['title'])
     MysqlConnector_INSTANCE.add_new_version(*DataTuple)
     latest_text = text
     last_version = version +1
@@ -176,7 +180,7 @@ if latest_text is not None and last_version is not None:
         files = Migrator.get_files(platform=platform, id=None, test_str=latest_text)
     if title.startswith('Bug') or title.startswith('bug') or title.startswith('BUG'):
         tags.append('bug')
-    print(files)
+    #print(files)
     # Doing tags
     if tags is not False:
         result = xWikiClient.add_tag_to_page(dict(DataTuple)['space'], dict(DataTuple)['title'], tags, title=None, parent=None)

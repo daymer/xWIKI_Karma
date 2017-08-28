@@ -124,14 +124,15 @@ class Users():
                 "Vsemakin" : "XWiki.vsemakin",
                 "Vyur" : "XWiki.vyur",
                 "Vzenkevich" : None,
-                "Vzubarev" : None,
+                "Vzubarev" : "XWiki.vzubarev",
                 "Yan Skoursky" : None,
                 "YariScur" : None,
                 "Yrri" : None,
                 "Zach.meyer" : None,
                 "Кулешов Александр" : "XWiki.akuleshov",
                 'Иван Беляев' : 'XWiki.ibelyaev',
-                'Ibely' : 'XWiki.ibelyaev'
+                'Ibely' : 'XWiki.ibelyaev',
+                'Pmakarov' : None
                     }
 '''
 for user, status in Users.items():

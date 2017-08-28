@@ -13,7 +13,6 @@ import Configuration
 import re
 sys.setrecursionlimit(10**6)
 
-
 class PageCreator:
     def __init__(self, ConfluenceConfig, MediaWIKIConfig, xWikiConfig):
         self.confluenceAPI = ConfluenceAPI(ConfluenceConfig.USER, ConfluenceConfig.PASS, ConfluenceConfig.ULR)
@@ -635,7 +634,12 @@ class xWikiClient:
         self.auth_pass = auth_pass
 
     def _build_url(self, path):
+        for idx, val in enumerate(path):
+            path[idx] = val.replace('/', '%2F')
         url = self.api_root + "/".join(path)
+        if url.endswith('.'):
+            url = url[:-1]
+        #print(url)
         return url
     def _make_request(self, path, data):
         url = self._build_url(path)
@@ -660,6 +664,7 @@ class xWikiClient:
         response = requests.put(url, data=data, auth=auth)
         response.raise_for_status()
         return response.status_code
+
     def _make_put(self, path, data, headers):
         url = self._build_url(path)
         #data['media'] = 'json'
@@ -668,10 +673,11 @@ class xWikiClient:
         auth = None
         if self.auth_user and self.auth_pass:
             auth = self.auth_user, self.auth_pass
-
+        #print('url in put', url)
         response = requests.put(url, data=data, auth=auth, headers=headers)
         response.raise_for_status()
         return response.status_code
+
     def _make_delete(self, path, data, headers):
         url = self._build_url(path)
         #data['media'] = 'json'
@@ -741,6 +747,8 @@ class xWikiClient:
         content = self._make_request(path, data)
         return content['pageSummaries']
     def submit_page(self, space, page, content, syntax, title=None, parent=None):
+        #print('page (aka title) in submit', page)
+
         path = ['spaces', space, 'pages', page]
         data = {'content': content}
         if title:
@@ -791,11 +799,12 @@ class xWikiClient:
     def add_tag_to_page(self, space, page, tags=list, title=None, parent=None):
         path = ['spaces', space, 'pages', page, 'tags']
         xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        xml +=  '<tags xmlns="http://www.xwiki.org">'
+        xml += '<tags xmlns="http://www.xwiki.org">'
         for tag in tags:
             xml +=  '<tag name="' + tag + '"></tag>'
         xml += '</tags>'
         headers = {'Content-Type': 'application/xml'}
+        #print(path)
         status = self._make_put(path, xml, headers)
         if status == 202:
             return "Created"
@@ -921,29 +930,39 @@ class MysqlConnector(object):
         test = test[1]
         only_update = only_update[1]
         last_run = last_run[1]
+        #print('title came into add_new_version', title)
+        '''
         if last_run is True:
-            print('============================================================Finalizing on', version,
+            #print('============================================================Finalizing on', version,
                   'version=============================================================')
         else:
             print('============================================================Sequence', version,
                   'started=============================================================')
-
+        '''
+        #print(title)
+        #title = title.replace('\\', '&#92;')
+        #print('title after replace', title)
         if only_update is not True:
             if version == 1:
                 try:
-                    result = self.xWikiClient_instance.delete_page(space=space, page=title,title=title, parent=parent)
-                    print('Page deleted with result:', result)
+                    result = self.xWikiClient_instance.delete_page(space=space, page=title, title=title, parent=parent)
+                    #print('Page deleted with result:', result)
                 except requests.exceptions.HTTPError:
-                    print('No such page found, deletion isn\'t needed')
+                    a = 1
+                    #print('No such page found, deletion isn\'t needed')
+                #print('title right before submit_page', title)
                 result = self.xWikiClient_instance.submit_page(space=space, page=title, content='', syntax=syntax, title=title, parent=parent)
-                print('Page created with syntax:',syntax, 'and result:', result)
+                #print('Page created with syntax:', syntax, 'and result:', result)
         version += 1
         if only_update is not True:
             if parent != space:
+                #print('title right before submit_page_as_plane', title)
                 result = self.xWikiClient_instance.submit_page_as_plane(space=space, page=title, content=content, syntax=syntax, title=title, parent=parent)
             else:
+                #print('title right before submit_page_as_plane', title)
                 result = self.xWikiClient_instance.submit_page_as_plane(space=space, page=title, content=content, syntax=syntax, title=title, parent=None)
-        print('Page', result)
+        #print('Page', result)
+
         if version == 1 and result != 'Created':
             print('Result != Created while 1st run. Kernel panic!')
             exit()
@@ -1009,7 +1028,7 @@ class Migrator(object):
     def __init__(self, ConfluenceConfig: Configuration.ConfluenceConfig, MediaWIKIConfig: Configuration.MediaWIKIConfig, xWikiConfig: Configuration.xWikiConfig):
         self.confluenceAPI = ConfluenceAPI(ConfluenceConfig.USER, ConfluenceConfig.PASS, ConfluenceConfig.ULR)
         self.ConfluenceConfig = ConfluenceConfig
-        self.MediaWIKIConfig = MediaWIKIConfig
+        self.MediaWIKIConfig_instance = MediaWIKIConfig
         self.xWikiConfig = xWikiConfig
         self.xWikiClient = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
         self.tag_list = []
@@ -1066,7 +1085,10 @@ class Migrator(object):
         elif platform == 'MediaWIKI':
             # so, now we need to locate the attachment
             # http://wiki.support.veeam.local/api.php?action=query&titles=File:Case01759022%20normal%20repo.png&prop=imageinfo&iiprop=url&format=json
-            request_url = self.MediaWIKIConfig.APIPath_long + 'action=query&titles=File:' + file_name + '&prop=imageinfo&iiprop=url&format=json'
+            try:
+                request_url = self.MediaWIKIConfig_instance.APIPath_long + 'action=query&titles=File:' + file_name + '&prop=imageinfo&iiprop=url&format=json'
+            except AttributeError:  # TODO: fix this dirty hack
+                request_url = 'http://wiki.support.veeam.local/api.php?action=query&titles=File:' + file_name + '&prop=imageinfo&iiprop=url&format=json'
             r = requests.get(request_url, stream=True)
             if r.status_code == 200:
                 respond = r.json()
@@ -1091,3 +1113,127 @@ class Migrator(object):
             result = self.xWikiClient.add_new_attach_application(space=space, page=page, attach_name=file_name,
                                                             attach_content=file_content)
             return result
+
+
+def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE, MysqlConnector_INSTANCE, SQLConfig, SQLConnector, ConfluenceConfig, MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList):
+    # Initializing agent
+    #print('Initializing agent')
+    # Starting migration process
+    print('Starting migration process of', title, 'from platform', platform)
+    SQLQuery = SQLConnector.GetDatagramsByPageTitleandPlatform(title, platform)
+    if SQLQuery is None:
+        return 'ERROR: Page', title, 'on platform', platform, 'isn\'t indexed yet'
+    datagram = SQLQuery[0]
+    contributors_datagram = SQLQuery[1]
+    UniqueUsers = set(contributors_datagram.values())
+    # print(UniqueUsers)
+    # print(contributors_datagram)
+    for idx, user in enumerate(UniqueUsers):
+        for version, author in contributors_datagram.items():
+            if author == user:
+                for symbol in datagram:
+                    if symbol[1] == version:
+                        symbol[1] = idx
+    global_counter_of_symbols = 0
+    version = 0
+    latest_text = None
+    last_version = None
+    title = title.replace('’', '\'')
+    title = title.replace('”', '"')
+    title = title.replace('“', '"')
+    for idx, author in enumerate(UniqueUsers):
+        version += 1
+        text = ''
+        counter_of_symbols = 0
+        for symbol in datagram:
+            if symbol[1] <= idx:
+                text += symbol[0]
+                if symbol[1] == idx:
+                    counter_of_symbols += 1
+        global_counter_of_symbols += counter_of_symbols
+        #print(author, 'with id:', idx, 'has contributed:', counter_of_symbols)
+        if counter_of_symbols == 0:
+            version -= 1
+            continue
+        try:
+            author = UserList.users[author]
+        except KeyError:
+            author = None
+        if author is None:
+            author = "XWiki.root"
+        if platform == 'Confluence':
+            syntax = 'confluence+xhtml/1.0'
+        elif platform == 'MediaWIKI':
+            syntax = 'mediawiki/1.6'
+        else:
+            syntax = 'xwiki/2.1'
+        text = text.replace('’', '\'')
+        text = text.replace('”', '"')
+        text = text.replace('“', '"')
+        DataTuple = (
+            ('space', target_pool),
+            ('parent', parent),
+            ('title', title),
+            ('content', text),
+            ('author', author),
+            ('version', version),
+            ('syntax', syntax),  # 'confluence/1.0' 'xwiki/2.1' 'MediaWiki/1.6'
+            ('test', False),
+            ('only_update', False),
+            ('last_run', False),
+        )
+        # print('title goes to add_new_version ', dict(DataTuple)['title'])
+        MysqlConnector_INSTANCE.add_new_version(*DataTuple)
+        latest_text = text
+        last_version = version + 1
+    if latest_text is not None and last_version is not None:
+        content = latest_text + ' '
+        DataTuple = (
+            ('space', target_pool),
+            ('parent', parent),
+            ('title', title),
+            ('content', content),
+            ('author', "XWiki.TestTest"),
+            ('version', last_version),
+            ('syntax', syntax),  # 'confluence/1.0' 'xwiki/2.1' 'MediaWiki/1.6'
+            ('test', False),
+            ('only_update', False),
+            ('last_run', True),
+        )
+        MysqlConnector_INSTANCE.add_new_version(*DataTuple)
+        tags = False
+        files = False
+        if platform == 'Confluence':
+            page_id = SQLConnector.GetPageID_by_title_and_platform(title, platform)
+            tags = Migrator.get_tags(platform=platform, id=page_id, test_str=None)
+            files = Migrator.get_files(platform=platform, id=page_id, test_str=latest_text)
+        elif platform == 'MediaWIKI':
+            tags = Migrator.get_tags(platform=platform, id=None, test_str=latest_text)
+            files = Migrator.get_files(platform=platform, id=None, test_str=latest_text)
+        #if title.startswith('Bug') or title.startswith('bug') or title.startswith('BUG'):
+        #   tags.append('bug')
+        # print(files)
+        # Doing tags
+        if tags is not False:
+            result = xWikiClient.add_tag_to_page(dict(DataTuple)['space'], dict(DataTuple)['title'], tags, title=None,
+                                                 parent=None)
+            #print(result, len(tags), 'tags:', tags)
+        else:
+            a = 1
+            #print('No tags were found')
+        # Doing attachments
+        if files is not False and len(files) != 0:
+            for file in files:
+                try:
+                    result = Migrator.make_and_attach(platform, file_name=file, page=title,
+                                                      space=target_pool)
+                    #print(result, 'file:', file)
+                except Exception as e:
+                    print('Failed on file:', file)
+                    print(traceback.format_exc())
+                    print('Failed on file:', file)
+            #print('Total proceed:', len(files))
+        else:
+            a = 1
+            #print('No files were found')
+        return 'STATUS: Migration of', title, 'finished'
