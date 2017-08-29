@@ -11,7 +11,7 @@ syntax = 'mediawiki/1.6'
 space = target_pool
 
 
-title = 'Bug 104952 - Backup fails with partitions;size() &#37; RecsPerTable error'
+title = 'Bug 49790 - "Next run" field in EM doesn\'t match corresponding field in B&R console if the time offset from UTC isn\'t multiple of hour (e.g. UTC +05:30, UTC +09:30).'
 m = hashlib.md5()
 page = m.hexdigest()
 

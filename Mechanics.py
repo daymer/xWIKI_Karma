@@ -897,6 +897,7 @@ class xWikiClient:
         elif status == 401:
             return "Not authorized"
 
+
 class ExclusionsDict(dict):
     def __setitem__(self, key, value):
         try:
