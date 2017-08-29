@@ -783,16 +783,13 @@ class xWikiClient:
         #print('page (aka title) in submit', page)
 
         path = ['spaces', space, 'pages', page]
-        data = {'content': content}
         if title is not None:
-            data['title'] = title
+            xml_title = title
         else:
-            data['title'] = page
-        if parent:
-            data['parent'] = parent
+            xml_title = page
         xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'\
         '<page xmlns="http://www.xwiki.org">'\
-        '<title>'+ data['title'] +'</title>'\
+        '<title>'+ xml_title +'</title>'\
         '<syntax>'+ syntax +'</syntax>'\
         '<content>'+ content +'</content>'\
         '</page>'
@@ -815,13 +812,6 @@ class xWikiClient:
 
         if parent:
             data['parent'] = parent
-        xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'\
-        '<page xmlns="http://www.xwiki.org">'\
-        '<title>'+  data['title']  +'</title>'\
-        '<syntax>'+ syntax +'</syntax>'\
-        '<content>'+ content +'</content>'\
-        '</page>'
-        headers = {'Content-Type': 'application/xml'}
         status = self._make_put_with_no_header(path, data)
         if status == 201:
             return "Created"
@@ -838,7 +828,6 @@ class xWikiClient:
             xml +=  '<tag name="' + tag + '"></tag>'
         xml += '</tags>'
         headers = {'Content-Type': 'application/xml'}
-        print('add_tag_to_page path:', path)
         status = self._make_put(path, xml, headers)
         if status == 202:
             return "Created"
@@ -983,9 +972,9 @@ class MysqlConnector(object):
         version += 1
         if only_update is not True:
             if parent != space:
-                result = self.xWikiClient_instance.submit_page_as_plane(space=space, page=title, content=content, syntax=syntax, title=title, parent=parent)
+                result = self.xWikiClient_instance.submit_page_as_plane(space=space, page=page, content=content, syntax=syntax, title=title, parent=parent)
             else:
-                result = self.xWikiClient_instance.submit_page_as_plane(space=space, page=title, content=content, syntax=syntax, title=title, parent=None)
+                result = self.xWikiClient_instance.submit_page_as_plane(space=space, page=page, content=content, syntax=syntax, title=title, parent=None)
         print('Page', result)
 
         if version == 1 and result != 'Created':
@@ -1167,10 +1156,12 @@ def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE
     version = 0
     latest_text = None
     last_version = None
+    '''
     title = title.replace('’', '\'')
     title = title.replace('”', '"')
     title = title.replace('“', '"')
     title = title.replace('.', ';')
+    '''
     for idx, author in enumerate(UniqueUsers):
         version += 1
         text = ''
