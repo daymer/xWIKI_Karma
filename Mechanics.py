@@ -1134,7 +1134,7 @@ class Migrator(object):
 def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE, MysqlConnector_INSTANCE, SQLConfig, SQLConnector, ConfluenceConfig, MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList):
     # Initializing agent
     # Starting migration process
-    m = hashlib.md5()
+    m = hashlib.md5(title.encode())
     page_hash = m.hexdigest()
     print('~~~~~~~~~~~~STATE: Starting migration process of', '"' + title + '"', 'from platform', platform, '~~~~~~~~~~~~')
     SQLQuery = SQLConnector.GetDatagramsByPageTitleandPlatform(page_title=title, platform=platform)

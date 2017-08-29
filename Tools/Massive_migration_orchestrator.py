@@ -7,7 +7,7 @@ import Configuration
 from Mechanics import SQLConnector
 import re
 import requests
-
+import sys
 
 target_pool = 'Migrated Bugs'
 parent = 'Migrated Bugs'
@@ -34,15 +34,15 @@ for entry in TaskPages_list:
 counter = 0
 for title, platform in TaskPages.items():
     if bool(re.match('bug', title, re.I)):
-        #try:
+        try:
             result = Mechanics.Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE, MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig, MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList)
             if result[0] is True:
                 counter += 1
                 print(result[1], 'migrated in total:', str(counter) + '/' + Total_pages_to_process)
             else:
                 print(result[1], 'migrated in total:', str(counter) + '/' + Total_pages_to_process)
-        #except requests.exceptions.HTTPError as error:
-        #    print('ERROR: Failed on page:', title, 'from', platform, 'with error:')
-        #    print(error)
+        except:
+            print('ERROR: Failed on page:', title, 'from', platform, 'with error:')
+            print(sys.exc_info()[0])
     else:
         print(title, 'skipped')
