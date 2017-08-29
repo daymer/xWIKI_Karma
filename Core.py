@@ -74,7 +74,7 @@ for space, platform in Task.items():
             else:
                 TaskPages.update({page.name: platform})
                 size += 1
-        #print(size, 'MediaWIKI pages were found in space', space)
+        print(size, 'MediaWIKI pages were found in space', space)
         TotalSize += size
     if platform == 'xWIKI':
         size = 0

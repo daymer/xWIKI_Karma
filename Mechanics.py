@@ -11,6 +11,7 @@ import sys
 import mysql.connector
 import Configuration
 import re
+import hashlib
 sys.setrecursionlimit(10**6)
 
 class PageCreator:
@@ -476,7 +477,7 @@ class SQLConnector:
                 page_SQL_id, user_id, direction)
             self.connection.commit()
             return 'Vote committed'
-    def GetDatagramsByPageTitleandPlatform(self, page_title,platform):
+    def GetDatagramsByPageTitleandPlatform(self, page_title, platform):
         self.cursor.execute(
             "select [id] from [dbo].[KnownPages] where [page_title] like ? and platform = ?", page_title, platform)
         raw = self.cursor.fetchone()
@@ -491,6 +492,26 @@ class SQLConnector:
             datagram = pickle.loads(raw[0])
             contributors_datagram = pickle.loads(raw[1])
             return datagram, contributors_datagram
+    def GetPagesByTitle(self, page_title:str=None, query:str=None):
+        if page_title is None and query is None:
+            return None
+        if page_title is not None and query is not None:
+            return None
+        if query is not None:
+            self.cursor.execute(query)
+            raw = self.cursor.fetchall()
+            if raw:
+                return raw
+            else:
+                return None
+        elif page_title is not None:
+            self.cursor.execute(
+                "SELECT page_title, platform FROM [Karma].[dbo].[KnownPages] where page_title like LOWER('%" + page_title + "%')")
+            raw = self.cursor.fetchall()
+            if raw:
+                return raw
+            else:
+                return None
 
 
 class ContribBuilder:
@@ -641,6 +662,7 @@ class xWikiClient:
             url = url[:-1]
         #print(url)
         return url
+
     def _make_request(self, path, data):
         url = self._build_url(path)
         data['media'] = 'json'
@@ -652,6 +674,7 @@ class xWikiClient:
         response = requests.get(url, params=data, auth=auth)
         response.raise_for_status()
         return response.json()
+
     def _make_put_with_no_header(self, path, data):
         url = self._build_url(path)
         #print(url)
@@ -688,6 +711,7 @@ class xWikiClient:
         response = requests.delete(url, data=data, auth=auth, headers=headers)
         response.raise_for_status()
         return response.status_code
+
     def _make_post(self, path, data, headers):
         url = self._build_url(path)
         #data['media'] = 'json'
@@ -699,28 +723,33 @@ class xWikiClient:
         response = requests.post(url, data=data, auth=auth, headers=headers)
         response.raise_for_status()
         return response.status_code
+
     def spaces(self):
         path = ['spaces']
         data = {}
         content = self._make_request(path, data)
         return content['spaces']
+
     def space_names(self):
         spaces = []
         result = self.spaces()
         for details in result:
             spaces.append(details['name'])
         return spaces
+
     def pages(self, space):
         path = ['spaces', space, 'pages']
         data = {}
         content = self._make_request(path, data)
         return content['pageSummaries']
+
     def page_names(self, space):
         pages = []
         result = self.pages(space)
         for details in result:
             pages.append(details['name'])
         return pages
+
     def page(self, space, page):
         path = ['spaces', space, 'pages', page]
         data = {}
@@ -729,38 +758,41 @@ class xWikiClient:
             return content
         except:
             return None
+
     def tags(self):
         path = ['tags']
         data = {}
         content = self._make_request(path, data)
         return content['tags']
+
     def tag_names(self):
         tags = []
         result = self.tags()
         for details in result:
             tags.append(details['name'])
         return tags
+
     def pages_by_tags(self, tags):
         taglist = ",".join(tags)
         path = ['tags', taglist]
         data = {}
         content = self._make_request(path, data)
         return content['pageSummaries']
+
     def submit_page(self, space, page, content, syntax, title=None, parent=None):
         #print('page (aka title) in submit', page)
 
         path = ['spaces', space, 'pages', page]
         data = {'content': content}
-        if title:
+        if title is not None:
             data['title'] = title
         else:
             data['title'] = page
-
         if parent:
             data['parent'] = parent
         xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'\
         '<page xmlns="http://www.xwiki.org">'\
-        '<title>'+ page  +'</title>'\
+        '<title>'+ data['title'] +'</title>'\
         '<syntax>'+ syntax +'</syntax>'\
         '<content>'+ content +'</content>'\
         '</page>'
@@ -772,6 +804,7 @@ class xWikiClient:
             return "Updated"
         elif status == 304:
             return "Unmodified"
+
     def submit_page_as_plane(self, space, page, content, syntax, title=None, parent=None):
         path = ['spaces', space, 'pages', page]
         data = {'content': content}
@@ -784,7 +817,7 @@ class xWikiClient:
             data['parent'] = parent
         xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'\
         '<page xmlns="http://www.xwiki.org">'\
-        '<title>'+ page  +'</title>'\
+        '<title>'+  data['title']  +'</title>'\
         '<syntax>'+ syntax +'</syntax>'\
         '<content>'+ content +'</content>'\
         '</page>'
@@ -796,6 +829,7 @@ class xWikiClient:
             return "Updated"
         elif status == 304:
             return "Unmodified"
+
     def add_tag_to_page(self, space, page, tags=list, title=None, parent=None):
         path = ['spaces', space, 'pages', page, 'tags']
         xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -804,12 +838,13 @@ class xWikiClient:
             xml +=  '<tag name="' + tag + '"></tag>'
         xml += '</tags>'
         headers = {'Content-Type': 'application/xml'}
-        #print(path)
+        print('add_tag_to_page path:', path)
         status = self._make_put(path, xml, headers)
         if status == 202:
             return "Created"
         elif status == 401:
             return "Failed"
+
     def add_tag_to_page_as_plane(self, space, page, tag, title=None, parent=None):
         path = ['spaces', space, 'pages', page, 'tags']
         data = tag
@@ -818,11 +853,14 @@ class xWikiClient:
             return "Added"
         elif status == 401:
             return "Failed"
+
     def delete_page(self, space, page, title=None, parent=None ):
         path = ['spaces', space, 'pages', page]
+        if title is None:
+            title = page
         xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'\
         '<page xmlns="http://www.xwiki.org">'\
-        '<title>'+ page  +'</title>'\
+        '<title>'+ title +'</title>'\
         '</page>'
         headers = {'Content-Type': 'application/xml'}
         status = self._make_delete(path, xml, headers)
@@ -830,17 +868,20 @@ class xWikiClient:
             return "Successful"
         elif status == 401:
             return "Not authorized"
+
     def get_page_history(self, space, page_name):
         path = ['spaces',space, 'pages', page_name, 'history']
         data = {}
         content = self._make_request(path, data)
         return content
+
     def get_page_version_content_and_author(self, space, page_name, version):
         path = ['spaces',space, 'pages', page_name, 'history', version]
         data = {}
         content = self._make_request(path, data)
         print(content)
         return content['content'], content['author']
+
     def add_new_attach_as_plane(self, space, page, attach_name, path_to_attach):
         # http://lists.xwiki.org/pipermail/users/2010-February/015251.html
         path = ['spaces', space, 'pages', page, 'attachments', attach_name]
@@ -852,20 +893,7 @@ class xWikiClient:
             return "Updated"
         elif status == 401:
             return "Not authorized"
-    def add_new_attach(self, space, page, attach_name, path_to_attach):
-        path = ['spaces', space, 'pages', page, 'attachments', attach_name]
-        xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'\
-        '<attachment xmlns="http://www.xwiki.org">'\
-        '<AttachmentSummary>'+ path_to_attach +'</AttachmentSummary>'\
-        '</attachment>'
-        headers = {'Content-Type': 'application/xml'}
-        status = self._make_put(path, xml, headers)
-        if status == 201:
-            return "Created"
-        elif status == 202:
-            return "Updated"
-        elif status == 401:
-            return "Not authorized"
+
     def add_new_attach_application(self, space, page, attach_name, attach_content):
         path = ['spaces', space, 'pages', page, 'attachments', attach_name]
         xml = attach_content
@@ -911,18 +939,19 @@ class MysqlConnector(object):
             return XWD_ID
         else:
             return None
-    def add_new_tag(self, space, parent, title, tag, test=False):
-        result = self.xWikiClient_instance.add_tag_to_page(space=space, page=title, title=title, parent=parent, tag=tag)
+    def add_new_tag(self, space, parent, title, page, tag, test=False):
+        result = self.xWikiClient_instance.add_tag_to_page(space=space, page=page, title=title, parent=parent, tag=tag)
         if result == 202:
             print('Tag', tag, 'was added')
         else:
             print('Tag', tag, 'wasn\'t added')
 
 
-    def add_new_version(self, space, parent, title, content, author, version, syntax='xwiki/2.1', test=False, only_update=False, last_run=False):
+    def add_new_version(self, space, parent, title, page, content, author, version, syntax='xwiki/2.1', test=False, only_update=False, last_run=False):
         space = space[1]
         author = author[1]
         title = title[1]
+        page = page[1]
         content = content[1]
         parent = parent[1]
         syntax = syntax[1]
@@ -930,38 +959,34 @@ class MysqlConnector(object):
         test = test[1]
         only_update = only_update[1]
         last_run = last_run[1]
-        #print('title came into add_new_version', title)
-        '''
+
         if last_run is True:
-            #print('============================================================Finalizing on', version,
+            print('============================================================Finalizing on', version,
                   'version=============================================================')
         else:
             print('============================================================Sequence', version,
                   'started=============================================================')
-        '''
+
         #print(title)
         #title = title.replace('\\', '&#92;')
         #print('title after replace', title)
         if only_update is not True:
             if version == 1:
                 try:
-                    result = self.xWikiClient_instance.delete_page(space=space, page=title, title=title, parent=parent)
-                    #print('Page deleted with result:', result)
+                    result = self.xWikiClient_instance.delete_page(space=space, page=page, title=title, parent=parent)
+                    print('Page deleted with result:', result)
                 except requests.exceptions.HTTPError:
-                    a = 1
-                    #print('No such page found, deletion isn\'t needed')
+                    print('No such page found, deletion isn\'t needed')
                 #print('title right before submit_page', title)
-                result = self.xWikiClient_instance.submit_page(space=space, page=title, content='', syntax=syntax, title=title, parent=parent)
-                #print('Page created with syntax:', syntax, 'and result:', result)
+                result = self.xWikiClient_instance.submit_page(space=space, page=page, content='', syntax=syntax, title=title, parent=parent)
+                print('Page created with syntax:', syntax, 'and result:', result)
         version += 1
         if only_update is not True:
             if parent != space:
-                #print('title right before submit_page_as_plane', title)
                 result = self.xWikiClient_instance.submit_page_as_plane(space=space, page=title, content=content, syntax=syntax, title=title, parent=parent)
             else:
-                #print('title right before submit_page_as_plane', title)
                 result = self.xWikiClient_instance.submit_page_as_plane(space=space, page=title, content=content, syntax=syntax, title=title, parent=None)
-        #print('Page', result)
+        print('Page', result)
 
         if version == 1 and result != 'Created':
             print('Result != Created while 1st run. Kernel panic!')
@@ -1036,6 +1061,7 @@ class Migrator(object):
         self.current_page_id = None
 
     def get_tags(self, platform: str, id: str=None, test_str: str=None):
+        self.tag_list = []
         if test_str is None and id is None: return False
         if platform == 'Confluence':
             self.current_page_id = id
@@ -1053,6 +1079,7 @@ class Migrator(object):
             return self.tag_list
 
     def get_files(self, platform: str, id: str = None, test_str: str = None):
+        self.file_list = []
         if test_str is None and id is None: return False
         if platform == 'Confluence':
             self.current_page_id = id
@@ -1065,16 +1092,16 @@ class Migrator(object):
             self.file_list = list(set(self.file_list))
             return self.file_list
         elif platform == 'MediaWIKI':
-            regex = r"\[\[File:((\w|\d|-|\.[^\|])*).*"
+            regex = r"\[\[File:((\w|\d|-| |\.[^\|])*).*"
             matches = re.finditer(regex, test_str)
-            #print(test_str)
+            #print('test_str', test_str)
             for matchNum, match in enumerate(matches):
                 matchNum = matchNum + 1
                 match = match.group(1)
                 self.file_list.append(match)
             return self.file_list
 
-    def make_and_attach(self, platform: str, file_name: str, page, space):
+    def make_and_attach(self, platform: str, file_name: str, page: str, space):
         source_url = None
         if platform == 'Confluence':
             if self.current_page_id is None:
@@ -1117,12 +1144,14 @@ class Migrator(object):
 
 def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE, MysqlConnector_INSTANCE, SQLConfig, SQLConnector, ConfluenceConfig, MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList):
     # Initializing agent
-    #print('Initializing agent')
     # Starting migration process
-    print('Starting migration process of', title, 'from platform', platform)
-    SQLQuery = SQLConnector.GetDatagramsByPageTitleandPlatform(title, platform)
+    m = hashlib.md5()
+    page_hash = m.hexdigest()
+    print('~~~~~~~~~~~~STATE: Starting migration process of', '"' + title + '"', 'from platform', platform, '~~~~~~~~~~~~')
+    SQLQuery = SQLConnector.GetDatagramsByPageTitleandPlatform(page_title=title, platform=platform)
     if SQLQuery is None:
-        return 'ERROR: Page', title, 'on platform', platform, 'isn\'t indexed yet'
+        result = 'ERROR: Page', title, 'on platform', platform, 'isn\'t indexed yet'
+        return False, result
     datagram = SQLQuery[0]
     contributors_datagram = SQLQuery[1]
     UniqueUsers = set(contributors_datagram.values())
@@ -1141,6 +1170,7 @@ def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE
     title = title.replace('’', '\'')
     title = title.replace('”', '"')
     title = title.replace('“', '"')
+    title = title.replace('.', ';')
     for idx, author in enumerate(UniqueUsers):
         version += 1
         text = ''
@@ -1174,6 +1204,7 @@ def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE
             ('space', target_pool),
             ('parent', parent),
             ('title', title),
+            ('page', page_hash),
             ('content', text),
             ('author', author),
             ('version', version),
@@ -1182,7 +1213,7 @@ def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE
             ('only_update', False),
             ('last_run', False),
         )
-        # print('title goes to add_new_version ', dict(DataTuple)['title'])
+
         MysqlConnector_INSTANCE.add_new_version(*DataTuple)
         latest_text = text
         last_version = version + 1
@@ -1192,6 +1223,7 @@ def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE
             ('space', target_pool),
             ('parent', parent),
             ('title', title),
+            ('page', page_hash),
             ('content', content),
             ('author', "XWiki.TestTest"),
             ('version', last_version),
@@ -1210,30 +1242,36 @@ def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE
         elif platform == 'MediaWIKI':
             tags = Migrator.get_tags(platform=platform, id=None, test_str=latest_text)
             files = Migrator.get_files(platform=platform, id=None, test_str=latest_text)
-        #if title.startswith('Bug') or title.startswith('bug') or title.startswith('BUG'):
-        #   tags.append('bug')
-        # print(files)
+        if bool(re.match('bug', title, re.I)):
+            match = False
+            for i in set(tags):
+                if bool(re.match('bug', i, re.I)):
+                    match = True
+            if match is False:
+                tags.append('bug')
+        #print('files:', files)
         # Doing tags
         if tags is not False:
-            result = xWikiClient.add_tag_to_page(dict(DataTuple)['space'], dict(DataTuple)['title'], tags, title=None,
-                                                 parent=None)
-            #print(result, len(tags), 'tags:', tags)
+            result = xWikiClient.add_tag_to_page(space=target_pool, page=page_hash, tags=tags, title=title,
+                                                 parent=parent)
+            print(result, len(tags), 'tags:', tags)
         else:
             a = 1
-            #print('No tags were found')
+            print('No tags were found')
         # Doing attachments
         if files is not False and len(files) != 0:
             for file in files:
                 try:
-                    result = Migrator.make_and_attach(platform, file_name=file, page=title,
+                    result = Migrator.make_and_attach(platform, file_name=file, page=page_hash,
                                                       space=target_pool)
-                    #print(result, 'file:', file)
+                    print(result, 'file:', file)
                 except Exception as e:
                     print('Failed on file:', file)
                     print(traceback.format_exc())
                     print('Failed on file:', file)
-            #print('Total proceed:', len(files))
+            print('Total proceed:', len(files))
         else:
             a = 1
-            #print('No files were found')
-        return 'STATUS: Migration of', title, 'finished'
+            print('No files were found')
+        result = 'SUCCESS: Page', '"' + title + '" from platform', platform, 'is migrated'
+        return True, result
