@@ -8,11 +8,19 @@ from Mechanics import SQLConnector
 import re
 import requests
 import sys
+from datetime import datetime
+import codecs
 
-target_pool = 'Migrated Bugs'
-parent = 'Migrated Bugs'
-migrate_statement = None
-title_like = 'bug%'
+target_pool = 'Migration pool'
+parent = 'Migration pool'
+migrate_statement = "SELECT page_title, platform FROM [Karma].[dbo].[KnownPages] where page_title not like LOWER('%bug%') and platform != 'xWiki'"
+title_like = None
+
+
+log_statement = 'Task started, migrate_statement=', str(migrate_statement), 'title_like=', str(title_like)
+with codecs.open("Migration_log.txt", "w", "utf-8") as stream:   # or utf-8
+    stream.write(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S", )) + str(log_statement) + u"\n")
+print(*log_statement, sep=' ')
 
 MySQLconfig_INSTANCE = MySQLConfig()
 MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
@@ -28,21 +36,35 @@ SQLConnector_instance = Mechanics.SQLConnector(SQLConfig)
 TaskPages_list = SQLConnector_instance.GetPagesByTitle(page_title=title_like, query=migrate_statement)
 Total_pages_to_process = str(len(TaskPages_list))
 TaskPages = {}
-print('Found pages:', Total_pages_to_process)
+
+log_statement = 'Found pages:', Total_pages_to_process
+print(*log_statement, sep=' ')
+print(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S",))+ str(log_statement))
 for entry in TaskPages_list:
     TaskPages.update({entry[0]: entry[1]})
 counter = 0
 for title, platform in TaskPages.items():
-    if bool(re.match('bug', title, re.I)):
+        if title == 'Veeam BandR releases':
+            continue
         try:
             result = Mechanics.Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE, MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig, MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList)
             if result[0] is True:
                 counter += 1
-                print(result[1], 'migrated in total:', str(counter) + '/' + Total_pages_to_process)
+                log_statement = result[1], 'migrated in total:', str(counter) + '/' + Total_pages_to_process
+                print(*log_statement, sep=' ')
+                with codecs.open("Migration_log.txt", "a", "utf-8") as stream:  # or utf-8
+                    stream.write(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S", )) + str(log_statement) + u"\n")
             else:
-                print(result[1], 'migrated in total:', str(counter) + '/' + Total_pages_to_process)
+                log_statement = result[1], 'migrated in total:', str(counter) + '/' + Total_pages_to_process
+                print(*log_statement, sep=' ')
+                with codecs.open("Migration_log.txt", "a", "utf-8") as stream:  # or utf-8
+                    stream.write(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S", )) + str(log_statement) + u"\n")
         except:
-            print('ERROR: Failed on page:', title, 'from', platform, 'with error:')
-            print(sys.exc_info()[0])
-    else:
-        print(title, 'skipped')
+            log_statement = 'ERROR: Failed on page:', title, 'from', platform, 'with error:'
+            print(*log_statement, sep=' ')
+            with codecs.open("Migration_log.txt", "a", "utf-8") as stream:  # or utf-8
+                stream.write(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S", )) + str(log_statement) + u"\n")
+            log_statement = sys.exc_info()[0]
+            print(log_statement)
+            with codecs.open("Migration_log.txt", "a", "utf-8") as stream:  # or utf-8
+                stream.write(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S", )) + str(log_statement) + u"\n")

@@ -10,13 +10,14 @@ PAGE_CREATOR = PageCreator(ConfluenceConfig, MediaWIKIConfig, xWikiConfig)
 SQLConnector = SQLConnector(SQLConfig)
 CustomLogging = CustomLogging('NotSilent')
 
-CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform('VixDiskLibSample', 'xWIKI')
+CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform('4 . Backup copying process', 'xWIKI')
+print(CurrentPage)
+exit()
 if CurrentPage is None:
     print('Page wasn\'t found in provided spaces. Try to search in [\'Blog\', \'Main\', \'Sandbox\', \'XWiki\']')
     exit()
 CustomLogging.page_analysis_started(CurrentPage.page_title)
 CurrentPage.page_id = PAGE_CREATOR.collect_page_id(CurrentPage)
-print(CurrentPage.page_id)
 # incremental or full mode
 CurrentPage.dbVersion = SQLConnector.CheckExistencebyID(CurrentPage)
 CurrentPage.page_author = PAGE_CREATOR.collect_page_author(CurrentPage)

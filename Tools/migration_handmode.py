@@ -9,8 +9,8 @@ import re
 import requests
 
 
-target_pool = 'Migrated Bugs'
-parent = 'Migrated Bugs'
+target_pool = 'Migration pool'
+parent = 'Migration pool'
 
 
 MySQLconfig_INSTANCE = MySQLConfig()
@@ -25,7 +25,7 @@ Migrator = Migrator(ConfluenceConfig=ConfluenceConfig_instance, MediaWIKIConfig=
 UserList = Users()
 SQLConnector_instance = Mechanics.SQLConnector(SQLConfig)
 
-title = 'Bug 49790 - "Next run" field in EM doesn\'t match corresponding field in B&R console if the time offset from UTC isn\'t multiple of hour (e.g. UTC +05:30, UTC +09:30).'
+title = 'New severity 1 created via CP'
 platform = 'MediaWIKI'
 result = Mechanics.Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE,
                                      MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig_instance,
