@@ -1375,7 +1375,7 @@ def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE
             ('title', title),
             ('page', page_hash),
             ('content', content),
-            ('author', "XWiki.TestTest"),
+            ('author', "XWiki.bot"),
             ('version', last_version),
             ('syntax', syntax),  # 'confluence/1.0' 'xwiki/2.1' 'MediaWiki/1.6'
             ('test', False),

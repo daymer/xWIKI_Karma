@@ -10,16 +10,18 @@ import requests
 import sys
 from datetime import datetime
 import codecs
+log_name = "Migration_log_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S", )) + '.txt'
 
-target_pool = 'Migrated bugs'
-parent = 'Migrated bugs'
-migrate_statement = None
-#migrate_statement = "SELECT page_title, platform FROM [Karma].[dbo].[KnownPages] where page_title not like LOWER('%bug%') and platform != 'xWiki'"
-title_like = 'bug%'
+target_pool = 'Migration pool'
+parent = 'Migration pool'
+#migrate_statement = None
+migrate_statement = "SELECT page_title, platform FROM [Karma].[dbo].[KnownPages] where page_title not like LOWER('%bug%') and platform != 'xWiki'"
+title_like = None
+#title_like = 'bug%'
 
 
 log_statement = 'Task started, migrate_statement=', str(migrate_statement), 'title_like=', str(title_like)
-with codecs.open("Migration_log.txt", "w", "utf-8") as stream:   # or utf-8
+with codecs.open(log_name, "w", "utf-8") as stream:   # or utf-8
     stream.write(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S", )) + str(log_statement) + u"\n")
 print(*log_statement, sep=' ')
 
@@ -53,19 +55,19 @@ for title, platform in TaskPages.items():
                 counter += 1
                 log_statement = result[1], 'migrated in total:', str(counter) + '/' + Total_pages_to_process
                 print(*log_statement, sep=' ')
-                with codecs.open("Migration_log.txt", "a", "utf-8") as stream:  # or utf-8
+                with codecs.open(log_name, "a", "utf-8") as stream:  # or utf-8
                     stream.write(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S", )) + str(log_statement) + u"\n")
             else:
                 log_statement = result[1], 'migrated in total:', str(counter) + '/' + Total_pages_to_process
                 print(*log_statement, sep=' ')
-                with codecs.open("Migration_log.txt", "a", "utf-8") as stream:  # or utf-8
+                with codecs.open(log_name, "a", "utf-8") as stream:  # or utf-8
                     stream.write(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S", )) + str(log_statement) + u"\n")
         except:
             log_statement = 'ERROR: Failed on page:', title, 'from', platform, 'with error:'
             print(*log_statement, sep=' ')
-            with codecs.open("Migration_log.txt", "a", "utf-8") as stream:  # or utf-8
+            with codecs.open(log_name, "a", "utf-8") as stream:  # or utf-8
                 stream.write(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S", )) + str(log_statement) + u"\n")
             log_statement = sys.exc_info()[0]
             print(log_statement)
-            with codecs.open("Migration_log.txt", "a", "utf-8") as stream:  # or utf-8
+            with codecs.open(log_name, "a", "utf-8") as stream:  # or utf-8
                 stream.write(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S", )) + str(log_statement) + u"\n")

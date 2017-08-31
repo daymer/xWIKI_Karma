@@ -7,6 +7,12 @@ from Mechanics import Page, SQLConnector, CustomLogging
 import json
 import pickle
 import operator
+import ctypes
+
+is_admin = ctypes.windll.shell32.IsUserAnAdmin()
+if is_admin != 1:
+    print('You\'r no admin here!')
+    exit()
 
 monkey.patch_all()  # makes many blocking calls asynchronous
 SQLConfig = Configuration.SQLConfig()

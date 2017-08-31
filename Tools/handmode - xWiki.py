@@ -10,9 +10,9 @@ PAGE_CREATOR = PageCreator(ConfluenceConfig, MediaWIKIConfig, xWikiConfig)
 SQLConnector = SQLConnector(SQLConfig)
 CustomLogging = CustomLogging('NotSilent')
 
-CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform('4 . Backup copying process', 'xWIKI')
-print(CurrentPage)
-exit()
+title = '.NET Error: Mixed mode assembly is built against version \'v2.0.50727\' of the runtime and cannot be loaded in the 4.0 runtime without additional configuration information'
+title = 'Migration pool.4343edbab705f181c0ec7c2462087a96'
+CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform(title, 'xWIKI')
 if CurrentPage is None:
     print('Page wasn\'t found in provided spaces. Try to search in [\'Blog\', \'Main\', \'Sandbox\', \'XWiki\']')
     exit()
