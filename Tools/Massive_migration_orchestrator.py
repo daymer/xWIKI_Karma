@@ -11,10 +11,11 @@ import sys
 from datetime import datetime
 import codecs
 
-target_pool = 'Migration pool'
-parent = 'Migration pool'
-migrate_statement = "SELECT page_title, platform FROM [Karma].[dbo].[KnownPages] where page_title not like LOWER('%bug%') and platform != 'xWiki'"
-title_like = None
+target_pool = 'Migrated bugs'
+parent = 'Migrated bugs'
+migrate_statement = None
+#migrate_statement = "SELECT page_title, platform FROM [Karma].[dbo].[KnownPages] where page_title not like LOWER('%bug%') and platform != 'xWiki'"
+title_like = 'bug%'
 
 
 log_statement = 'Task started, migrate_statement=', str(migrate_statement), 'title_like=', str(title_like)

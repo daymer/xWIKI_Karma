@@ -9,8 +9,8 @@ import re
 import requests
 
 
-target_pool = 'Migration pool'
-parent = 'Migration pool'
+target_pool = 'Migrated bugs'
+parent = 'Migrated bugs'
 
 
 MySQLconfig_INSTANCE = MySQLConfig()
@@ -25,7 +25,7 @@ Migrator = Migrator(ConfluenceConfig=ConfluenceConfig_instance, MediaWIKIConfig=
 UserList = Users()
 SQLConnector_instance = Mechanics.SQLConnector(SQLConfig)
 
-title = 'New severity 1 created via CP'
+title = 'Bug 43180 - If there are more then 4 networks configured for virtual lab, SureBackup job will fail'
 platform = 'MediaWIKI'
 result = Mechanics.Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE,
                                      MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig_instance,

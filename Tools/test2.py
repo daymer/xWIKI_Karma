@@ -16,7 +16,7 @@ page = 'TESTPAGE'
 title = 'TESTPAGE'
 
 
-exit()
-result = xWikiClient_instance.get_pages_by_space(space=space)
+
+result = xWikiClient_instance.get_page(space=space)
 print(result)
 

@@ -49,19 +49,13 @@ class PageCreator:
                     return new_created_page
         elif platform == 'xWIKI':
             self.current_xWiki_page = None
-            #Sandbox.TESTPAGE.123.WebHome
-            '''
-            regex = r"(.[^\.]*)\."
-            matches = re.search(regex, title)
-            space = matches.group(1)
-            '''
             line_array = list(title)
             space = None
             nested_space = None
             page = None
             space_idx = None
             nested_space_idx = None
-            idx = 'thanks pep8'
+            space_idx = 'thanks pep8'
             if title.endswith('.WebHome'):
                 for idx, character in enumerate(line_array):
                     # print(idx, character)
@@ -79,26 +73,31 @@ class PageCreator:
                             if page is None:
                                 page = title[nested_space_idx + 1:idx]
             else:
+                #print('!=title.endswith(\'.WebHome\')')
                 for idx, character in enumerate(line_array):
                     # print(idx, character)
                     if character == '.':
+                        #print('1st char found')
                         if line_array[idx - 1] != '\\':
                             space = title[:idx]
                             space_idx = idx
                         elif line_array[idx - 1] != '\\' and space is not None:
+                            #print('2nd char found')
                             nested_space = title[space_idx + 1:idx]
                             page = title[idx:]
                 if page is None:
-                    page = title[idx+1:]
-            print('space', space, 'page', page, 'nested_space', nested_space)
+                    #print('page is still NONE')
+                    page = title[space_idx+1:]
+            #print('space', space, 'page', page, 'nested_space', nested_space)
             current_page = self.xWikiAPI.page(space=space, page=page, nested_space=nested_space)
             #print('current_page is', current_page)
             if current_page is not None:
                 self.current_xWiki_page = current_page
+                title = self.current_xWiki_page['title']
                 if not self.current_xWiki_page['content']:
                     print('no content was found')
                     return None
-                current_page = Page(title, platform)
+                current_page = Page(title, platform, page_xWIKI_nested_space=nested_space, page_xWIKI_page=page, page_xWIKI_space=space)
                 return current_page
             elif current_page is None:
                 return None
@@ -209,11 +208,12 @@ class PageCreator:
 
 
 class Page:
-    def __init__(self, page_title, current_platform):
-        if current_platform == 'xWiki':
-            self.page_title = page_title # TODO: need to get truly page title
-            self.page_xWIKI_page = page_title
-            self.page_xWIKI_nested_space = None
+    def __init__(self, page_title, current_platform, page_xWIKI_nested_space=None,page_xWIKI_page=None, page_xWIKI_space=None ):
+        if current_platform == 'xWIKI':
+            self.page_title = page_title
+            self.page_xWIKI_page = page_xWIKI_page
+            self.page_xWIKI_nested_space = page_xWIKI_nested_space
+            self.page_xWIKI_space = page_xWIKI_space
         else:
             self.page_title = page_title
         self.page_id = ''
@@ -495,6 +495,9 @@ class SQLConnector:
             "select [version] from [dbo].[KnownPages] where [page_id] = '" + str(CurrentPage.page_id) + "'")
         row = self.cursor.fetchone()
         if row:
+            self.cursor.execute(
+                "update [dbo].[KnownPages] set page_title = ? where [page_id] = '" + str(CurrentPage.page_id) + "'", CurrentPage.page_title)
+            self.connection.commit()
             return int(row[0])
         else:
             return None
@@ -1079,7 +1082,8 @@ class xWikiClient:
         elif status == 304:
             return "Unmodified"
 
-    def submit_page_as_plane(self, space, page, content, syntax, title=None, parent=None):
+    def submit_page_as_plane(self, space, page, content, syntax, title=None, parent=None, nested_spacet=None):
+
         path = ['spaces', space, 'pages', page]
         data = {'content': content}
         if title:
@@ -1336,7 +1340,7 @@ def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE
         except KeyError:
             author = None
         if author is None:
-            author = "XWiki.root"
+            author = "XWiki.bot"
         if platform == 'Confluence':
             syntax = 'confluence+xhtml/1.0'
         elif platform == 'MediaWIKI':

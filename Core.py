@@ -98,7 +98,6 @@ CustomLogging.log_task_start(TotalSize, PAGE_CREATOR.TotalExcluded)
 for title, platform in TaskPages.items():
     CustomLogging.page_analysis_started(title)
     CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform(title, platform)
-    print(CurrentPage)
     if CurrentPage is None:
         CustomLogging.skip_some_page(title)
         continue
@@ -106,7 +105,6 @@ for title, platform in TaskPages.items():
     if CurrentPage.page_id is None:
         CustomLogging.skip_some_page(title)
         continue
-    # TODO: add page rename into DB
     # incremental or full mode
     CurrentPage.dbVersion = SQLConnector.CheckExistencebyID(CurrentPage)
     CurrentPage.page_versions = PAGE_CREATOR.collect_page_history(CurrentPage)
