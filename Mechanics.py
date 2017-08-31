@@ -1315,12 +1315,7 @@ def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE
     version = 0
     latest_text = None
     last_version = None
-    '''
-    title = title.replace('’', '\'')
-    title = title.replace('”', '"')
-    title = title.replace('“', '"')
-    title = title.replace('.', ';')
-    '''
+    #title = title.replace('&', '%26') #dosn't work :(
     for idx, author in enumerate(UniqueUsers):
         version += 1
         text = ''

@@ -15,7 +15,7 @@ log_name = "Migration_log_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S", )
 target_pool = 'Migration pool'
 parent = 'Migration pool'
 #migrate_statement = None
-migrate_statement = "SELECT page_title, platform FROM [Karma].[dbo].[KnownPages] where page_title not like LOWER('%bug%') and platform != 'xWiki'"
+migrate_statement = "SELECT page_title, platform FROM [Karma].[dbo].[KnownPages] where page_title like ('%&%') and platform != 'xWiki'"
 title_like = None
 #title_like = 'bug%'
 

@@ -25,7 +25,7 @@ Migrator = Migrator(ConfluenceConfig=ConfluenceConfig_instance, MediaWIKIConfig=
 UserList = Users()
 SQLConnector_instance = Mechanics.SQLConnector(SQLConfig)
 
-title = 'Bug 43180 - If there are more then 4 networks configured for virtual lab, SureBackup job will fail'
+title = 'Patch 1 cannot be installed with "This Veeam Backup & Replication installation cannot be updated automatically"'
 platform = 'MediaWIKI'
 result = Mechanics.Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE,
                                      MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig_instance,

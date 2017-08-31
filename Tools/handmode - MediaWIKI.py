@@ -10,7 +10,7 @@ PAGE_CREATOR = PageCreator(ConfluenceConfig, MediaWIKIConfig, xWikiConfig)
 SQLConnector = SQLConnector(SQLConfig)
 CustomLogging = CustomLogging('NotSilent')
 
-CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform('Bug 101406 - New media set is not created if there is an open one, which is currently locked for writing by other job', 'MediaWIKI')
+CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform('Patch 1 cannot be installed with "This Veeam Backup & Replication installation cannot be updated automatically"', 'MediaWIKI')
 if CurrentPage is None:
     print('Page not found')
     exit()
