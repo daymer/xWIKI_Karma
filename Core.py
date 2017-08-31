@@ -2,13 +2,15 @@ from PythonConfluenceAPI import ConfluenceAPI
 from mwclient import Site
 import Configuration
 import pickle
-from Mechanics import PageCreator, SQLConnector, ContribBuilder, CustomLogging, ExclusionsDict
+from Mechanics import PageCreator, SQLConnector, ContribBuilder, CustomLogging, ExclusionsDict, MysqlConnector
 
 ContribBuilder = ContribBuilder()
 SQLConfig = Configuration.SQLConfig()
 ConfluenceConfig = Configuration.ConfluenceConfig()
 MediaWIKIConfig = Configuration.MediaWIKIConfig()
 xWikiConfig = Configuration.xWikiConfig(['Migration pool', 'Sandbox', 'Main'])
+MySQLconfig_INSTANCE = Configuration.MySQLConfig()
+MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
 PAGE_CREATOR = PageCreator(ConfluenceConfig, MediaWIKIConfig, xWikiConfig)
 SQLConnector = SQLConnector(SQLConfig)
 CustomLogging = CustomLogging('no-silent')
@@ -62,7 +64,7 @@ for space, platform in Task.items():
                 size += 1
     if platform == 'MediaWIKI':
         size = 0
-        for page in PAGE_CREATOR.MediaWikiAPI.allpages():
+        for page in PAGE_CREATOR.MediaWikiAPI_instance.allpages():
             if TaskExclusions[platform] is not None:
                 if not PAGE_CREATOR.check_exclusions(page.name, platform, TaskExclusions):
                     # print(page.name, 'was excluded, total excluded:', PAGE_CREATOR.TotalExcluded)
@@ -78,7 +80,7 @@ for space, platform in Task.items():
     if platform == 'xWIKI':
         size = 0
         print('Looking for pages in the following xWIKI space:', space)
-        for page in PAGE_CREATOR.xWikiAPI.page_names(space):
+        for page in MysqlConnector_INSTANCE.get_XWD_FULLNAMEs(space):
             if TaskExclusions[platform] is not None:
                 if not PAGE_CREATOR.check_exclusions(page, platform, TaskExclusions):
                     continue
@@ -96,6 +98,7 @@ CustomLogging.log_task_start(TotalSize, PAGE_CREATOR.TotalExcluded)
 for title, platform in TaskPages.items():
     CustomLogging.page_analysis_started(title)
     CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform(title, platform)
+    print(CurrentPage)
     if CurrentPage is None:
         CustomLogging.skip_some_page(title)
         continue

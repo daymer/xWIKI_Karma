@@ -20,8 +20,8 @@ sys.setrecursionlimit(10 ** 6)
 class PageCreator:
     def __init__(self, ConfluenceConfig, MediaWIKIConfig, xWikiConfig):
         self.confluenceAPI = ConfluenceAPI(ConfluenceConfig.USER, ConfluenceConfig.PASS, ConfluenceConfig.ULR)
-        self.MediaWikiAPI = Site((MediaWIKIConfig.Protocol, MediaWIKIConfig.URL), path=MediaWIKIConfig.APIPath,
-                                 clients_useragent=MediaWIKIConfig.UserAgent)
+        self.MediaWikiAPI_instance = Site((MediaWIKIConfig.Protocol, MediaWIKIConfig.URL), path=MediaWIKIConfig.APIPath,
+                                          clients_useragent=MediaWIKIConfig.UserAgent)
         self.xWikiSpaces = xWikiConfig.spaces
         self.xWikiAPI = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
         self.current_mediaWiki_page = None
@@ -35,7 +35,7 @@ class PageCreator:
             new_created_page = Page(title, platform)
             return new_created_page
         elif platform == 'MediaWIKI':
-            current_page = self.MediaWikiAPI.Pages[title]
+            current_page = self.MediaWikiAPI_instance.Pages[title]
             if current_page.redirect:
                 # print('redirect, skipping...')
                 return None
@@ -49,34 +49,58 @@ class PageCreator:
                     return new_created_page
         elif platform == 'xWIKI':
             self.current_xWiki_page = None
-            #print('Entering page_search')
-            for space in self.xWikiSpaces:
-                #print('testing space', space, 'by', title)
-                current_page = self.xWikiAPI.page(space, title)
-                #print('current_page is', current_page)
-                if current_page is not None:
-                    self.current_xWiki_page = current_page
-                    if not self.current_xWiki_page['content']:
-                        print('no content was found')
-                        return None
-                    current_page = Page(title, platform)
-                    return current_page
-                if current_page is None:  # re-check if it's a migrated page
-                    # print('current_xWiki_page is None')
-                    my_str_as_bytes = str.encode(title)
-                    m = hashlib.md5(my_str_as_bytes)
-                    page_hash = m.hexdigest()
-                    current_page = self.xWikiAPI.page(space, page_hash)
-                    if current_page is not None:
-                        self.current_xWiki_page = current_page
-                        if not self.current_xWiki_page['content']:
-                            print('no content was found')
-                            return None
-                        current_page = Page(title, platform)
-                        return current_page
-                    elif current_page is None:
-                        continue
-            if current_page is None:
+            #Sandbox.TESTPAGE.123.WebHome
+            '''
+            regex = r"(.[^\.]*)\."
+            matches = re.search(regex, title)
+            space = matches.group(1)
+            '''
+            line_array = list(title)
+            space = None
+            nested_space = None
+            page = None
+            space_idx = None
+            nested_space_idx = None
+            idx = 'thanks pep8'
+            if title.endswith('.WebHome'):
+                for idx, character in enumerate(line_array):
+                    # print(idx, character)
+                    if character == '.':
+                        # test -1 char
+                        if line_array[idx - 1] != '\\':
+                            if space is None:
+                                space = title[:idx]
+                                space_idx = idx
+                                continue
+                            if space is not None and nested_space is None:
+                                nested_space = title[space_idx + 1:idx]
+                                nested_space_idx = idx
+                                continue
+                            if page is None:
+                                page = title[nested_space_idx + 1:idx]
+            else:
+                for idx, character in enumerate(line_array):
+                    # print(idx, character)
+                    if character == '.':
+                        if line_array[idx - 1] != '\\':
+                            space = title[:idx]
+                            space_idx = idx
+                        elif line_array[idx - 1] != '\\' and space is not None:
+                            nested_space = title[space_idx + 1:idx]
+                            page = title[idx:]
+                if page is None:
+                    page = title[idx+1:]
+            print('space', space, 'page', page, 'nested_space', nested_space)
+            current_page = self.xWikiAPI.page(space=space, page=page, nested_space=nested_space)
+            #print('current_page is', current_page)
+            if current_page is not None:
+                self.current_xWiki_page = current_page
+                if not self.current_xWiki_page['content']:
+                    print('no content was found')
+                    return None
+                current_page = Page(title, platform)
+                return current_page
+            elif current_page is None:
                 return None
 
     def collect_page_id(self, page):
@@ -89,7 +113,7 @@ class PageCreator:
                 print('404 - page with such name wasn\'t found')
                 return None
         elif page.page_platform == 'MediaWIKI':
-            self.current_mediaWiki_page = self.MediaWikiAPI.Pages[page.page_title]
+            self.current_mediaWiki_page = self.MediaWikiAPI_instance.Pages[page.page_title]
             return self.current_mediaWiki_page.pageid
         elif page.page_platform == 'xWIKI':
             return self.current_xWiki_page['id']
@@ -186,7 +210,12 @@ class PageCreator:
 
 class Page:
     def __init__(self, page_title, current_platform):
-        self.page_title = page_title
+        if current_platform == 'xWiki':
+            self.page_title = page_title # TODO: need to get truly page title
+            self.page_xWIKI_page = page_title
+            self.page_xWIKI_nested_space = None
+        else:
+            self.page_title = page_title
         self.page_id = ''
         self.page_versions = ''
         self.page_author = ''
@@ -733,6 +762,157 @@ class CustomLogging:
         print(datetime.now(), title, 'is redirect or unable to find ID, skipping')
 
 
+class MysqlConnector(object):
+    def __init__(self, config: Configuration.MySQLConfig):
+        self.cnx = mysql.connector.connect(user=config.user, password=config.password,
+                                           host=config.host,
+                                           port=config.port,
+                                           database=config.database)
+        self.cursor = self.cnx.cursor(buffered=True)
+        self.xWikiConfig_instance = Configuration.xWikiConfig('Sandbox')
+        self.xWikiClient_instance = xWikiClient(self.xWikiConfig_instance.api_root, self.xWikiConfig_instance.auth_user,
+                                                self.xWikiConfig_instance.auth_pass)
+
+    def get_XWD_ID(self, XWD_WEB):
+        query = ("select XWD_ID from xwikidoc where XWD_FULLNAME= %(XWD_FULLNAME)s")
+        data = {
+            'XWD_FULLNAME': XWD_WEB
+        }
+        self.cursor.execute(query, data)
+        if self.cursor.rowcount != 0:
+            for row in self.cursor:
+                XWD_ID = str(row[0])
+            return XWD_ID
+        else:
+            return None
+
+    def add_new_tag(self, space, parent, title, page, tag, test=False):
+        result = self.xWikiClient_instance.add_tag_to_page(space=space, page=page, title=title, parent=parent, tag=tag)
+        if result == 202:
+            print('Tag', tag, 'was added')
+        else:
+            print('Tag', tag, 'wasn\'t added')
+
+    def add_new_version(self, space, parent, title, page, content, author, version, syntax='xwiki/2.1', test=False,
+                        only_update=False, last_run=False):
+        space = space[1]
+        author = author[1]
+        title = title[1]
+        page = page[1]
+        content = content[1]
+        parent = parent[1]
+        syntax = syntax[1]
+        version = version[1]
+        test = test[1]
+        only_update = only_update[1]
+        last_run = last_run[1]
+
+        if last_run is True:
+            print('============================================================Finalizing on', version,
+                  'version=============================================================')
+        else:
+            print('============================================================Sequence', version,
+                  'started=============================================================')
+
+        # print(title)
+        # title = title.replace('\\', '&#92;')
+        # print('title after replace', title)
+        if only_update is not True:
+            if version == 1:
+                try:
+                    result = self.xWikiClient_instance.delete_page(space=space, page=page, title=title, parent=parent)
+                    print('Page deleted with result:', result)
+                except requests.exceptions.HTTPError:
+                    print('No such page found, deletion isn\'t needed')
+                result = self.xWikiClient_instance.submit_page(space=space, page=page, content='', syntax=syntax,
+                                                               title=title, parent=parent)
+                print('Page created with syntax:', syntax, 'and result:', result)
+        version += 1
+        if only_update is not True:
+            if parent != space:
+                result = self.xWikiClient_instance.submit_page_as_plane(space=space, page=page, content=content,
+                                                                        syntax=syntax, title=title, parent=parent)
+            else:
+                result = self.xWikiClient_instance.submit_page_as_plane(space=space, page=page, content=content,
+                                                                        syntax=syntax, title=title, parent=None)
+        print('Page', result)
+
+        if version == 1 and result != 'Created':
+            print('Result != Created while 1st run. Kernel panic!')
+            exit()
+        elif result == 'Unmodified':
+            print('Result: Unmodified. Kernel panic!')
+            exit()
+        if content == '':
+            print('Content length == ''. Kernel panic!')
+            exit()
+        if parent == space:
+            XWD_WEB = space + '.' + page
+        else:
+            XWD_WEB = space + '.' + parent + '.' + page
+        XWD_ID = self.get_XWD_ID(XWD_WEB)
+        query = (
+        "update xwikircs set XWR_AUTHOR = %(XWR_AUTHOR)s where XWR_DOCID = %(XWR_DOCID)s and XWR_VERSION1 = %(XWR_VERSION1)s")
+        data = {
+            'XWR_VERSION1': version,
+            'XWR_AUTHOR': author,
+            'XWR_DOCID': XWD_ID
+        }
+        self.cursor.execute(query, data)
+        print('update xwikircs done, affected rows = {}'.format(self.cursor.rowcount))
+        if test is True:
+            self.cnx.rollback()
+            print(query, data)
+        else:
+            self.cnx.commit()
+        if syntax != 'xwiki/2.1':
+            query = (
+            'update xwikidoc set XWD_SYNTAX_ID = %(XWD_SYNTAX_ID)s, XWD_AUTHOR = %(XWD_AUTHOR)s, XWD_CONTENT_AUTHOR = %(XWD_CONTENT_AUTHOR)s where XWD_FULLNAME = %(XWD_NAME)s')
+            data = {
+                'XWD_NAME': XWD_WEB,
+                'XWD_SYNTAX_ID': syntax,
+                'XWD_AUTHOR': author,
+                'XWD_CONTENT_AUTHOR': author,
+            }
+            self.cursor.execute(query, data)
+            print('update XWD_SYNTAX_ID in xwikidoc done, affected rows = {}'.format(self.cursor.rowcount))
+            if test is True:
+                self.cnx.rollback()
+                print(query, data)
+            else:
+                self.cnx.commit()
+            query = (
+            'UPDATE xwikircs SET XWR_Patch = UpdateXML(XWR_Patch,"xwikidoc/syntaxId", "<syntaxId>' + syntax + '</syntaxId>"),'
+                                                                                                              'XWR_Patch = UpdateXML(XWR_Patch,"xwikidoc/contentAuthor", "<contentAuthor>' + author + '</contentAuthor>"),'
+                                                                                                                                                                                                      'XWR_Patch = UpdateXML(XWR_Patch,"xwikidoc/author", "<author>' + author + '</author>") '
+                                                                                                                                                                                                                                                                                'WHERE XWR_DOCID=%(XWR_DOCID)s and XWR_ISDIFF = 0')
+            data = {
+                'XWR_DOCID': XWD_ID,
+                'XWD_SYNTAX_ID': syntax
+            }
+            self.cursor.execute(query, data)
+            print('update XWD_SYNTAX_ID in xwikircs done, affected rows = {}'.format(self.cursor.rowcount))
+            if test is True:
+                self.cnx.rollback()
+                print(query, data)
+            else:
+                self.cnx.commit()
+        return True
+
+    def get_XWD_FULLNAMEs(self, space:str):
+        query = ("select XWD_FULLNAME from xwikidoc where XWD_FULLNAME like %(poolname)s and XWD_CREATOR != 'XWiki.root' and XWD_HIDDEN != 1")
+        data = {
+            'poolname': space+'%'
+        }
+        self.cursor.execute(query, data)
+        if self.cursor.rowcount != 0:
+            space_subtitles_XWD_FULLNAMEs = []
+            for row in self.cursor:
+                space_subtitles_XWD_FULLNAMEs.append(row[0].decode("utf-8"))
+            return space_subtitles_XWD_FULLNAMEs
+        else:
+            return None
+
 class xWikiClient:
     def __init__(self, api_root, auth_user=None, auth_pass=None):
         self.api_root = api_root
@@ -834,15 +1014,27 @@ class xWikiClient:
             pages.append(details['title'])
         return pages
 
-    def page(self, space, page):
+    def page(self, space, page, nested_space=None):
         # TODO: what to do with same titled pages? how to get page in this case?
-        path = ['spaces', space, 'pages', page]
+        if nested_space is None:
+            path = ['spaces', space, 'pages', page]
+        else: # http://xwiki.support2.veeam.local/rest/wikis/xwiki/spaces/Sandbox/spaces/TESTPAGE/spaces/123/pages
+            path = ['spaces', space, 'spaces', nested_space,'spaces', page, 'pages']
         data = {}
         try:
             content = self._make_request(path, data)
             return content
         except:
             return None
+    def get_pages_by_space(self, space):
+        MySQLconfig_INSTANCE = Configuration.MySQLConfig()
+        little_mysql_client = MysqlConnector(MySQLconfig_INSTANCE)
+        result = little_mysql_client.get_XWD_FULLNAME(space)
+        if result != None:
+            return result
+        else:
+            return None
+
 
     def tags(self):
         path = ['tags']
@@ -990,144 +1182,6 @@ class ExclusionsDict(dict):
         except KeyError:
             super(ExclusionsDict, self).__setitem__(key, [])
         self[key].append(value)
-
-
-class MysqlConnector(object):
-    def __init__(self, config: Configuration.MySQLConfig):
-        self.cnx = mysql.connector.connect(user=config.user, password=config.password,
-                                           host=config.host,
-                                           port=config.port,
-                                           database=config.database)
-        self.cursor = self.cnx.cursor(buffered=True)
-        self.xWikiConfig_instance = Configuration.xWikiConfig('Sandbox')
-        self.xWikiClient_instance = xWikiClient(self.xWikiConfig_instance.api_root, self.xWikiConfig_instance.auth_user,
-                                                self.xWikiConfig_instance.auth_pass)
-
-    def get_XWD_ID(self, XWD_WEB):
-        query = ("select XWD_ID from xwikidoc where XWD_FULLNAME= %(XWD_FULLNAME)s")
-        data = {
-            'XWD_FULLNAME': XWD_WEB
-        }
-        self.cursor.execute(query, data)
-        if self.cursor.rowcount != 0:
-            for row in self.cursor:
-                XWD_ID = str(row[0])
-            return XWD_ID
-        else:
-            return None
-
-    def add_new_tag(self, space, parent, title, page, tag, test=False):
-        result = self.xWikiClient_instance.add_tag_to_page(space=space, page=page, title=title, parent=parent, tag=tag)
-        if result == 202:
-            print('Tag', tag, 'was added')
-        else:
-            print('Tag', tag, 'wasn\'t added')
-
-    def add_new_version(self, space, parent, title, page, content, author, version, syntax='xwiki/2.1', test=False,
-                        only_update=False, last_run=False):
-        space = space[1]
-        author = author[1]
-        title = title[1]
-        page = page[1]
-        content = content[1]
-        parent = parent[1]
-        syntax = syntax[1]
-        version = version[1]
-        test = test[1]
-        only_update = only_update[1]
-        last_run = last_run[1]
-
-        if last_run is True:
-            print('============================================================Finalizing on', version,
-                  'version=============================================================')
-        else:
-            print('============================================================Sequence', version,
-                  'started=============================================================')
-
-        # print(title)
-        # title = title.replace('\\', '&#92;')
-        # print('title after replace', title)
-        if only_update is not True:
-            if version == 1:
-                try:
-                    result = self.xWikiClient_instance.delete_page(space=space, page=page, title=title, parent=parent)
-                    print('Page deleted with result:', result)
-                except requests.exceptions.HTTPError:
-                    print('No such page found, deletion isn\'t needed')
-                result = self.xWikiClient_instance.submit_page(space=space, page=page, content='', syntax=syntax,
-                                                               title=title, parent=parent)
-                print('Page created with syntax:', syntax, 'and result:', result)
-        version += 1
-        if only_update is not True:
-            if parent != space:
-                result = self.xWikiClient_instance.submit_page_as_plane(space=space, page=page, content=content,
-                                                                        syntax=syntax, title=title, parent=parent)
-            else:
-                result = self.xWikiClient_instance.submit_page_as_plane(space=space, page=page, content=content,
-                                                                        syntax=syntax, title=title, parent=None)
-        print('Page', result)
-
-        if version == 1 and result != 'Created':
-            print('Result != Created while 1st run. Kernel panic!')
-            exit()
-        elif result == 'Unmodified':
-            print('Result: Unmodified. Kernel panic!')
-            exit()
-        if content == '':
-            print('Content length == ''. Kernel panic!')
-            exit()
-        if parent == space:
-            XWD_WEB = space + '.' + page
-        else:
-            XWD_WEB = space + '.' + parent + '.' + page
-        XWD_ID = self.get_XWD_ID(XWD_WEB)
-        query = (
-        "update xwikircs set XWR_AUTHOR = %(XWR_AUTHOR)s where XWR_DOCID = %(XWR_DOCID)s and XWR_VERSION1 = %(XWR_VERSION1)s")
-        data = {
-            'XWR_VERSION1': version,
-            'XWR_AUTHOR': author,
-            'XWR_DOCID': XWD_ID
-        }
-        self.cursor.execute(query, data)
-        print('update xwikircs done, affected rows = {}'.format(self.cursor.rowcount))
-        if test is True:
-            self.cnx.rollback()
-            print(query, data)
-        else:
-            self.cnx.commit()
-        if syntax != 'xwiki/2.1':
-            query = (
-            'update xwikidoc set XWD_SYNTAX_ID = %(XWD_SYNTAX_ID)s, XWD_AUTHOR = %(XWD_AUTHOR)s, XWD_CONTENT_AUTHOR = %(XWD_CONTENT_AUTHOR)s where XWD_FULLNAME = %(XWD_NAME)s')
-            data = {
-                'XWD_NAME': XWD_WEB,
-                'XWD_SYNTAX_ID': syntax,
-                'XWD_AUTHOR': author,
-                'XWD_CONTENT_AUTHOR': author,
-            }
-            self.cursor.execute(query, data)
-            print('update XWD_SYNTAX_ID in xwikidoc done, affected rows = {}'.format(self.cursor.rowcount))
-            if test is True:
-                self.cnx.rollback()
-                print(query, data)
-            else:
-                self.cnx.commit()
-            query = (
-            'UPDATE xwikircs SET XWR_Patch = UpdateXML(XWR_Patch,"xwikidoc/syntaxId", "<syntaxId>' + syntax + '</syntaxId>"),'
-                                                                                                              'XWR_Patch = UpdateXML(XWR_Patch,"xwikidoc/contentAuthor", "<contentAuthor>' + author + '</contentAuthor>"),'
-                                                                                                                                                                                                      'XWR_Patch = UpdateXML(XWR_Patch,"xwikidoc/author", "<author>' + author + '</author>") '
-                                                                                                                                                                                                                                                                                'WHERE XWR_DOCID=%(XWR_DOCID)s and XWR_ISDIFF = 0')
-            data = {
-                'XWR_DOCID': XWD_ID,
-                'XWD_SYNTAX_ID': syntax
-            }
-            self.cursor.execute(query, data)
-            print('update XWD_SYNTAX_ID in xwikircs done, affected rows = {}'.format(self.cursor.rowcount))
-            if test is True:
-                self.cnx.rollback()
-                print(query, data)
-            else:
-                self.cnx.commit()
-        return True
 
 
 class Migrator(object):

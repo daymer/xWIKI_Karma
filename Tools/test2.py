@@ -15,5 +15,8 @@ xWikiClient_instance = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, 
 page = 'TESTPAGE'
 title = 'TESTPAGE'
 
-result = xWikiClient_instance.page(space=space, page=page)
+
+exit()
+result = xWikiClient_instance.get_pages_by_space(space=space)
 print(result)
+
