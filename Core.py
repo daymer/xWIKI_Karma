@@ -22,13 +22,14 @@ confluenceAPI = ConfluenceAPI(ConfluenceConfig.USER, ConfluenceConfig.PASS, Conf
 #    MediaWIKI: just all
 #    xWIKI: ['Blog', 'Main', 'Sandbox', 'XWiki']
 Task = {
-    'VB': 'Confluence',
-    'WB': 'Confluence',
-    'GZ': 'Confluence',
-    'ALL mWIKI': 'MediaWIKI'
-    # 'Main': 'xWIKI',
-    # 'Sandbox': 'xWIKI',
-    # 'Migration pool': 'xWIKI'
+    #'VB': 'Confluence',
+    #'WB': 'Confluence',
+    #'GZ': 'Confluence',
+    #'ALL mWIKI': 'MediaWIKI'
+     #'Main': 'xWIKI',
+     #'Sandbox': 'xWIKI',
+    'Migration pool': 'xWIKI',
+    'Migrated bugs': 'xWIKI'
 }
 TaskExclusions = ExclusionsDict()
 TaskExclusions['Confluence'] = 'List of all KBs'

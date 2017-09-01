@@ -1211,7 +1211,7 @@ class Migrator(object):
             return self.tag_list
         elif platform == 'MediaWIKI':
             regex = r"\[\[Category:(.[^\]]*)\]\]"
-            matches = re.finditer(regex, test_str)
+            matches = re.finditer(regex, test_str, re.IGNORECASE)
             for matchNum, match in enumerate(matches):
                 matchNum = matchNum + 1
                 match = match.group(1)
@@ -1233,8 +1233,8 @@ class Migrator(object):
             return self.file_list
         elif platform == 'MediaWIKI':
             regex = r"\[\[File:((\w|\d|-| |\.[^\|])*).*"
-            matches = re.finditer(regex, test_str)
-            # print('test_str', test_str)
+            matches = re.finditer(regex, test_str, re.IGNORECASE) # added ignore case option
+            #print('test_str', test_str)
             for matchNum, match in enumerate(matches):
                 matchNum = matchNum + 1
                 match = match.group(1)
@@ -1315,7 +1315,7 @@ def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE
     version = 0
     latest_text = None
     last_version = None
-    #title = title.replace('&', '%26') #dosn't work :(
+    title = title.replace('&', '%26') # dosn't work :(
     for idx, author in enumerate(UniqueUsers):
         version += 1
         text = ''
@@ -1387,6 +1387,7 @@ def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE
         elif platform == 'MediaWIKI':
             tags = Migrator.get_tags(platform=platform, id=None, test_str=latest_text)
             files = Migrator.get_files(platform=platform, id=None, test_str=latest_text)
+            #print(files)
         if bool(re.match('bug', title, re.I)):
             match = False
             for i in set(tags):

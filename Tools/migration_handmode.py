@@ -9,8 +9,8 @@ import re
 import requests
 
 
-target_pool = 'Migrated bugs'
-parent = 'Migrated bugs'
+target_pool = 'Migration pool'
+parent = 'Migration pool'
 
 
 MySQLconfig_INSTANCE = MySQLConfig()
@@ -25,7 +25,7 @@ Migrator = Migrator(ConfluenceConfig=ConfluenceConfig_instance, MediaWIKIConfig=
 UserList = Users()
 SQLConnector_instance = Mechanics.SQLConnector(SQLConfig)
 
-title = 'Patch 1 cannot be installed with "This Veeam Backup & Replication installation cannot be updated automatically"'
+title = 'Understanding VeeamGuestHelper RPC connectivity'
 platform = 'MediaWIKI'
 result = Mechanics.Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE,
                                      MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig_instance,

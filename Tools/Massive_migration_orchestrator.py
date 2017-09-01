@@ -14,8 +14,8 @@ log_name = "Migration_log_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S", )
 
 target_pool = 'Migration pool'
 parent = 'Migration pool'
-#migrate_statement = None
-migrate_statement = "SELECT page_title, platform FROM [Karma].[dbo].[KnownPages] where page_title like ('%&%') and platform != 'xWiki'"
+migrate_statement = None
+migrate_statement = "SELECT page_title, platform FROM [Karma].[dbo].[KnownPages] where page_title not like LOWER('bug%') and platform != 'xWiki'"
 title_like = None
 #title_like = 'bug%'
 
@@ -47,7 +47,7 @@ for entry in TaskPages_list:
     TaskPages.update({entry[0]: entry[1]})
 counter = 0
 for title, platform in TaskPages.items():
-        if title == 'Veeam BandR releases':
+        if title == 'Veeam B&R releases':
             continue
         try:
             result = Mechanics.Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE, MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig, MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList)
@@ -58,6 +58,7 @@ for title, platform in TaskPages.items():
                 with codecs.open(log_name, "a", "utf-8") as stream:  # or utf-8
                     stream.write(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S", )) + str(log_statement) + u"\n")
             else:
+                counter += 1
                 log_statement = result[1], 'migrated in total:', str(counter) + '/' + Total_pages_to_process
                 print(*log_statement, sep=' ')
                 with codecs.open(log_name, "a", "utf-8") as stream:  # or utf-8

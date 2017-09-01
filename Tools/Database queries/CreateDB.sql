@@ -362,3 +362,23 @@ if (@karma_total_score = 0 and @up != @down)
 	end;
 select @up as up, @down as down, @karma_total_score as karma_total_score
 GO
+
+USE Karma;  
+GO 
+CREATE PROCEDURE make_new_global_karma_slice
+AS   
+    SET NOCOUNT ON; 
+	DECLARE @user_id as uniqueidentifier
+	DECLARE @CURSOR CURSOR
+SET @CURSOR = CURSOR SCROLL
+FOR
+select id from [Karma].[dbo].[KnownPages_Users]
+OPEN @CURSOR
+FETCH NEXT FROM @CURSOR INTO @user_id
+WHILE @@FETCH_STATUS = 0
+BEGIN
+  exec [dbo].[make_new_karma_slice] @user_id
+FETCH NEXT FROM @CURSOR INTO @user_id
+END
+CLOSE @CURSOR
+GO 
