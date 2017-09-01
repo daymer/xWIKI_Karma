@@ -12,10 +12,10 @@ from datetime import datetime
 import codecs
 log_name = "Migration_log_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S", )) + '.txt'
 
-target_pool = 'Migration pool'
-parent = 'Migration pool'
+target_pool = 'Migrated bugs'
+parent = 'Migrated bugs'
 migrate_statement = None
-migrate_statement = "SELECT page_title, platform FROM [Karma].[dbo].[KnownPages] where page_title not like LOWER('bug%') and platform != 'xWiki'"
+migrate_statement = "SELECT page_title, platform FROM [Karma].[dbo].[KnownPages] where page_title like LOWER('bug%') and platform != 'xWiki'"
 title_like = None
 #title_like = 'bug%'
 
