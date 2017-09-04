@@ -3,7 +3,7 @@ from datetime import datetime
 from gevent import monkey
 import Configuration
 from urllib.parse import parse_qs
-from Mechanics import Page, SQLConnector, CustomLogging
+from Mechanics import Page, SQLConnector, CustomLogging, MysqlConnector, PageCreator
 import json
 import pickle
 import operator
@@ -19,7 +19,6 @@ SQLConfig = Configuration.SQLConfig()
 SQLConnector = SQLConnector(SQLConfig)
 CustomLogging = CustomLogging('NOT_silent')
 
-
 def post_request_analyse(request_body):
     request_body = request_body.decode("utf-8")
     request = parse_qs(request_body)
@@ -29,19 +28,54 @@ def post_request_analyse(request_body):
         return json.dumps({'Error': 'Bad request - no method specified'}, separators=(',', ':'))
     try:
         if method == 'get_stat_by_title':
+            page_id = None
+            page_title = None
             try:  # zero title exception
-                request['title'][0]
-                request['platform'][0]
+                platform = request['platform'][0]
             except:
                 return json.dumps({'Error': 'Bad request - no title or platform was provided'}, separators=(',', ':'))
-            platform = request['platform'][0]
-            Current_Page = Page(request['title'][0], platform)
-            temp_array = SQLConnector.GetPageSQLID_and_characters_total_by_title_and_platform(Current_Page.page_title,Current_Page.page_platform )
+            try:
+                page_id = request['id'][0]
+            except:
+                print('may be it\'s an old logic?')
+                try:
+                    page_title = request['title'][0]
+                except:
+                    return json.dumps({'Error': 'Bad request - no title, id or platform was provided'},
+                                      separators=(',', ':'))
+            if page_title is not None:
+               Current_Page = Page(request['title'][0], platform)
+               temp_array = SQLConnector.GetPageSQLID_and_characters_total_by_title_and_platform(
+                   Current_Page.page_title, Current_Page.page_platform)
+            if page_id is not None and page_title is None:
+                MySQLconfig_INSTANCE = Configuration.MySQLConfig()
+                MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
+                #print('page_title', page_title, 'page_id', page_id)
+                XWD_FULLNAME = MysqlConnector_INSTANCE.XWD_FULLNAME(XWD_ID=page_id)
+                if XWD_FULLNAME != None:
+                    XWD_FULLNAME = XWD_FULLNAME.decode('utf-8')
+                else:
+                    page_unknown_answer = json.dumps({
+                        'Error': 'Bad request - there is no known page with id "' + page_id + '" in the database'},
+                        separators=(',', ':'))
+                    return page_unknown_answer
+                #print('XWD_FULLNAME', XWD_FULLNAME, 'page_id', page_id)
+                temp_array = SQLConnector.GetPageSQLID_and_characters_total_by_page_id_and_platform(
+                    XWD_FULLNAME, platform)
+                #print('temp_array', temp_array)
+                if temp_array is None:  # page is unknown exception
+                    page_unknown_answer = json.dumps({
+                        'Error': 'Bad request - there is no known page with ID "' + page_id + '" in the database'},
+                        separators=(',', ':'))
+                    return page_unknown_answer
+                Current_Page = Page(XWD_FULLNAME, platform)
+
             if temp_array is None:  # page is unknown exception
                 page_unknown_answer = json.dumps({
                                                      'Error': 'Bad request - there is no known page with title "' + Current_Page.page_title + '" in the database'},
                                                  separators=(',', ':'))
                 return page_unknown_answer
+
             Current_Page.pageSQL_id = temp_array[0]
             Current_Page.TOTALCharacters = int(temp_array[1])
             Current_Page.TotalContribute = pickle.loads(SQLConnector.GetPagePageContribution(Current_Page))
@@ -93,28 +127,62 @@ def post_request_analyse(request_body):
                 answer['raw_karma'].update({'"'+row.page_title+'"': row.percent})
             return json.dumps(answer, separators=(',', ':'))
         if method == 'vote_for_page_as_user': # need to re-write this function
+            page_id = None
+            page_title = None
             try:  # zero title exception
-                request['page_title'][0]
-                request['user_name'][0]
-                request['direction'][0]
-                request['platform'][0]
+                user_name = request['user_name'][0]
+                direction = request['direction'][0]
             except:
                 return json.dumps({'Error': 'bad request - no user_name, platform or page_title was provided'}, separators=(',', ':'))
-            #print(request)
-            user_name = request['user_name'][0]
-            page_title = request['page_title'][0]
-            direction = request['direction'][0]
-            platform = request['platform'][0]
+            try:  # zero title exception
+                platform = request['platform'][0]
+            except:
+                return json.dumps({'Error': 'Bad request - no title or platform was provided'}, separators=(',', ':'))
+            try:
+                page_id = request['id'][0]
+            except:
+                try:
+                    page_title = request['page_title'][0]
+                except:
+                    return json.dumps({'Error': 'Bad request - no title, id or platform was provided'},
+                                      separators=(',', ':'))
+
             user_id = SQLConnector.GetUserIDbyName(user_name)
+            #old or new logic
             if user_id is None:
                 return json.dumps({'Error': 'bad request - username not found'}, separators=(',', ':'))
-            Current_Page = Page(page_title, platform)
-            temp_array = SQLConnector.GetPageSQLID_and_characters_total_by_title_and_platform(Current_Page.page_title, Current_Page.page_platform)
-            if temp_array is None:  # page is unknown exception
-                page_unknown_answer = json.dumps({
-                                                     'Error': 'Bad request - there is no known page with title "' + Current_Page.page_title + '" in the database'},
-                                                 separators=(',', ':'))
-                return page_unknown_answer
+            if page_title is not None:
+               Current_Page = Page(page_title, platform)
+               temp_array = SQLConnector.GetPageSQLID_and_characters_total_by_title_and_platform(
+                   Current_Page.page_title, Current_Page.page_platform)
+               if temp_array is None:  # page is unknown exception
+                   page_unknown_answer = json.dumps({
+                       'Error': 'Bad request - there is no known page with title "' + Current_Page.page_title + '" in the database'},
+                       separators=(',', ':'))
+                   return page_unknown_answer
+            if page_id is not None and page_title is None:
+                MySQLconfig_INSTANCE = Configuration.MySQLConfig()
+                MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
+                #print('page_title', page_title, 'page_id', page_id)
+                XWD_FULLNAME = MysqlConnector_INSTANCE.XWD_FULLNAME(XWD_ID=page_id)
+                if XWD_FULLNAME != None:
+                    XWD_FULLNAME = XWD_FULLNAME.decode('utf-8')
+                else:
+                    page_unknown_answer = json.dumps({
+                        'Error': 'Bad request - there is no known page with id "' + page_id + '" in the database'},
+                        separators=(',', ':'))
+                    return page_unknown_answer
+                #print('XWD_FULLNAME', XWD_FULLNAME, 'page_id', page_id)
+                temp_array = SQLConnector.GetPageSQLID_and_characters_total_by_page_id_and_platform(
+                    XWD_FULLNAME, platform)
+                #print('temp_array', temp_array)
+                if temp_array is None:  # page is unknown exception
+                    page_unknown_answer = json.dumps({
+                        'Error': 'Bad request - there is no known page with ID "' + page_id + '" in the database'},
+                        separators=(',', ':'))
+                    return page_unknown_answer
+                Current_Page = Page(XWD_FULLNAME, platform)
+
             #print(temp_array[0], user_id, direction)
             result = SQLConnector.NewPageVote(temp_array[0], user_id, direction)
             if result.startswith('Error'):

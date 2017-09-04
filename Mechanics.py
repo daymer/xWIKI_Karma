@@ -47,7 +47,7 @@ class PageCreator:
                 else:
                     new_created_page = Page(title, platform)
                     return new_created_page
-        elif platform == 'xWIKI':
+        elif platform == 'xWIKI' or platform == 'xwiki':
             self.current_xWiki_page = None
             line_array = list(title)
             space = None
@@ -93,7 +93,10 @@ class PageCreator:
             #print('current_page is', current_page)
             if current_page is not None:
                 self.current_xWiki_page = current_page
-                title = self.current_xWiki_page['title']
+                try:
+                    title = self.current_xWiki_page['title']
+                except:
+                    title = self.current_xWiki_page['pageSummaries'][0]['title']
                 if not self.current_xWiki_page['content']:
                     print('no content was found')
                     return None
@@ -289,13 +292,22 @@ class SQLConnector:
 
     def GetPageSQLID_and_characters_total_by_title_and_platform(self, title, platform):
         self.cursor.execute(
-            "select [id],[characters_total]  from [dbo].[KnownPages] where [page_title] = ? and platform=?", title,
+            "select [id],[characters_total] from [dbo].[KnownPages] where [page_title] = ? and platform=?", title,
             platform)
         raw = self.cursor.fetchone()
         # if raw is None:
         #    return None
         return raw
 
+
+    def GetPageSQLID_and_characters_total_by_page_id_and_platform(self, XWD, platform):
+        self.cursor.execute(
+            "select [id],[characters_total] FROM [Karma].[dbo].[KnownPages] where [page_id] = 'xwiki:'+? and [platform]= ?", XWD,
+            platform)
+        raw = self.cursor.fetchone()
+        # if raw is None:
+        #    return None
+        return raw
     def GetUserIDbyName(self, username):
         self.cursor.execute(
             "select [id] from [dbo].[KnownPages_Users] where [user_name] = ?", username)
@@ -786,6 +798,18 @@ class MysqlConnector(object):
             for row in self.cursor:
                 XWD_ID = str(row[0])
             return XWD_ID
+        else:
+            return None
+    def XWD_FULLNAME(self, XWD_ID):
+        query = ("select XWD_FULLNAME from xwikidoc where XWD_ID = %(XWD_ID)s")
+        data = {
+            'XWD_ID': XWD_ID
+        }
+        self.cursor.execute(query, data)
+        if self.cursor.rowcount != 0:
+            for row in self.cursor:
+                XWD_FULLNAME = row[0]
+            return XWD_FULLNAME
         else:
             return None
 
