@@ -630,82 +630,84 @@ class SQLConnector:
                 return None
 
 
-class ContribBuilder:
+class ContributionComparator:
     def __init__(self, logging_mode='silent'):
         self.temp_array = []
         self.some_other_array = []
         self.logging_mode = logging_mode
 
-    def Initialcompare(self, CurrentPage):  # compares all existing version from 1st to the last
-        for index, VersionContent in enumerate(CurrentPage.PageVersionsDict):
+    def initial_compare(self, current_page_instance):  # compares all existing versions
+        for index, version_content in enumerate(current_page_instance.PageVersionsDict):
             # print('Iteration number', index)
             try:
-                StageNEXT = VersionContent
+                stage_next = version_content
                 if index == 0:
-                    StageFIRST = [-1, '']
+                    stage_first = [-1, '']
                 else:
-                    StageFIRST = CurrentPage.PageVersionsDict[index - 1]
-                # print('{} => {}'.format(StageFIRST, StageNEXT))
-                for i, s in enumerate(difflib.ndiff(StageFIRST[1], StageNEXT[1])):
+                    stage_first = current_page_instance.PageVersionsDict[index - 1]
+                # print('{} => {}'.format(stage_first, stage_next))
+                for i, s in enumerate(difflib.ndiff(stage_first[1], stage_next[1])):
                     if s[0] == '+':
                         # print(u'Add "{}" to position {}'.format(s[-1], i))
-                        CurrentPage.VersionsGlobalArray.insert(i, [s[-1], StageNEXT[0]])
+                        current_page_instance.VersionsGlobalArray.insert(i, [s[-1], stage_next[0]])
                     elif s[0] == '-':
                         # print(u'Delete "{}" from position {}'.format(s[-1], i))
-                        CurrentPage.VersionsGlobalArray[i] = None
+                        current_page_instance.VersionsGlobalArray[i] = None
                 self.temp_array = []
                 self.some_other_array = []
                 self.temp_array[:] = []
                 self.some_other_array[:] = []
-                self.temp_array = copy.deepcopy(CurrentPage.VersionsGlobalArray)
-                CurrentPage.VersionsGlobalArray[:] = []
+                self.temp_array = copy.deepcopy(current_page_instance.VersionsGlobalArray)
+                current_page_instance.VersionsGlobalArray[:] = []
                 self.some_other_array = [x for x in self.temp_array if x is not None]
-                CurrentPage.VersionsGlobalArray = copy.deepcopy(self.some_other_array)
+                current_page_instance.VersionsGlobalArray = copy.deepcopy(self.some_other_array)
                 self.temp_array[:] = []
                 self.some_other_array[:] = []
             except Exception as error:
                 print('initial compare of page was failed with error:', error)
-                for each in CurrentPage.VersionsGlobalArray:
+                for each in current_page_instance.VersionsGlobalArray:
                     if each is None:
                         print(each, 'is none, but WTF?')
-                print('CurrentPage.VersionsGlobalArray', CurrentPage.VersionsGlobalArray)
+                print('CurrentPage.VersionsGlobalArray', current_page_instance.VersionsGlobalArray)
                 exit()
 
-    def Incrementalcompare(self,
-                           CurrentPage):  # compares all existing version from CurrentPage.dbVersion to the CurrentPage.versions
-        for index, VersionContent in enumerate(CurrentPage.PageVersionsDict):
+    def incremental_compare(self, current_page_instance):
+        # compares all existing version from current_page_instance.dbVersion to the current_page_instance.versions
+        for index, VersionContent in enumerate(current_page_instance.PageVersionsDict):
             if self.logging_mode != 'silent': print('Iteration number', index)
-            if index == len(CurrentPage.PageVersionsDict) - 1: break
-            StageFIRST = VersionContent
-            StageNEXT = CurrentPage.PageVersionsDict[index + 1]
+            if index == len(current_page_instance.PageVersionsDict) - 1:
+                break
+            stage_first = VersionContent
+            stage_next = current_page_instance.PageVersionsDict[index + 1]
             try:
                 if self.logging_mode != 'silent':
-                    print(StageFIRST)
-                    print(StageNEXT)
-                array_to_compare = difflib.ndiff(StageFIRST[1], StageNEXT[1])
+                    print(stage_first)
+                    print(stage_next)
+                array_to_compare = difflib.ndiff(stage_first[1], stage_next[1])
                 for i, s in enumerate(
-                        array_to_compare):  # problem: each s[0] == ' ' extends loop. Need to find a way to ignore them
+                        array_to_compare):  # TODO: each s[0] == ' ' extends loop. Need to find a way to ignore them
                     if s[0] == '+':
                         if self.logging_mode != 'silent': print(u'Add "{}" to position {}'.format(s[-1], i))
-                        CurrentPage.VersionsGlobalArray.insert(i, [s[-1], StageNEXT[0]])
+                        current_page_instance.VersionsGlobalArray.insert(i, [s[-1], stage_next[0]])
                     elif s[0] == '-':
                         if self.logging_mode != 'silent': print(u'Delete "{}" from position {}'.format(s[-1], i))
-                        CurrentPage.VersionsGlobalArray[i] = None
-                if self.logging_mode != 'silent': print('Done with compare, removing deleted characters...')
+                        current_page_instance.VersionsGlobalArray[i] = None
+                if self.logging_mode != 'silent':
+                    print('Done with compare, removing deleted characters...')
                 self.temp_array[:] = []
                 self.some_other_array[:] = []
-                self.temp_array = copy.deepcopy(CurrentPage.VersionsGlobalArray)
-                CurrentPage.VersionsGlobalArray[:] = []
+                self.temp_array = copy.deepcopy(current_page_instance.VersionsGlobalArray)
+                current_page_instance.VersionsGlobalArray[:] = []
                 self.some_other_array = [x for x in self.temp_array if x is not None]
-                CurrentPage.VersionsGlobalArray = copy.deepcopy(self.some_other_array)
+                current_page_instance.VersionsGlobalArray = copy.deepcopy(self.some_other_array)
             except Exception as error:
                 print('Incremental compare of page was failed with error:', error)
-                for each in CurrentPage.VersionsGlobalArray:
+                for each in current_page_instance.VersionsGlobalArray:
                     if each is None:
                         print(each, 'is none, but WTF?')
                         break
-                print('CurrentPage.VersionsGlobalArray', CurrentPage.VersionsGlobalArray)
-                print('Len of array', len(CurrentPage.VersionsGlobalArray))
+                print('current_page_instance.VersionsGlobalArray', current_page_instance.VersionsGlobalArray)
+                print('Len of array', len(current_page_instance.VersionsGlobalArray))
                 exit()
 
 

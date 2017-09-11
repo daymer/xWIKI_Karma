@@ -3,7 +3,7 @@ import pyodbc
 import Configuration
 import pickle
 from docx.enum.text import WD_COLOR_INDEX
-from Mechanics import PageCreator, SQLConnector, ContribBuilder, CustomLogging, ExclusionsDict, xWikiClient
+from Mechanics import PageCreator, SQLConnector, ContributionComparator, CustomLogging, ExclusionsDict, xWikiClient
 SQLConfig = Configuration.SQLConfig()
 SQLConnector = SQLConnector(SQLConfig)
 xWikiConfig = Configuration.xWikiConfig('Migration pool')

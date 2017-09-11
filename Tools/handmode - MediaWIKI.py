@@ -1,5 +1,5 @@
 import Configuration
-from Mechanics import PageCreator, SQLConnector, ContribBuilder, CustomLogging
+from Mechanics import PageCreator, SQLConnector, ContributionComparator, CustomLogging
 import pickle
 
 SQLConfig = Configuration.SQLConfig()
@@ -29,8 +29,8 @@ if CurrentPage.dbVersion == None:
         CurrentPage.add_new_page_version(
             PAGE_CREATOR.get_version_content_by_version(VersionNumber, CurrentPage))
     # comparing all versions
-    ContribBuilder = ContribBuilder()
-    ContribBuilder.Initialcompare(CurrentPage)
+    ContribBuilder = ContributionComparator()
+    ContribBuilder.initial_compare(CurrentPage)
     CurrentPage.TOTALCharacters = len(CurrentPage.VersionsGlobalArray)
     for VersionNum in range(1, CurrentPage.page_versions + 1):
         #print(CurrentPage.contributors[VersionNum] +' has contributed ' + str(len(UserXContribute)) + ' in version ' + str(VersionNum))
@@ -60,8 +60,8 @@ elif CurrentPage.dbVersion < CurrentPage.page_versions:
     CurrentPage.VersionsGlobalArray = pickle.loads(TempArray[0])
     TempContributors = pickle.loads(TempArray[1])
     # comparing latest versions
-    ContribBuilder = ContribBuilder('not_silent')
-    ContribBuilder.Incrementalcompare(CurrentPage)
+    ContribBuilder = ContributionComparator('not_silent')
+    ContribBuilder.incremental_compare(CurrentPage)
     CurrentPage.TOTALCharacters = len(CurrentPage.VersionsGlobalArray)
     for version, user in TempContributors.items(): #Warning! dict.update is used, which means that accidentally matching pairs version:user will be overwritten.
         CurrentPage.contributors.update({version: user})
