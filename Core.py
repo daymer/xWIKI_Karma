@@ -8,7 +8,7 @@ ContribBuilder = ContribBuilder()
 SQLConfig = Configuration.SQLConfig()
 ConfluenceConfig = Configuration.ConfluenceConfig()
 MediaWIKIConfig = Configuration.MediaWIKIConfig()
-xWikiConfig = Configuration.xWikiConfig(['Migration pool', 'Sandbox', 'Main'])
+xWikiConfig = Configuration.xWikiConfig(['Migration pool', 'Sandbox', 'Main', 'StagingWiki'])
 MySQLconfig_INSTANCE = Configuration.MySQLConfig()
 MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
 PAGE_CREATOR = PageCreator(ConfluenceConfig, MediaWIKIConfig, xWikiConfig)
@@ -28,20 +28,22 @@ Task = {
     #'ALL mWIKI': 'MediaWIKI'
      #'Main': 'xWIKI',
      #'Sandbox': 'xWIKI',
-    'Migration pool': 'xWIKI',
-    'Migrated bugs': 'xWIKI'
+    #'Migration pool': 'xWIKI',
+    #'Migrated bugs': 'xWIKI'
+    'Main': 'xWIKI',
+    'StagingWiki': 'xWIKI'
 }
 TaskExclusions = ExclusionsDict()
-TaskExclusions['Confluence'] = 'List of all KBs'
-TaskExclusions['MediaWIKI'] = 'Found Bugs'
-TaskExclusions['MediaWIKI'] = 'Registry values B&R'
-TaskExclusions['MediaWIKI'] = 'Veeam ONE Registry Keys'
-TaskExclusions['MediaWIKI'] = 'Patches and fixes for B&R'
+# TaskExclusions['Confluence'] = 'List of all KBs'
+# TaskExclusions['MediaWIKI'] = 'Found Bugs'
+# TaskExclusions['MediaWIKI'] = 'Registry values B&R'
+# TaskExclusions['MediaWIKI'] = 'Veeam ONE Registry Keys'
+# TaskExclusions['MediaWIKI'] = 'Patches and fixes for B&R'
 # TaskExclusions['MediaWIKI'] = 'Bug%'
 # TaskExclusions['MediaWIKI'] = 'BUG%'
 # TaskExclusions['MediaWIKI'] = 'bug%'
-TaskExclusions['MediaWIKI'] = 'Case Handling'
-TaskExclusions['MediaWIKI'] = 'Team Members'
+# TaskExclusions['MediaWIKI'] = 'Case Handling'
+# TaskExclusions['MediaWIKI'] = 'Team Members'
 TaskExclusions['xWIKI'] = None
 toAnalyze = []
 TaskPages = {}

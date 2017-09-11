@@ -11,7 +11,7 @@ SQLConnector = SQLConnector(SQLConfig)
 CustomLogging = CustomLogging('NotSilent')
 
 title = '.NET Error: Mixed mode assembly is built against version \'v2.0.50727\' of the runtime and cannot be loaded in the 4.0 runtime without additional configuration information'
-title = 'Migration pool.4343edbab705f181c0ec7c2462087a96'
+title = 'Main.Bugs and Fixes.Found Bugs.Migrated from mediaWIKI.0061b1c914a094d577ceb4c8e7bc00ae'
 CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform(title, 'xWIKI')
 if CurrentPage is None:
     print('Page wasn\'t found in provided spaces. Try to search in [\'Blog\', \'Main\', \'Sandbox\', \'XWiki\']')

@@ -77,27 +77,29 @@ class PageCreator:
                 for idx, character in enumerate(line_array):
                     # print(idx, character)
                     if character == '.':
-                        #print('1st char found')
+                        print('1st char found')
                         if line_array[idx - 1] != '\\':
                             space = title[:idx]
                             space_idx = idx
                         elif line_array[idx - 1] != '\\' and space is not None:
-                            #print('2nd char found')
+                            print('2nd char found')
                             nested_space = title[space_idx + 1:idx]
                             page = title[idx:]
                 if page is None:
                     #print('page is still NONE')
                     page = title[space_idx+1:]
-            #print('space', space, 'page', page, 'nested_space', nested_space)
+            print('space', space, 'page', page, 'nested_space', nested_space)
             current_page = self.xWikiAPI.page(space=space, page=page, nested_space=nested_space)
-            #print('current_page is', current_page)
+            print('current_page is', current_page)
             if current_page is not None:
                 self.current_xWiki_page = current_page
                 try:
                     title = self.current_xWiki_page['title']
                 except:
                     title = self.current_xWiki_page['pageSummaries'][0]['title']
-                if not self.current_xWiki_page['content']:
+                try:
+                    self.current_xWiki_page['content']
+                except:
                     print('no content was found')
                     return None
                 current_page = Page(title, platform, page_xWIKI_nested_space=nested_space, page_xWIKI_page=page, page_xWIKI_space=space)
@@ -182,11 +184,12 @@ class PageCreator:
                     exit()
             return VersionNumber, PageVersion, Contributor
         elif page.page_platform == 'xWIKI':
+            nested_space = None
+            nested_space = page.page_xWIKI_nested_space
             # first, we need to find the latest minor version for the major version which were provided to method
             # +str(self.current_xWiki_page['wiki'])+ is temporally removed, since it looks more logical to use only 1 wiki
-            response = self.xWikiAPI.get_page_version_content_and_author(self.current_xWiki_page['space'],
-                                                                         self.current_xWiki_page['name'],
-                                                                         str(VersionNumber) + '.1')
+            response = self.xWikiAPI.get_page_version_content_and_author(page.page_xWIKI_space,
+                                                                         page.page_xWIKI_page, str(VersionNumber) + '.1', nested_space)
             PageVersion = response[0]
             Contributor = response[1]
             return VersionNumber, PageVersion, Contributor
@@ -947,6 +950,7 @@ class xWikiClient:
         self.auth_pass = auth_pass
 
     def _build_url(self, path):
+        print(path)
         for idx, val in enumerate(path):
             path[idx] = val.replace('/', '%2F')
         url = self.api_root + "/".join(path)
@@ -958,11 +962,9 @@ class xWikiClient:
     def _make_request(self, path, data):
         url = self._build_url(path)
         data['media'] = 'json'
-
         auth = None
         if self.auth_user and self.auth_pass:
             auth = self.auth_user, self.auth_pass
-
         response = requests.get(url, params=data, auth=auth)
         response.raise_for_status()
         return response.json()
@@ -1046,13 +1048,19 @@ class xWikiClient:
         if nested_space is None:
             path = ['spaces', space, 'pages', page]
         else: # http://xwiki.support2.veeam.local/rest/wikis/xwiki/spaces/Sandbox/spaces/TESTPAGE/spaces/123/pages
-            path = ['spaces', space, 'spaces', nested_space,'spaces', page, 'pages']
+            path = ['spaces', space, 'spaces', nested_space, 'spaces', page, 'pages', 'WebHome']
         data = {}
         try:
             content = self._make_request(path, data)
             return content
         except:
-            return None
+            try:
+                path = ['spaces', space, 'spaces', nested_space, 'spaces', page, 'pages', 'WebHome']
+                data = {}
+                content = self._make_request(path, data)
+                return content
+            except:
+                return None
     def get_pages_by_space(self, space):
         MySQLconfig_INSTANCE = Configuration.MySQLConfig()
         little_mysql_client = MysqlConnector(MySQLconfig_INSTANCE)
@@ -1169,11 +1177,12 @@ class xWikiClient:
         content = self._make_request(path, data)
         return content
 
-    def get_page_version_content_and_author(self, space, page_name, version):
+    def get_page_version_content_and_author(self, space, page_name, version, nested_space=None):
         path = ['spaces', space, 'pages', page_name, 'history', version]
+        if nested_space is not None:
+            path = ['spaces', space, 'spaces', nested_space, 'spaces', page_name, 'pages', 'WebHome', 'history', version]
         data = {}
         content = self._make_request(path, data)
-        #print(content)
         return content['content'], content['author']
 
     def add_new_attach_as_plane(self, space, page, attach_name, path_to_attach):

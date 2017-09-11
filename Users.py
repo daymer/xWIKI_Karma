@@ -62,7 +62,7 @@ class Users():
                 "Kate" : 'XWiki.kegorova',
                 "Katerina" : 'XWiki.kegorova',
                 "Kira Podlesnaja" : "XWiki.kpodlesnaja",
-                "Kirill Avramenko" : None,
+                "Kirill Avramenko" : 'XWiki.kavramenko',
                 "Kirill Kuklin" : "XWiki.kkuklin",
                 "Kirill Stetsko" : 'XWiki.KStetsko',
                 "KirillK" : "XWiki.kkuklin",
@@ -115,7 +115,7 @@ class Users():
                 "Vadim Mordberg" : 'XWiki.vmordberg',
                 "Vasiliy Pavlovich" : "XWiki.vpavlovich",
                 "Vasiliy Yur" : "XWiki.vyur",
-                "Viktoriia Meluzova" : None,
+                "Viktoriia Meluzova" : 'XWiki.V',
                 "Vindika Dissanayake" : None,
                 "Vitaliy Andrienko" : "XWiki.vandrienko",
                 "Vkuznetsov" : "XWiki.vkuznetsov",
@@ -132,7 +132,8 @@ class Users():
                 "Кулешов Александр" : "XWiki.akuleshov",
                 'Иван Беляев' : 'XWiki.ibelyaev',
                 'Ibely' : 'XWiki.ibelyaev',
-                'Pmakarov' : None
+                'Pmakarov' : None,
+                'Kavramenko' : 'XWiki.kavramenko'
                     }
 '''
 for user, status in Users.items():

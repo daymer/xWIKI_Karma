@@ -25,8 +25,8 @@ Migrator = Migrator(ConfluenceConfig=ConfluenceConfig_instance, MediaWIKIConfig=
 UserList = Users()
 SQLConnector_instance = Mechanics.SQLConnector(SQLConfig)
 
-title = 'Understanding VeeamGuestHelper RPC connectivity'
-platform = 'MediaWIKI'
+title = 'Hyper-V Basics'
+platform = 'Confluence'
 result = Mechanics.Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE,
                                      MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig_instance,
                                      MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList)
