@@ -51,17 +51,15 @@ def post_request_analyse(request_body):
                 MySQLconfig_INSTANCE = Configuration.MySQLConfig()
                 MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
                 #print('page_title', page_title, 'page_id', page_id)
-                XWD_FULLNAME = MysqlConnector_INSTANCE.XWD_FULLNAME(XWD_ID=page_id)
-                if XWD_FULLNAME != None:
-                    XWD_FULLNAME = XWD_FULLNAME.decode('utf-8')
-                else:
+                XWD_FULLNAME = MysqlConnector_INSTANCE.get_XWD_FULLNAME(XWD_ID=page_id)
+                if XWD_FULLNAME is None:
                     page_unknown_answer = json.dumps({
                         'Error': 'Bad request - there is no known page with id "' + page_id + '" in the database'},
                         separators=(',', ':'))
                     return page_unknown_answer
-                #print('XWD_FULLNAME', XWD_FULLNAME, 'page_id', page_id)
+                #print('XWD_FULLNAME', 'xwiki:'+XWD_FULLNAME, 'page_id', page_id, 'platform', platform)
                 temp_array = SQLConnector.GetPageSQLID_and_characters_total_by_page_id_and_platform(
-                    XWD_FULLNAME, platform)
+                    'xwiki:'+XWD_FULLNAME, platform)
                 #print('temp_array', temp_array)
                 if temp_array is None:  # page is unknown exception
                     page_unknown_answer = json.dumps({
@@ -164,7 +162,7 @@ def post_request_analyse(request_body):
                 MySQLconfig_INSTANCE = Configuration.MySQLConfig()
                 MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
                 #print('page_title', page_title, 'page_id', page_id)
-                XWD_FULLNAME = MysqlConnector_INSTANCE.XWD_FULLNAME(XWD_ID=page_id)
+                XWD_FULLNAME = MysqlConnector_INSTANCE.get_XWD_FULLNAME(XWD_ID=page_id)
                 if XWD_FULLNAME != None:
                     XWD_FULLNAME = XWD_FULLNAME.decode('utf-8')
                 else:

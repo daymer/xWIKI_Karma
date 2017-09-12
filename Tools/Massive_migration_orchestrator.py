@@ -4,9 +4,6 @@ from Mechanics import xWikiClient, MysqlConnector, Migrator
 import Mechanics
 from PythonConfluenceAPI import ConfluenceAPI
 import Configuration
-from Mechanics import SQLConnector
-import re
-import requests
 import sys
 from datetime import datetime
 import codecs
@@ -38,15 +35,15 @@ UserList = Users()
 SQLConnector_instance = Mechanics.SQLConnector(SQLConfig)
 TaskPages_list = SQLConnector_instance.GetPagesByTitle(page_title=title_like, query=migrate_statement)
 Total_pages_to_process = str(len(TaskPages_list))
-TaskPages = {}
+task_pages_dict = {}
 
 log_statement = 'Found pages:', Total_pages_to_process
 print(*log_statement, sep=' ')
 print(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S",))+ str(log_statement))
 for entry in TaskPages_list:
-    TaskPages.update({entry[0]: entry[1]})
+    task_pages_dict.update({entry[0]: entry[1]})
 counter = 0
-for title, platform in TaskPages.items():
+for title, platform in task_pages_dict.items():
         if title == 'Veeam B&R releases':
             continue
         try:

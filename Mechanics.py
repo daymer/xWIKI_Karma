@@ -48,49 +48,18 @@ class PageCreator:
                     new_created_page = Page(title, platform)
                     return new_created_page
         elif platform == 'xWIKI' or platform == 'xwiki':
-            self.current_xWiki_page = None
-            line_array = list(title)
-            space = None
-            nested_space = None
-            page = None
-            space_idx = None
-            nested_space_idx = None
-            space_idx = 'thanks pep8'
             if title.endswith('.WebHome'):
-                for idx, character in enumerate(line_array):
-                    # print(idx, character)
-                    if character == '.':
-                        # test -1 char
-                        if line_array[idx - 1] != '\\':
-                            if space is None:
-                                space = title[:idx]
-                                space_idx = idx
-                                continue
-                            if space is not None and nested_space is None:
-                                nested_space = title[space_idx + 1:idx]
-                                nested_space_idx = idx
-                                continue
-                            if page is None:
-                                page = title[nested_space_idx + 1:idx]
+                replaced_title = title.replace('.WebHome', '')
+                replaced_title = replaced_title.replace('\\.', '<dirtyhack>')
             else:
-                #print('!=title.endswith(\'.WebHome\')')
-                for idx, character in enumerate(line_array):
-                    # print(idx, character)
-                    if character == '.':
-                        print('1st char found')
-                        if line_array[idx - 1] != '\\':
-                            space = title[:idx]
-                            space_idx = idx
-                        elif line_array[idx - 1] != '\\' and space is not None:
-                            print('2nd char found')
-                            nested_space = title[space_idx + 1:idx]
-                            page = title[idx:]
-                if page is None:
-                    #print('page is still NONE')
-                    page = title[space_idx+1:]
-            print('space', space, 'page', page, 'nested_space', nested_space)
-            current_page = self.xWikiAPI.page(space=space, page=page, nested_space=nested_space)
-            print('current_page is', current_page)
+                replaced_title = title.replace('\\.', '<dirtyhack>')
+            array = replaced_title.split('.')
+            path_array = []
+            for each in array:
+                path_array.append(each.replace('<dirtyhack>', '\\.'))
+            page = path_array.pop(-1)
+            space = path_array.pop(0)
+            current_page = self.xWikiAPI.page(space=space, page=page, nested_space=path_array)
             if current_page is not None:
                 self.current_xWiki_page = current_page
                 try:
@@ -102,8 +71,8 @@ class PageCreator:
                 except:
                     print('no content was found')
                     return None
-                current_page = Page(title, platform, page_xWIKI_nested_space=nested_space, page_xWIKI_page=page, page_xWIKI_space=space)
-                return current_page
+                new_created_page = Page(title, platform, page_xWIKI_nested_space=path_array, page_xWIKI_page=page, page_xWIKI_space=space)
+                return new_created_page
             elif current_page is None:
                 return None
 
@@ -189,7 +158,8 @@ class PageCreator:
             # first, we need to find the latest minor version for the major version which were provided to method
             # +str(self.current_xWiki_page['wiki'])+ is temporally removed, since it looks more logical to use only 1 wiki
             response = self.xWikiAPI.get_page_version_content_and_author(page.page_xWIKI_space,
-                                                                         page.page_xWIKI_page, str(VersionNumber) + '.1', nested_space)
+                                                                         page.page_xWIKI_page,
+                                                                         str(VersionNumber) + '.1', nested_space)
             PageVersion = response[0]
             Contributor = response[1]
             return VersionNumber, PageVersion, Contributor
@@ -214,7 +184,8 @@ class PageCreator:
 
 
 class Page:
-    def __init__(self, page_title, current_platform, page_xWIKI_nested_space=None,page_xWIKI_page=None, page_xWIKI_space=None ):
+    def __init__(self, page_title, current_platform, page_xWIKI_nested_space=None, page_xWIKI_page=None,
+                 page_xWIKI_space=None):
         if current_platform == 'xWIKI':
             self.page_title = page_title
             self.page_xWIKI_page = page_xWIKI_page
@@ -302,15 +273,15 @@ class SQLConnector:
         #    return None
         return raw
 
-
     def GetPageSQLID_and_characters_total_by_page_id_and_platform(self, XWD, platform):
         self.cursor.execute(
-            "select [id],[characters_total] FROM [Karma].[dbo].[KnownPages] where [page_id] = 'xwiki:'+? and [platform]= ?", XWD,
-            platform)
+            "select [id],[characters_total] FROM [dbo].[KnownPages] where [page_id] = ? and [platform] LIKE LOWER(?)",
+            XWD, platform)
         raw = self.cursor.fetchone()
         # if raw is None:
         #    return None
         return raw
+
     def GetUserIDbyName(self, username):
         self.cursor.execute(
             "select [id] from [dbo].[KnownPages_Users] where [user_name] = ?", username)
@@ -511,7 +482,8 @@ class SQLConnector:
         row = self.cursor.fetchone()
         if row:
             self.cursor.execute(
-                "update [dbo].[KnownPages] set page_title = ? where [page_id] = '" + str(CurrentPage.page_id) + "'", CurrentPage.page_title)
+                "update [dbo].[KnownPages] set page_title = ? where [page_id] = '" + str(CurrentPage.page_id) + "'",
+                CurrentPage.page_title)
             self.connection.commit()
             return int(row[0])
         else:
@@ -748,7 +720,7 @@ class CustomLogging:
     def page_processing_target(self, CurrentPage):
         self.PageAnalysisEndTime = datetime.now()
         if self.LogLevel != 'silent':
-            print(self.PageAnalysisEndTime, 'Page "' + CurrentPage.page_title + '" with ID' + str(
+            print(self.PageAnalysisEndTime, 'Page "' + CurrentPage.page_title + '" with ID ' + str(
                 CurrentPage.page_id) + ', created by ' + CurrentPage.page_author + ' was parsed, ' + str(
                 CurrentPage.page_versions) + ' versions were found', '\n',
                   'Sources are collected, calculating difference... ')
@@ -805,7 +777,22 @@ class MysqlConnector(object):
             return XWD_ID
         else:
             return None
-    def XWD_FULLNAME(self, XWD_ID):
+
+    def get_XWD_TITLE(self, XWD_FULLNAME):
+        query = ("select XWD_TITLE from xwikidoc where XWD_FULLNAME= %(XWD_FULLNAME)s")
+        data = {
+            'XWD_FULLNAME': XWD_FULLNAME
+        }
+        self.cursor.execute(query, data)
+        XWD_TITLE = None
+        if self.cursor.rowcount != 0:
+            for row in self.cursor:
+                XWD_TITLE = row[0].decode("utf-8")
+            return XWD_TITLE
+        else:
+            return None
+
+    def get_XWD_FULLNAME(self, XWD_ID):
         query = ("select XWD_FULLNAME from xwikidoc where XWD_ID = %(XWD_ID)s")
         data = {
             'XWD_ID': XWD_ID
@@ -813,7 +800,7 @@ class MysqlConnector(object):
         self.cursor.execute(query, data)
         if self.cursor.rowcount != 0:
             for row in self.cursor:
-                XWD_FULLNAME = row[0]
+                XWD_FULLNAME = row[0].decode("utf-8")
             return XWD_FULLNAME
         else:
             return None
@@ -884,7 +871,7 @@ class MysqlConnector(object):
             XWD_WEB = space + '.' + parent + '.' + page
         XWD_ID = self.get_XWD_ID(XWD_WEB)
         query = (
-        "update xwikircs set XWR_AUTHOR = %(XWR_AUTHOR)s where XWR_DOCID = %(XWR_DOCID)s and XWR_VERSION1 = %(XWR_VERSION1)s")
+            "update xwikircs set XWR_AUTHOR = %(XWR_AUTHOR)s where XWR_DOCID = %(XWR_DOCID)s and XWR_VERSION1 = %(XWR_VERSION1)s")
         data = {
             'XWR_VERSION1': version,
             'XWR_AUTHOR': author,
@@ -899,7 +886,7 @@ class MysqlConnector(object):
             self.cnx.commit()
         if syntax != 'xwiki/2.1':
             query = (
-            'update xwikidoc set XWD_SYNTAX_ID = %(XWD_SYNTAX_ID)s, XWD_AUTHOR = %(XWD_AUTHOR)s, XWD_CONTENT_AUTHOR = %(XWD_CONTENT_AUTHOR)s where XWD_FULLNAME = %(XWD_NAME)s')
+                'update xwikidoc set XWD_SYNTAX_ID = %(XWD_SYNTAX_ID)s, XWD_AUTHOR = %(XWD_AUTHOR)s, XWD_CONTENT_AUTHOR = %(XWD_CONTENT_AUTHOR)s where XWD_FULLNAME = %(XWD_NAME)s')
             data = {
                 'XWD_NAME': XWD_WEB,
                 'XWD_SYNTAX_ID': syntax,
@@ -914,10 +901,10 @@ class MysqlConnector(object):
             else:
                 self.cnx.commit()
             query = (
-            'UPDATE xwikircs SET XWR_Patch = UpdateXML(XWR_Patch,"xwikidoc/syntaxId", "<syntaxId>' + syntax + '</syntaxId>"),'
-                                                                                                              'XWR_Patch = UpdateXML(XWR_Patch,"xwikidoc/contentAuthor", "<contentAuthor>' + author + '</contentAuthor>"),'
-                                                                                                                                                                                                      'XWR_Patch = UpdateXML(XWR_Patch,"xwikidoc/author", "<author>' + author + '</author>") '
-                                                                                                                                                                                                                                                                                'WHERE XWR_DOCID=%(XWR_DOCID)s and XWR_ISDIFF = 0')
+                'UPDATE xwikircs SET XWR_Patch = UpdateXML(XWR_Patch,"xwikidoc/syntaxId", "<syntaxId>' + syntax + '</syntaxId>"),'
+                                                                                                                  'XWR_Patch = UpdateXML(XWR_Patch,"xwikidoc/contentAuthor", "<contentAuthor>' + author + '</contentAuthor>"),'
+                                                                                                                                                                                                          'XWR_Patch = UpdateXML(XWR_Patch,"xwikidoc/author", "<author>' + author + '</author>") '
+                                                                                                                                                                                                                                                                                    'WHERE XWR_DOCID=%(XWR_DOCID)s and XWR_ISDIFF = 0')
             data = {
                 'XWR_DOCID': XWD_ID,
                 'XWD_SYNTAX_ID': syntax
@@ -931,10 +918,11 @@ class MysqlConnector(object):
                 self.cnx.commit()
         return True
 
-    def get_XWD_FULLNAMEs(self, space:str):
-        query = ("select XWD_FULLNAME from xwikidoc where XWD_FULLNAME like %(poolname)s and XWD_CREATOR != 'XWiki.root' and XWD_HIDDEN != 1")
+    def get_XWD_FULLNAMEs(self, space: str):
+        query = (
+            "select XWD_FULLNAME from xwikidoc where XWD_FULLNAME like %(poolname)s and XWD_CREATOR != 'XWiki.root' and XWD_HIDDEN != 1")
         data = {
-            'poolname': space+'%'
+            'poolname': space + '%'
         }
         self.cursor.execute(query, data)
         if self.cursor.rowcount != 0:
@@ -945,6 +933,7 @@ class MysqlConnector(object):
         else:
             return None
 
+
 class xWikiClient:
     def __init__(self, api_root, auth_user=None, auth_pass=None):
         self.api_root = api_root
@@ -952,7 +941,7 @@ class xWikiClient:
         self.auth_pass = auth_pass
 
     def _build_url(self, path):
-        print(path)
+        #print(path)
         for idx, val in enumerate(path):
             path[idx] = val.replace('/', '%2F')
         url = self.api_root + "/".join(path)
@@ -963,6 +952,7 @@ class xWikiClient:
 
     def _make_request(self, path, data):
         url = self._build_url(path)
+        #print(url)
         data['media'] = 'json'
         auth = None
         if self.auth_user and self.auth_pass:
@@ -1045,24 +1035,31 @@ class xWikiClient:
             pages.append(details['title'])
         return pages
 
-    def page(self, space, page, nested_space=None):
-        # TODO: what to do with same titled pages? how to get page in this case?
+    def page(self, space: str, page: str, nested_space: list=None):
         if nested_space is None:
             path = ['spaces', space, 'pages', page]
-        else: # http://xwiki.support2.veeam.local/rest/wikis/xwiki/spaces/Sandbox/spaces/TESTPAGE/spaces/123/pages
-            path = ['spaces', space, 'spaces', nested_space, 'spaces', page, 'pages', 'WebHome']
+        else:
+            path = ['spaces', space]
+            for space in nested_space:
+                l = ['spaces', space]
+                path.extend(l)
+            l = ['spaces', page, 'pages', 'WebHome']
+            path.extend(l)
         data = {}
         try:
             content = self._make_request(path, data)
             return content
-        except:
+        except requests.exceptions.HTTPError:
             try:
-                path = ['spaces', space, 'spaces', nested_space, 'spaces', page, 'pages', 'WebHome']
-                data = {}
-                content = self._make_request(path, data)
+                #print('It\'s a terminal page')
+                l = ['pages', page]
+                terminal_path = path[:-3]
+                terminal_path.extend(l)
+                content = self._make_request(terminal_path, data)
                 return content
             except:
                 return None
+
     def get_pages_by_space(self, space):
         MySQLconfig_INSTANCE = Configuration.MySQLConfig()
         little_mysql_client = MysqlConnector(MySQLconfig_INSTANCE)
@@ -1071,7 +1068,6 @@ class xWikiClient:
             return result
         else:
             return None
-
 
     def tags(self):
         path = ['tags']
@@ -1179,13 +1175,31 @@ class xWikiClient:
         content = self._make_request(path, data)
         return content
 
-    def get_page_version_content_and_author(self, space, page_name, version, nested_space=None):
-        path = ['spaces', space, 'pages', page_name, 'history', version]
-        if nested_space is not None:
-            path = ['spaces', space, 'spaces', nested_space, 'spaces', page_name, 'pages', 'WebHome', 'history', version]
+    def get_page_version_content_and_author(self, space, page, version, nested_space=None):
+        if nested_space is None:
+            path = ['spaces', space, 'pages', page, 'history', version]
+        else:
+            # print('It\'s not a terminal page')
+            path = ['spaces', space]
+            for space in nested_space:
+                l = ['spaces', space]
+                path.extend(l)
+            l = ['spaces', page, 'pages', 'WebHome', 'history', version]
+            path.extend(l)
         data = {}
-        content = self._make_request(path, data)
-        return content['content'], content['author']
+        try:
+            content = self._make_request(path, data)
+            return content['content'], content['author']
+        except requests.exceptions.HTTPError:
+            try:
+                #print('It\'s a terminal page')
+                l = ['pages', page, 'history', version]
+                terminal_path = path[:-6]
+                terminal_path.extend(l)
+                content = self._make_request(terminal_path, data)
+                return content['content'], content['author']
+            except:
+                return None
 
     def add_new_attach_as_plane(self, space, page, attach_name, path_to_attach):
         # http://lists.xwiki.org/pipermail/users/2010-February/015251.html
@@ -1268,8 +1282,8 @@ class Migrator(object):
             return self.file_list
         elif platform == 'MediaWIKI':
             regex = r"\[\[File:((\w|\d|-| |\.[^\|])*).*"
-            matches = re.finditer(regex, test_str, re.IGNORECASE) # added ignore case option
-            #print('test_str', test_str)
+            matches = re.finditer(regex, test_str, re.IGNORECASE)  # added ignore case option
+            # print('test_str', test_str)
             for matchNum, match in enumerate(matches):
                 matchNum = matchNum + 1
                 match = match.group(1)
@@ -1350,7 +1364,7 @@ def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE
     version = 0
     latest_text = None
     last_version = None
-    title = title.replace('&', '%26') # dosn't work :(
+    title = title.replace('&', '%26')  # dosn't work :(
     for idx, author in enumerate(UniqueUsers):
         version += 1
         text = ''
@@ -1422,7 +1436,7 @@ def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE
         elif platform == 'MediaWIKI':
             tags = Migrator.get_tags(platform=platform, id=None, test_str=latest_text)
             files = Migrator.get_files(platform=platform, id=None, test_str=latest_text)
-            #print(files)
+            # print(files)
         if bool(re.match('bug', title, re.I)):
             match = False
             for i in set(tags):
