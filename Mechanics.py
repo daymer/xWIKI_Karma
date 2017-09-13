@@ -274,12 +274,14 @@ class SQLConnector:
         return raw
 
     def GetPageSQLID_and_characters_total_by_page_id_and_platform(self, XWD, platform):
+        if platform.lower() == 'xwiki':
+            XWD = 'xwiki:'+XWD
         self.cursor.execute(
             "select [id],[characters_total] FROM [dbo].[KnownPages] where [page_id] = ? and [platform] LIKE LOWER(?)",
             XWD, platform)
         raw = self.cursor.fetchone()
-        # if raw is None:
-        #    return None
+        if raw is None:
+            return None
         return raw
 
     def GetUserIDbyName(self, username):

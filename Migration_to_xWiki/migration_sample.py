@@ -1,13 +1,10 @@
-from Users import Users
-from Configuration import MySQLConfig, ConfluenceConfig, MediaWIKIConfig
-from Mechanics import xWikiClient, MysqlConnector, Migrator
-import Mechanics
 from PythonConfluenceAPI import ConfluenceAPI
-import Configuration
-from Mechanics import SQLConnector
-import re
-import requests
 
+import Configuration
+import Mechanics
+from Configuration import MySQLConfig, MediaWIKIConfig
+from Mechanics import xWikiClient, MysqlConnector, Migrator
+from Migration_to_xWiki.Users_association import Users
 
 target_pool = 'Migration pool'
 parent = 'Migration pool'

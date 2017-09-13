@@ -1,12 +1,15 @@
-from Users import Users
-from Configuration import MySQLConfig, ConfluenceConfig, MediaWIKIConfig
-from Mechanics import xWikiClient, MysqlConnector, Migrator
-import Mechanics
-from PythonConfluenceAPI import ConfluenceAPI
-import Configuration
+import codecs
 import sys
 from datetime import datetime
-import codecs
+
+from PythonConfluenceAPI import ConfluenceAPI
+
+import Configuration
+import Mechanics
+from Configuration import MySQLConfig, ConfluenceConfig, MediaWIKIConfig
+from Mechanics import xWikiClient, MysqlConnector, Migrator
+from Migration_to_xWiki.Users_association import Users
+
 log_name = "Migration_log_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S", )) + '.txt'
 
 target_pool = 'Migrated bugs'

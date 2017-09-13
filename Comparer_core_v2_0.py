@@ -1,12 +1,57 @@
 from PythonConfluenceAPI import ConfluenceAPI
 import Configuration
 import pickle
-from Mechanics import PageCreator, SQLConnector, ContributionComparator, ExclusionsDict, MysqlConnector
+from Mechanics import PageCreator, SQLConnector, ContributionComparator, MysqlConnector
 import logging
 from datetime import datetime
+import argparse
+import base64
 GlobalStartTime = datetime.now()
 
-def initialize(logging_mode: str = 'INFO', log_to_file: bool = False):
+log_level = None
+task_pages_dict = None
+log_to_file = None
+
+##############################################################
+#                      Test variables                        #
+UseTestVarsSwitch = False
+TestVars = {
+    'log_level': 'INFO',
+    'log_to_file': False,
+    'task_pages_dict': {'Main.Bugs and Fixes.Fix Upload.WebHome': 'xWIKI'}
+}
+#                                                            #
+##############################################################
+
+if UseTestVarsSwitch is True:
+    log_level = TestVars['log_level']
+    log_to_file = TestVars['log_to_file']
+    task_pages_dict = TestVars['task_pages_dict']
+else:
+    parser = argparse.ArgumentParser()
+    # python Comparer_core_v2_0.py INFO true -t "Main.Bugs and Fixes.Fix Upload.WebHome" -p xWIKI
+    # python Comparer_core_v2_0.py INFO true -b b'gASVNQAAAAAAAAB9lIwmTWFpbi5CdWdzIGFuZCBGaXhlcy5GaXggVXBsb2FkLldlYkhvbWWUjAV4V0lLSZRzLg=='
+    parser.add_argument("log_level", type=str)
+    parser.add_argument("log_to_file", type=bool)
+    parser.add_argument("-t", "--title", type=str)
+    parser.add_argument("-p", "--platform", type=str)
+    parser.add_argument("-b", "--binary_dict", type=str)
+    args = parser.parse_args()
+    log_level = args.log_level
+    log_to_file = args.log_to_file
+    if args.title and args.platform:
+        task_pages_dict = {args.title: args.platform}
+    elif args.binary_dict:
+        print(args.binary_dict)
+        task_pages_dict = pickle.loads(args.binary_dict)
+        print(task_pages_dict)
+        exit()
+
+if log_level is None or task_pages_dict is None or log_to_file is None:
+    exit(1)
+
+
+def initialize(logging_mode: str = 'INFO', log_to_file_var: bool = False):
     ###################################################################################################################
     # Contrib_Compare_inst                                                                                            #
     # Main instance, used to analyze pages and create page contribution maps based on the content,                    #
@@ -23,8 +68,8 @@ def initialize(logging_mode: str = 'INFO', log_to_file: bool = False):
     logger_inst = logging.getLogger()
     logger_inst.setLevel(logging_mode)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    if log_to_file is True:
-        log_name = "Core_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S", )) + '.log'
+    if log_to_file_var is True:
+        log_name = "Core_v2.0_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S", )) + '.log'
         fh = logging.FileHandler(log_name)
         fh.setLevel(logging_mode)
         fh.setFormatter(formatter)
@@ -47,103 +92,11 @@ def initialize(logging_mode: str = 'INFO', log_to_file: bool = False):
                                        confluence_config_inst.ULR)
     return contrib_compare_inst, Mysql_connector_inst, confluenceAPI_inst, SQL_connector_inst, Page_creator_inst, logger_inst
 
-Contrib_Compare_inst, Mysql_Connector_inst, ConfluenceAPI_inst, SQL_Connector_inst, Page_Creator_inst, Logger = initialize('INFO')
+Contrib_Compare_inst, Mysql_Connector_inst, ConfluenceAPI_inst, SQL_Connector_inst, Page_Creator_inst, Logger = initialize(logging_mode=log_level, log_to_file_var=log_to_file)
 Logger.info('Initialization finished, job started at ' + str(GlobalStartTime))
-# Task:
-#    Confluence: VB (Veeam B&R Basic knowledge), WB (Veeam Support Hints and Tricks), GZ (Ground Zero)
-#    MediaWIKI: just all
-#    xWIKI: ['Blog', 'Main', 'Sandbox', 'XWiki']
-Task = {
-    # 'VB': 'Confluence',
-    # 'WB': 'Confluence',
-    # 'GZ': 'Confluence',
-    # 'ALL mWIKI': 'MediaWIKI'
-    # 'Main': 'xWIKI',
-    # 'Sandbox': 'xWIKI',
-    # 'Migration pool': 'xWIKI',
-    # 'Migrated bugs': 'xWIKI'
-    'Main': 'xWIKI',
-    'StagingWiki': 'xWIKI'
-}
-TaskExclusions = ExclusionsDict()
-# TaskExclusions['Confluence'] = 'List of all KBs'
-# TaskExclusions['MediaWIKI'] = 'Found Bugs'
-# TaskExclusions['MediaWIKI'] = 'Registry values B&R'
-# TaskExclusions['MediaWIKI'] = 'Veeam ONE Registry Keys'
-# TaskExclusions['MediaWIKI'] = 'Patches and fixes for B&R'
-# TaskExclusions['MediaWIKI'] = 'Bug%'
-# TaskExclusions['MediaWIKI'] = 'BUG%'
-# TaskExclusions['MediaWIKI'] = 'bug%'
-# TaskExclusions['MediaWIKI'] = 'Case Handling'
-# TaskExclusions['MediaWIKI'] = 'Team Members'
-TaskExclusions['xWIKI'] = 'Main.WebHome'
-TaskExclusions['xWIKI'] = 'StagingWiki.WebHome'
 
-
-def build_task_array(task_dict: dict, task_exclusions_dict: dict, Logger):
-    global task_pages_dict, platform
-    task_pages_dict = {}
-    total_size = 0
-    for space, platform in task_dict.items():
-        if platform == 'Confluence':
-            respond = ConfluenceAPI_inst.get_content('page', space, None, 'current', None, None, 0, 500)
-            size = respond['size']
-            total_size += size
-            Logger.info(str(size) + ' Confluence pages were found in space ' + space)
-            try:
-                confluence_pages_from_api = respond['results']
-            except:
-                Logger.error('Unable to get Confluence pages from API, aborting this space')
-                continue
-            for page in confluence_pages_from_api:
-                if task_exclusions_dict[platform] is not None:
-                    if not Page_Creator_inst.check_exclusions(page['title'], platform, task_exclusions_dict):
-                        continue
-                    else:
-                        task_pages_dict.update({page['title']: platform})
-                        size += 1
-                else:
-                    task_pages_dict.update({page['title']: platform})
-                    size += 1
-        if platform == 'MediaWIKI':
-            size = 0
-            for page in Page_Creator_inst.MediaWikiAPI_instance.allpages():
-                if task_exclusions_dict[platform] is not None:
-                    if not Page_Creator_inst.check_exclusions(page.name, platform, task_exclusions_dict):
-                        Logger.debug(page.name + ' was excluded, total excluded: ' + str(Page_Creator_inst.TotalExcluded))
-                        continue
-                    else:
-                        task_pages_dict.update({page.name: platform})
-                        size += 1
-                else:
-                    task_pages_dict.update({page.name: platform})
-                    size += 1
-            Logger.info(str(size) + ' MediaWIKI pages were found in space "' + space + '"')
-            total_size += size
-        if platform == 'xWIKI':
-            size = 0
-            Logger.debug('Looking for pages in the following xWIKI space: "' + space + '"')
-            for page in Mysql_Connector_inst.get_XWD_FULLNAMEs(space):
-                if task_exclusions_dict[platform] is not None:
-                    if not Page_Creator_inst.check_exclusions(page, platform, task_exclusions_dict):
-                        Logger.debug(page + ' was excluded, total excluded: ' + str(Page_Creator_inst.TotalExcluded))
-                        continue
-                    else:
-                        task_pages_dict.update({page: platform})
-                        size += 1
-                else:
-                    task_pages_dict.update({page: platform})
-                    size += 1
-            Logger.info(str(size) + ' xWIKI pages were found in space "' + space + '"')
-            total_size += size
-    TaskStartTime = datetime.now()
-    Logger.info(str(total_size) + ' pages were found in all spaces, excluded: ' + str(Page_Creator_inst.TotalExcluded))
-    return task_pages_dict, TaskStartTime
-
-task_pages_dict, TaskStartTime = build_task_array(task_dict=Task, task_exclusions_dict=TaskExclusions, Logger=Logger)
-
-# starting main process
 Logger.info('Starting main process...')
+TaskStartTime = datetime.now()
 for title, platform in task_pages_dict.items():
     PageAnalysisStartTime = datetime.now()
     Logger.info(title + ' : Task initialized, getting sources...')

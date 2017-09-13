@@ -1,2 +1,0 @@
-2017-09-01_02:37:10('Task started, migrate_statement=', "SELECT page_title, platform FROM [Karma].[dbo].[KnownPages] where page_title like ('%&%') and platform != 'xWiki'", 'title_like=', 'None')
-2017-09-01_02:37:16(('SUCCESS: Page', '"Patch 1 cannot be installed with "This Veeam Backup %26 Replication installation cannot be updated automatically"" from platform', 'MediaWIKI', 'is migrated'), 'migrated in total:', '1/1')

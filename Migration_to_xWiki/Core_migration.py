@@ -1,10 +1,11 @@
 import getopt
 import sys
+
 import Configuration
-from Users import Users
-from Configuration import MySQLConfig, ConfluenceConfig, MediaWIKIConfig
-from Mechanics import SQLConnector, xWikiClient, MysqlConnector, Migrator, ConfluenceAPI
 import Mechanics
+from Configuration import MySQLConfig, ConfluenceConfig, MediaWIKIConfig
+from Mechanics import xWikiClient, MysqlConnector, Migrator, ConfluenceAPI
+from Migration_to_xWiki.Users_association import Users
 
 ##############################################################
 #                      Test variables                        #

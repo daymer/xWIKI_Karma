@@ -38,6 +38,7 @@ def post_request_analyse(request_body):
                 page_id = request['id'][0]
             except:
                 print('may be it\'s an old logic?')
+                print(request)
                 try:
                     page_title = request['title'][0]
                 except:
@@ -59,7 +60,7 @@ def post_request_analyse(request_body):
                     return page_unknown_answer
                 #print('XWD_FULLNAME', 'xwiki:'+XWD_FULLNAME, 'page_id', page_id, 'platform', platform)
                 temp_array = SQLConnector.GetPageSQLID_and_characters_total_by_page_id_and_platform(
-                    'xwiki:'+XWD_FULLNAME, platform)
+                    XWD_FULLNAME, platform)
                 #print('temp_array', temp_array)
                 if temp_array is None:  # page is unknown exception
                     page_unknown_answer = json.dumps({
@@ -164,7 +165,7 @@ def post_request_analyse(request_body):
                 #print('page_title', page_title, 'page_id', page_id)
                 XWD_FULLNAME = MysqlConnector_INSTANCE.get_XWD_FULLNAME(XWD_ID=page_id)
                 if XWD_FULLNAME != None:
-                    XWD_FULLNAME = XWD_FULLNAME.decode('utf-8')
+                    XWD_FULLNAME = XWD_FULLNAME#.decode('utf-8')
                 else:
                     page_unknown_answer = json.dumps({
                         'Error': 'Bad request - there is no known page with id "' + page_id + '" in the database'},
