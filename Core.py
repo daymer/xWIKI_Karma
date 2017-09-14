@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 GlobalStartTime = datetime.now()
 
-def initialize(logging_mode: str = 'INFO', log_to_file: bool = False):
+def initialize(logging_mode: str = 'INFO', log_to_file: bool = True):
     ###################################################################################################################
     # Contrib_Compare_inst                                                                                            #
     # Main instance, used to analyze pages and create page contribution maps based on the content,                    #
@@ -195,7 +195,7 @@ for title, platform in task_pages_dict.items():
                 Percent = (Value / CurrentPage.TOTALCharacters) * 100
                 Logger.debug('Contribution of ' + Contributor + ' = ' + str(Percent) + '%' + ' (' + str(
                     Value) + ') characters')
-        Logger.info('Time elapsed: Analysis: ' + str(PageAnalysisEndTime - PageAnalysisStartTime) + ' + Diff calc: ',
+        Logger.info('Time elapsed: Analysis: ' + str(PageAnalysisEndTime - PageAnalysisStartTime) + ' + Diff calc: ' +
                     str(PageCountingEndTime - PageAnalysisEndTime) + ' = ' + str(
                         PageCountingEndTime - PageAnalysisStartTime))
         PageAnalysisStartTime = None

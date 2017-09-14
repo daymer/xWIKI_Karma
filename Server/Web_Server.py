@@ -305,6 +305,40 @@ def post_request_analyse(request_body):
                 for score, change_time_epoch in result:
                     answer['result'].update({change_time_epoch:score})
             return json.dumps(answer, separators=(',', ':'))
+        if method == 'reindex_page_by_title_or_id':
+            page_id = None
+            page_title = None
+            try:  # zero title exception
+                platform = request['platform'][0]
+            except:
+                return json.dumps({'Error': 'Bad request - no title or platform was provided'}, separators=(',', ':'))
+            try:
+                page_id = request['id'][0]
+            except:
+                print('may be it\'s an old logic?')
+                print(request)
+                try:
+                    page_title = request['title'][0]
+                except:
+                    return json.dumps({'Error': 'Bad request - no title, id or platform was provided'},
+                                      separators=(',', ':'))
+            if page_title is not None:
+                Current_Page = Page(request['title'][0], platform)
+                temp_array = SQLConnector.GetPageSQLID_and_characters_total_by_title_and_platform(
+                    Current_Page.page_title, Current_Page.page_platform)
+            if page_id is not None and page_title is None:
+                MySQLconfig_INSTANCE = Configuration.MySQLConfig()
+                MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
+                # print('page_title', page_title, 'page_id', page_id)
+                XWD_FULLNAME = MysqlConnector_INSTANCE.get_XWD_FULLNAME(XWD_ID=page_id)
+                if XWD_FULLNAME is None:
+                    page_unknown_answer = json.dumps({
+                        'Error': 'Bad request - there is no known page with id "' + page_id + '" in the xWiki database'},
+                        separators=(',', ':'))
+                    return page_unknown_answer
+                # print('XWD_FULLNAME', 'xwiki:'+XWD_FULLNAME, 'page_id', page_id, 'platform', platform)
+                answer = 'added to processing'
+                return json.dumps(answer, separators=(',', ':'))
 
         else:
             return json.dumps({'Error': 'bad request - unknown method'}, separators=(',', ':'))

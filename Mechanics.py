@@ -252,7 +252,7 @@ class SQLConnector:
 
     def GetPageSQLID(self, CurrentPage):
         self.cursor.execute(
-            "select [id] from [dbo].[KnownPages] where [page_id] = '" + str(CurrentPage.page_id) + "'")
+            "select [id] from [dbo].[KnownPages] where [page_id] = ?", CurrentPage.page_id)
         raw = self.cursor.fetchone()
         return raw[0]
 
@@ -378,7 +378,7 @@ class SQLConnector:
 
     def GetPagePageContribution(self, CurrentPage):
         self.cursor.execute(
-            "select [datagram_contribution] from [dbo].[KnownPages_contribution] where [KnownPageID] = '" + CurrentPage.pageSQL_id + "'")
+            "select [datagram_contribution] from [dbo].[KnownPages_contribution] where [KnownPageID] = ?", CurrentPage.pageSQL_id)
         raw = self.cursor.fetchone()
         if raw:
             return raw[0]
@@ -480,7 +480,7 @@ class SQLConnector:
 
     def CheckExistencebyID(self, CurrentPage):
         self.cursor.execute(
-            "select [version] from [dbo].[KnownPages] where [page_id] = '" + str(CurrentPage.page_id) + "'")
+            "select [version] from [dbo].[KnownPages] where [page_id] = ?", CurrentPage.page_id)
         row = self.cursor.fetchone()
         if row:
             self.cursor.execute(

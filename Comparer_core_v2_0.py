@@ -5,7 +5,7 @@ from Mechanics import PageCreator, SQLConnector, ContributionComparator, MysqlCo
 import logging
 from datetime import datetime
 import argparse
-import base64
+import os
 GlobalStartTime = datetime.now()
 
 log_level = None
@@ -35,17 +35,18 @@ else:
     parser.add_argument("log_to_file", type=bool)
     parser.add_argument("-t", "--title", type=str)
     parser.add_argument("-p", "--platform", type=str)
-    parser.add_argument("-b", "--binary_dict", type=str)
+    parser.add_argument("-b", "--binary_dict_id", type=str)
     args = parser.parse_args()
     log_level = args.log_level
     log_to_file = args.log_to_file
     if args.title and args.platform:
         task_pages_dict = {args.title: args.platform}
-    elif args.binary_dict:
-        print(args.binary_dict)
-        task_pages_dict = pickle.loads(args.binary_dict)
-        print(task_pages_dict)
-        exit()
+    elif args.binary_dict_id:
+        #print('env_name', args.binary_dict_id)
+        str_environ = os.environ[args.binary_dict_id]
+        #print('pickled + decoded dict from env', str_environ, 'len', len(str_environ))
+        task_pages_dict = pickle.loads(str_environ.encode('latin1'))
+        #print(task_pages_dict)
 
 if log_level is None or task_pages_dict is None or log_to_file is None:
     exit(1)
