@@ -10,19 +10,24 @@ PAGE_CREATOR = PageCreator(ConfluenceConfig, MediaWIKIConfig, xWikiConfig)
 SQLConnector = SQLConnector(SQLConfig)
 CustomLogging = CustomLogging('NotSilent')
 
-title = '.NET Error: Mixed mode assembly is built against version \'v2.0.50727\' of the runtime and cannot be loaded in the 4.0 runtime without additional configuration information'
-title = 'Main.Bugs and Fixes.Found Bugs.Migrated from mediaWIKI.0061b1c914a094d577ceb4c8e7bc00ae'
+title = 'Main.Internal Technical Docs.Knowledge Domains.Troubleshooting.Strategies & How-To​'
 CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform(title, 'xWIKI')
 if CurrentPage is None:
     print('Page wasn\'t found in provided spaces. Try to search in [\'Blog\', \'Main\', \'Sandbox\', \'XWiki\']')
     exit()
 CustomLogging.page_analysis_started(CurrentPage.page_title)
 CurrentPage.page_id = PAGE_CREATOR.collect_page_id(CurrentPage)
+
 # incremental or full mode
 CurrentPage.dbVersion = SQLConnector.CheckExistencebyID(CurrentPage)
+
 CurrentPage.page_author = PAGE_CREATOR.collect_page_author(CurrentPage)
+
 CurrentPage.page_versions = PAGE_CREATOR.collect_page_history(CurrentPage)
+
 CustomLogging.page_processing_started(CurrentPage)
+print(CurrentPage.dbVersion, CurrentPage.page_versions)
+
 if CurrentPage.dbVersion == None:
     CustomLogging.page_processing_target(CurrentPage)
     # getting sources for all versions
@@ -85,4 +90,5 @@ elif CurrentPage.dbVersion < CurrentPage.page_versions:
     SQLConnector.PushContributionDatagramByID(CurrentPage)
     SQLConnector.PushContributionByUser(CurrentPage)
 elif CurrentPage.dbVersion == CurrentPage.page_versions:
+    CustomLogging.page_processing_started(CurrentPage)
     SQLConnector.UpdateKnownPagesLast_check(CurrentPage)

@@ -32,13 +32,13 @@ else:
     # python Comparer_core_v2_0.py INFO true -t "Main.Bugs and Fixes.Fix Upload.WebHome" -p xWIKI
     # python Comparer_core_v2_0.py INFO true -b b'gASVNQAAAAAAAAB9lIwmTWFpbi5CdWdzIGFuZCBGaXhlcy5GaXggVXBsb2FkLldlYkhvbWWUjAV4V0lLSZRzLg=='
     parser.add_argument("log_level", type=str)
-    parser.add_argument("log_to_file", type=bool)
+    parser.add_argument("log_to_file", type=str)
     parser.add_argument("-t", "--title", type=str)
     parser.add_argument("-p", "--platform", type=str)
     parser.add_argument("-b", "--binary_dict_id", type=str)
     args = parser.parse_args()
     log_level = args.log_level
-    log_to_file = args.log_to_file
+    log_to_file = bool(eval(args.log_to_file))
     if args.title and args.platform:
         task_pages_dict = {args.title: args.platform}
     elif args.binary_dict_id:
@@ -105,6 +105,7 @@ for title, platform in task_pages_dict.items():
     if CurrentPage is None:
         Logger.warning(title + ' is redirect or unable to find ID, skipping')
         continue
+    print(CurrentPage)
     CurrentPage.page_id = Page_Creator_inst.collect_page_id(CurrentPage)
     if CurrentPage.page_id is None:
         Logger.warning(title + ' is redirect or unable to find ID, skipping')
@@ -112,6 +113,7 @@ for title, platform in task_pages_dict.items():
     # incremental or full mode
     CurrentPage.dbVersion = SQL_Connector_inst.CheckExistencebyID(CurrentPage)
     CurrentPage.page_versions = Page_Creator_inst.collect_page_history(CurrentPage)
+    print(CurrentPage.page_versions)
     CurrentPage.page_author = Page_Creator_inst.collect_page_author(CurrentPage)
 
     if CurrentPage.dbVersion is None:
@@ -142,7 +144,7 @@ for title, platform in task_pages_dict.items():
                     {CurrentPage.contributors[VersionNum]: NowInDict + len(UserXContribute)})
         # Showing stats, counting percents
         PageCountingEndTime = datetime.now()
-        Logger.info('... Done')
+        Logger.debug('... Done')
         Logger.debug('Characters in TOTAL: ' + str(CurrentPage.TOTALCharacters))
         if CurrentPage.TOTALCharacters != 0:
             for Contributor, Value in CurrentPage.TotalContribute.items():
@@ -157,6 +159,7 @@ for title, platform in task_pages_dict.items():
         PageCountingEndTime = None
         # pushing new page to SQL
         CurrentPage.pageSQL_id = SQL_Connector_inst.PushNewPage(CurrentPage)
+        Logger.info(CurrentPage.page_title + ' was added to DB')
         SQL_Connector_inst.PushNewDatagram(CurrentPage)
         SQL_Connector_inst.PushContributionDatagramByID(CurrentPage)
         SQL_Connector_inst.PushContributionByUser(CurrentPage)
@@ -223,4 +226,4 @@ for title, platform in task_pages_dict.items():
 
 TaskEndTime = datetime.now()
 TotalElapsed = TaskEndTime - TaskStartTime
-Logger.info('Task finished, total time wasted:' + str(TotalElapsed))
+Logger.info('Task finished, total time wasted: ' + str(TotalElapsed))

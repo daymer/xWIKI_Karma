@@ -188,7 +188,7 @@ for title, platform in task_pages_dict.items():
                     {CurrentPage.contributors[VersionNum]: NowInDict + len(UserXContribute)})
         # Showing stats, counting percents
         PageCountingEndTime = datetime.now()
-        Logger.info('... Done')
+        Logger.info(CurrentPage.page_title + ' was added to DB')
         Logger.debug('Characters in TOTAL: ' + str(CurrentPage.TOTALCharacters))
         if CurrentPage.TOTALCharacters != 0:
             for Contributor, Value in CurrentPage.TotalContribute.items():

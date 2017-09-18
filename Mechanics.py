@@ -77,6 +77,7 @@ class PageCreator:
                 return None
 
     def collect_page_id(self, page):
+        print(page.page_platform)
         if page.page_platform == 'Confluence':
             page_content = self.confluenceAPI.get_content(content_type='page', title=page.page_title)
             try:
@@ -88,7 +89,8 @@ class PageCreator:
         elif page.page_platform == 'MediaWIKI':
             self.current_mediaWiki_page = self.MediaWikiAPI_instance.Pages[page.page_title]
             return self.current_mediaWiki_page.pageid
-        elif page.page_platform == 'xWIKI':
+        elif page.page_platform.lower() == 'xwiki':
+            print(self.current_xWiki_page)
             return self.current_xWiki_page['id']
 
     def collect_page_history(self, page):
@@ -252,7 +254,7 @@ class SQLConnector:
 
     def GetPageSQLID(self, CurrentPage):
         self.cursor.execute(
-            "select [id] from [dbo].[KnownPages] where [page_id] = ?", CurrentPage.page_id)
+            "select [id] from [dbo].[KnownPages] where [page_id] like '" + CurrentPage.page_id + "'")
         raw = self.cursor.fetchone()
         return raw[0]
 
@@ -400,7 +402,6 @@ class SQLConnector:
                 CurrentPage.page_title, CurrentPage.page_id, CurrentPage.page_author, 'Null', CurrentPage.page_versions,
                 CurrentPage.TOTALCharacters, CurrentPage.page_platform)
             self.connection.commit()
-            print(datetime.now(), CurrentPage.page_title + ' was added to DB')
             pageID = self.GetPageSQLID(CurrentPage)
             return pageID
         except pyodbc.DataError:
@@ -480,7 +481,7 @@ class SQLConnector:
 
     def CheckExistencebyID(self, CurrentPage):
         self.cursor.execute(
-            "select [version] from [dbo].[KnownPages] where [page_id] = ?", CurrentPage.page_id)
+            "select [version] from [dbo].[KnownPages] where [page_id] = '" + CurrentPage.page_id + "'")
         row = self.cursor.fetchone()
         if row:
             self.cursor.execute(

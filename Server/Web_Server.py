@@ -8,6 +8,9 @@ import json
 import pickle
 import operator
 import ctypes
+import os
+import subprocess
+import uuid
 
 is_admin = ctypes.windll.shell32.IsUserAnAdmin()
 if is_admin != 1:
@@ -18,6 +21,17 @@ monkey.patch_all()  # makes many blocking calls asynchronous
 SQLConfig = Configuration.SQLConfig()
 SQLConnector = SQLConnector(SQLConfig)
 CustomLogging = CustomLogging('NOT_silent')
+
+
+def start_core_as_subprocess(dict_to_pickle: dict):
+    print(dict_to_pickle)
+    pickled_data = pickle.dumps(dict_to_pickle, 0)
+    pickled_and_decoded_dict = pickled_data.decode('latin1')
+    temp_id = str(uuid.uuid4())
+    os.environ[temp_id] = pickled_and_decoded_dict
+    print('---------sub process started-------------')
+    subprocess.call("python C:/Projects/xWIKI_Karma/Comparer_core_v2_0.py INFO False -b" + temp_id, shell=True)
+
 
 def post_request_analyse(request_body):
     request_body = request_body.decode("utf-8")
@@ -337,6 +351,8 @@ def post_request_analyse(request_body):
                         separators=(',', ':'))
                     return page_unknown_answer
                 # print('XWD_FULLNAME', 'xwiki:'+XWD_FULLNAME, 'page_id', page_id, 'platform', platform)
+                dict_to_pickle = {XWD_FULLNAME: platform}
+                start_core_as_subprocess(dict_to_pickle)
                 answer = 'added to processing'
                 return json.dumps(answer, separators=(',', ':'))
 
