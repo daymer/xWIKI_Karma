@@ -57,7 +57,7 @@ class PageXWiki(PageGlobal):
             self.is_terminal_page = False
         else:
             self.is_terminal_page = True
-        self.page_from_API = self.xWikiClient_inst.page(space=self.space, page=self.page, nested_space=self.nested_spaces)
+        self.page_from_API = self.xWikiClient_inst.page(space=self.space, page=self.page, nested_space=self.nested_spaces, is_terminal_page=self.is_terminal_page)
         self.page_id = self.page_from_API['id']
         self.page_versions = self.page_from_API['majorVersion']
         self.page_author = self.page_from_API['creator']
@@ -80,7 +80,7 @@ class PageXWiki(PageGlobal):
 
     def get_version_content_by_version(self, version_number: int) -> tuple:
         if type(self) is PageXWiki:
-            response = self.xWikiClient_inst.get_page_version_content_and_author(space=self.space, page=self.page, version=str(version_number) + '.1', nested_space=self.nested_spaces)
+            response = self.xWikiClient_inst.get_page_version_content_and_author(space=self.space, page=self.page, version=str(version_number) + '.1', nested_space=self.nested_spaces, is_terminal_page=self.is_terminal_page)
             page_version = response[0]
             contributor = response[1]
             return version_number, page_version, contributor

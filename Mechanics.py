@@ -957,7 +957,6 @@ class xWikiClient:
 
     def _make_request(self, path, data):
         url = self._build_url(path)
-        #print(url)
         data['media'] = 'json'
         auth = None
         if self.auth_user and self.auth_pass:
@@ -1040,9 +1039,12 @@ class xWikiClient:
             pages.append(details['title'])
         return pages
 
-    def page(self, space: str, page: str, nested_space: list=None):
+    def page(self, space: str, page: str, nested_space: list=None, is_terminal_page: bool=False):
         if nested_space is None:
-            path = ['spaces', space, 'pages', page]
+                if is_terminal_page is True:
+                    path = ['spaces', space, 'pages', page]
+                else:
+                    path = ['spaces', space, 'spaces', page, 'pages', 'WebHome']
         else:
             path = ['spaces', space]
             for space in nested_space:
@@ -1180,9 +1182,12 @@ class xWikiClient:
         content = self._make_request(path, data)
         return content
 
-    def get_page_version_content_and_author(self, space, page, version, nested_space=None):
+    def get_page_version_content_and_author(self, space, page, version, nested_space=None, is_terminal_page: bool =False):
         if nested_space is None:
-            path = ['spaces', space, 'pages', page, 'history', version]
+                if is_terminal_page is True:
+                    path = ['spaces', space, 'pages', page, 'history', version]
+                else:
+                    path = ['spaces', space, 'spaces', page, 'pages', 'WebHome','history', version]
         else:
             # print('It\'s not a terminal page')
             path = ['spaces', space]

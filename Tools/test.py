@@ -1,2 +1,2 @@
 dict = {'1': 'XWiki.drozhdestvenskiy'}
-print(dict['1'])
+print(dict.items())

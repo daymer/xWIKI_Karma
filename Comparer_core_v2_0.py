@@ -49,7 +49,7 @@ if log_level is None or task_pages_dict is None or log_to_file is None:
     exit(1)
 
 
-def initialize(logging_mode: str = 'INFO', log_to_file_var: bool = False):
+def initialize(task_pages_dict: dict, logging_mode: str = 'INFO', log_to_file_var: bool = False):
     ###################################################################################################################
     # Contrib_Compare_inst                                                                                            #
     # Main instance, used to analyze pages and create page contribution maps based on the content,                    #
@@ -63,11 +63,17 @@ def initialize(logging_mode: str = 'INFO', log_to_file_var: bool = False):
     # Page_Creator_inst                                                                                               #
     # Creates PAGE objects - data handlers for currently analyzed page                                                #
     ###################################################################################################################
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     logger_inst = logging.getLogger()
     logger_inst.setLevel(logging_mode)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    if log_to_file_var is True:
-        log_name = "Core_v2.0_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S", )) + '.log'
+    Integration_config = Configuration.Integration()
+    if log_to_file is True:
+        if len(task_pages_dict) == 1:
+            task_pages_dict_temp = task_pages_dict.copy()
+            log_title, log_platform = task_pages_dict_temp.popitem()
+            log_name = Integration_config.log_location + "Core_v2.0_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S")) + '_' + log_title + '_' + log_platform + '.log'
+        else:
+            log_name = Integration_config.log_location + "Core_v2.0_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S")) + '.log'
         fh = logging.FileHandler(log_name)
         fh.setLevel(logging_mode)
         fh.setFormatter(formatter)
@@ -92,7 +98,7 @@ def initialize(logging_mode: str = 'INFO', log_to_file_var: bool = False):
                                    xWiki_Config_inst.auth_pass)
     return contrib_compare_inst, Mysql_connector_inst, confluenceAPI_inst, SQL_connector_inst, Page_creator_inst, logger_inst, xwikiclient_inst
 
-Contrib_Compare_inst, Mysql_Connector_inst, ConfluenceAPI_inst, SQL_Connector_inst, Page_Creator_inst, Logger, xWikiClient_inst = initialize(logging_mode=log_level, log_to_file_var=log_to_file)
+Contrib_Compare_inst, Mysql_Connector_inst, ConfluenceAPI_inst, SQL_Connector_inst, Page_Creator_inst, Logger, xWikiClient_inst = initialize(task_pages_dict, logging_mode=log_level, log_to_file_var=log_to_file)
 Logger.info('Initialization finished, job started at ' + str(GlobalStartTime))
 
 TaskStartTime = datetime.now()

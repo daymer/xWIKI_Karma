@@ -7,6 +7,7 @@ from datetime import datetime
 import uuid
 import os
 import subprocess
+import sys
 GlobalStartTime = datetime.now()
 
 
@@ -24,9 +25,9 @@ def initialize(logging_mode: str = 'INFO', log_to_file: bool = True):
     # Page_Creator_inst                                                                                               #
     # Creates PAGE objects - data handlers for currently analyzed page                                                #
     ###################################################################################################################
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     logger_inst = logging.getLogger()
     logger_inst.setLevel(logging_mode)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     Integration_config = Configuration.Integration()
     if log_to_file is True:
         log_name = Integration_config.log_location + "Comparer_task_builder_v1.0_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S", )) + '.log'
@@ -152,7 +153,7 @@ def start_core_as_subprocess(dict_to_pickle: dict):
     temp_id = str(uuid.uuid4())
     os.environ[temp_id] = pickled_and_decoded_dict
     # print('---------sub process started-------------')
-    subprocess.call("python C:/Projects/xWIKI_Karma/Comparer_core_v2_0.py INFO False -b" + temp_id, shell=True)
+    subprocess.call("python C:/Projects/xWIKI_Karma/Comparer_core_v2_0.py INFO True -b" + temp_id, shell=True)
 
 task_pages_dict, TaskStartTime = build_task_array(task_dict=Task, task_exclusions_dict=TaskExclusions, Logger=Logger)
 
@@ -160,10 +161,14 @@ task_pages_dict, TaskStartTime = build_task_array(task_dict=Task, task_exclusion
 Logger.info('Re-indexing started')
 
 for title, platform in task_pages_dict.items():
-    dict_to_pickle = {
-        title: platform
-    }
-    Logger.info('Re-indexing of "'+ title + '" platform: ' + platform + ' started')
-    start_core_as_subprocess(dict_to_pickle)
+    try:
+        dict_to_pickle = {
+            title: platform
+        }
+        Logger.info('Re-indexing of "' + title + '" platform: ' + platform + ' started')
+        start_core_as_subprocess(dict_to_pickle)
+    except:  # all unhandled exceptions
+        error = sys.exc_info()[0]
+        Logger.error('Re-indexing unexpectedly failed with: ' + str(error))
 
 Logger.info('Re-indexing finished')
