@@ -59,7 +59,7 @@
                     };
                 if (Eugenes_style == "true") {
                         console.log('true')
-                        data.reverse_array = "true" //there is no diff what to send, only key itself must exist
+                        data.reverse_array = "true" //there is no diff what to send, only key itself is needed
                     } else {
                     console.log('false')
                     }
@@ -71,13 +71,9 @@
                     dataType: 'json',
                     success: function (data) {
                         console.log(data);
-                        servermsg.innerHTML = servermsg.innerHTML + "<br>Karma score of user <b> " + username+"</b> between <b>"+date_start+" </b>and <b>"+ date_end+":</b><br>";
+                        servermsg.innerHTML = servermsg.innerHTML + "<br>Requested re-index of: <b> " + page_id+"</b> platform <b>"+page_platform+" </b>:</b>";
                         if (data.Error != 0) {
-                            servermsg.innerHTML = servermsg.innerHTML  +  "<br>Error: <b>" + data[Object.keys(data)[0]]+"</b>"
-                        } else {
-                            jQuery.each(data.result, function(i, val) {
-                                servermsg.innerHTML = servermsg.innerHTML  + " " +  val  + ": " + i + "<br>" //EpochToDate(val)
-                                });
+                            servermsg.innerHTML = servermsg.innerHTML  +  "<br>Result: <b>" + data[Object.keys(data)[0]]+"</b>"
                         }
                     }
                 });

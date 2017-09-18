@@ -1,11 +1,14 @@
 from PythonConfluenceAPI import ConfluenceAPI
 import Configuration
 import pickle
-from Mechanics import PageCreator, SQLConnector, ContributionComparator, MysqlConnector
+from Mechanics import SQLConnector, ContributionComparator, MysqlConnector, PageCreator, xWikiClient
+from Page_mechanics import PageXWiki
 import logging
 from datetime import datetime
 import argparse
 import os
+
+
 GlobalStartTime = datetime.now()
 
 log_level = None
@@ -18,7 +21,7 @@ UseTestVarsSwitch = False
 TestVars = {
     'log_level': 'INFO',
     'log_to_file': False,
-    'task_pages_dict': {'Main.Bugs and Fixes.Fix Upload.WebHome': 'xWIKI'}
+    'task_pages_dict': {'Sandbox.Pages.test.WebHome': 'xWIKI'}
 }
 #                                                            #
 ##############################################################
@@ -29,8 +32,6 @@ if UseTestVarsSwitch is True:
     task_pages_dict = TestVars['task_pages_dict']
 else:
     parser = argparse.ArgumentParser()
-    # python Comparer_core_v2_0.py INFO true -t "Main.Bugs and Fixes.Fix Upload.WebHome" -p xWIKI
-    # python Comparer_core_v2_0.py INFO true -b b'gASVNQAAAAAAAAB9lIwmTWFpbi5CdWdzIGFuZCBGaXhlcy5GaXggVXBsb2FkLldlYkhvbWWUjAV4V0lLSZRzLg=='
     parser.add_argument("log_level", type=str)
     parser.add_argument("log_to_file", type=str)
     parser.add_argument("-t", "--title", type=str)
@@ -42,12 +43,8 @@ else:
     if args.title and args.platform:
         task_pages_dict = {args.title: args.platform}
     elif args.binary_dict_id:
-        #print('env_name', args.binary_dict_id)
         str_environ = os.environ[args.binary_dict_id]
-        #print('pickled + decoded dict from env', str_environ, 'len', len(str_environ))
         task_pages_dict = pickle.loads(str_environ.encode('latin1'))
-        #print(task_pages_dict)
-
 if log_level is None or task_pages_dict is None or log_to_file is None:
     exit(1)
 
@@ -91,51 +88,57 @@ def initialize(logging_mode: str = 'INFO', log_to_file_var: bool = False):
     # getting all pages in Confluence:
     confluenceAPI_inst = ConfluenceAPI(confluence_config_inst.USER, confluence_config_inst.PASS,
                                        confluence_config_inst.ULR)
-    return contrib_compare_inst, Mysql_connector_inst, confluenceAPI_inst, SQL_connector_inst, Page_creator_inst, logger_inst
+    xwikiclient_inst = xWikiClient(xWiki_Config_inst.api_root, xWiki_Config_inst.auth_user,
+                                   xWiki_Config_inst.auth_pass)
+    return contrib_compare_inst, Mysql_connector_inst, confluenceAPI_inst, SQL_connector_inst, Page_creator_inst, logger_inst, xwikiclient_inst
 
-Contrib_Compare_inst, Mysql_Connector_inst, ConfluenceAPI_inst, SQL_Connector_inst, Page_Creator_inst, Logger = initialize(logging_mode=log_level, log_to_file_var=log_to_file)
+Contrib_Compare_inst, Mysql_Connector_inst, ConfluenceAPI_inst, SQL_Connector_inst, Page_Creator_inst, Logger, xWikiClient_inst = initialize(logging_mode=log_level, log_to_file_var=log_to_file)
 Logger.info('Initialization finished, job started at ' + str(GlobalStartTime))
 
-Logger.info('Starting main process...')
 TaskStartTime = datetime.now()
 for title, platform in task_pages_dict.items():
+    # Creating new page instance. Practically, page inst is everything what we need to get page index
     PageAnalysisStartTime = datetime.now()
-    Logger.info(title + ' : Task initialized, getting sources...')
-    CurrentPage = Page_Creator_inst.create_new_page_by_title_and_platform(title, platform)
-    if CurrentPage is None:
-        Logger.warning(title + ' is redirect or unable to find ID, skipping')
-        continue
-    print(CurrentPage)
-    CurrentPage.page_id = Page_Creator_inst.collect_page_id(CurrentPage)
-    if CurrentPage.page_id is None:
-        Logger.warning(title + ' is redirect or unable to find ID, skipping')
-        continue
+    Logger.info(title + ': Task initialized.')
+    if platform.lower() == 'xwiki':
+        # title is not a valid term in case of xWIki. Pages there have 2 separate options:
+        # page (used in api path) and title (unused).
+        # So, first we have to find it's name to make sure that the provided page exists
+        real_title = Mysql_Connector_inst.get_XWD_TITLE(title)
+        if real_title is None:
+            Logger.error('Unable to find title of page "' + title + '". Skipping.')
+            continue
+        CurrentPage = PageXWiki(page=title, page_title=real_title, xWikiClient_inst=xWikiClient_inst)
+        if CurrentPage is None:
+            Logger.error('Unable to initialize PageXWiki instance "' + title + '". Skipping.')
+            continue
+        if CurrentPage.page_id is None:
+            Logger.warning(title + ' is redirect or unable to find ID, skipping')
+            continue
     # incremental or full mode
     CurrentPage.dbVersion = SQL_Connector_inst.CheckExistencebyID(CurrentPage)
-    CurrentPage.page_versions = Page_Creator_inst.collect_page_history(CurrentPage)
-    print(CurrentPage.page_versions)
-    CurrentPage.page_author = Page_Creator_inst.collect_page_author(CurrentPage)
 
+    #FULL MODE:
     if CurrentPage.dbVersion is None:
         Logger.info('"' + CurrentPage.page_title + '" will be processed in FULL mode')
         PageAnalysisEndTime = datetime.now()
         Logger.debug('Page "' + CurrentPage.page_title + '" with ID ' + str(
                 CurrentPage.page_id) + ', created by ' + CurrentPage.page_author + ' was parsed, ' + str(
-                CurrentPage.page_versions) + ' versions were found', '\n',
-                  'Sources are collected, calculating difference... ')
+                CurrentPage.page_versions) + ' versions were found')
+        Logger.debug('Collecting sources and calculating difference... ')
         # getting sources for all versions
         for VersionNumber in range(1, CurrentPage.page_versions + 1):
-            new_version = Page_Creator_inst.get_version_content_by_version(VersionNumber, CurrentPage)
-            CurrentPage.add_new_page_version(new_version)
+            CurrentPage.add_new_page_version(CurrentPage.get_version_content_by_version(VersionNumber))
         # comparing all versions
         try:
             Contrib_Compare_inst.initial_compare(CurrentPage)
         except:
             print(CurrentPage.PageVersionsDict)
-        CurrentPage.TOTALCharacters = len(CurrentPage.VersionsGlobalArray)
+            exit()
+        CurrentPage.TotalCharacters = len(CurrentPage.VersionsGlobalArray)
         for VersionNum in range(1, CurrentPage.page_versions + 1):
-            # print(CurrentPage.contributors[VersionNum] +' has contributed ' + str(len(UserXContribute)) + ' in version ' + str(VersionNum))
             UserXContribute = [x for x in CurrentPage.VersionsGlobalArray if x[1] == VersionNum]
+            # print(CurrentPage.contributors[VersionNum] + ' has contributed ' + str(len(UserXContribute)) + ' in version ' + str(VersionNum))
             if CurrentPage.TotalContribute.get(CurrentPage.contributors[VersionNum]) == None:
                 CurrentPage.TotalContribute.update({CurrentPage.contributors[VersionNum]: len(UserXContribute)})
             else:
@@ -145,13 +148,13 @@ for title, platform in task_pages_dict.items():
         # Showing stats, counting percents
         PageCountingEndTime = datetime.now()
         Logger.debug('... Done')
-        Logger.debug('Characters in TOTAL: ' + str(CurrentPage.TOTALCharacters))
-        if CurrentPage.TOTALCharacters != 0:
+        Logger.debug('Characters in TOTAL: ' + str(CurrentPage.TotalCharacters))
+        if CurrentPage.TotalCharacters != 0:
             for Contributor, Value in CurrentPage.TotalContribute.items():
-                Percent = (Value / CurrentPage.TOTALCharacters) * 100
+                Percent = (Value / CurrentPage.TotalCharacters) * 100
                 Logger.debug('Contribution of ' + Contributor + ' = ' + str(Percent) + '%' + ' (' + str(
                     Value) + ') characters')
-        Logger.info('Time elapsed: Analysis: ' + str(PageAnalysisEndTime - PageAnalysisStartTime) + ' + Diff calc: ',
+        Logger.info('Time elapsed: Analysis: ' + str(PageAnalysisEndTime - PageAnalysisStartTime) + ' + Diff calc: ' +
                     str(PageCountingEndTime - PageAnalysisEndTime) + ' = ' + str(
                         PageCountingEndTime - PageAnalysisStartTime))
         PageAnalysisStartTime = None
@@ -168,18 +171,17 @@ for title, platform in task_pages_dict.items():
         PageAnalysisEndTime = datetime.now()
         Logger.info('Page "' + CurrentPage.page_title + '" with ID ' + str(
                 CurrentPage.page_id) + ', created by ' + CurrentPage.page_author + ' was parsed, ' + str(
-                CurrentPage.page_versions) + ' versions were found', '\n',
-                  'Sources are collected, calculating difference... ')
+                CurrentPage.page_versions) + ' versions were found')
+        Logger.debug('Sources are loaded, collecting incremental data and calculating difference... ')
         SQL_Connector_inst.UpdateKnownPagesLast_check(CurrentPage)
         # getting sources for all missing versions + latest in DB
         for VersionNumber in range(CurrentPage.dbVersion, CurrentPage.page_versions + 1):
-            new_version = Page_Creator_inst.get_version_content_by_version(VersionNumber, CurrentPage)
-            CurrentPage.add_new_page_version(new_version)
+            CurrentPage.add_new_page_version(CurrentPage.get_version_content_by_version(VersionNumber))
         PageAnalysisEndTime = datetime.now()
         Logger.info('Page "' + CurrentPage.page_title + '" with ID ' + str(
                 CurrentPage.page_id) + ', created by ' + CurrentPage.page_author + ' was parsed, ' + str(
-                CurrentPage.page_versions) + ' versions were found', '\n',
-                  'Sources are collected, calculating difference... ')
+                CurrentPage.page_versions) + ' versions were found')
+        Logger.debug('Sources are loaded, calculating difference... ')
         # loading old datagram
         CurrentPage.pageSQL_id = SQL_Connector_inst.GetPageSQLID(CurrentPage)
         TempArray = SQL_Connector_inst.GetDatagrams(CurrentPage)
@@ -187,7 +189,7 @@ for title, platform in task_pages_dict.items():
         TempContributors = pickle.loads(TempArray[1])
         # comparing latest versions
         Contrib_Compare_inst.incremental_compare(CurrentPage)
-        CurrentPage.TOTALCharacters = len(CurrentPage.VersionsGlobalArray)
+        CurrentPage.TotalCharacters = len(CurrentPage.VersionsGlobalArray)
         for version, user in TempContributors.items():  # Warning! dict.update is used, which means that accidentally matching pairs version:user will be overwritten.
             CurrentPage.contributors.update({version: user})
         # recalculating contribution for all versions
@@ -203,13 +205,13 @@ for title, platform in task_pages_dict.items():
         # Showing stats, counting percents
         PageCountingEndTime = datetime.now()
         Logger.info('... Done')
-        Logger.debug('Characters in TOTAL: ' + str(CurrentPage.TOTALCharacters))
-        if CurrentPage.TOTALCharacters != 0:
+        Logger.debug('Characters in TOTAL: ' + str(CurrentPage.TotalCharacters))
+        if CurrentPage.TotalCharacters != 0:
             for Contributor, Value in CurrentPage.TotalContribute.items():
-                Percent = (Value / CurrentPage.TOTALCharacters) * 100
+                Percent = (Value / CurrentPage.TotalCharacters) * 100
                 Logger.debug('Contribution of ' + Contributor + ' = ' + str(Percent) + '%' + ' (' + str(
                     Value) + ') characters')
-        Logger.info('Time elapsed: Analysis: ' + str(PageAnalysisEndTime - PageAnalysisStartTime) + ' + Diff calc: ',
+        Logger.info('Time elapsed: Analysis: ' + str(PageAnalysisEndTime - PageAnalysisStartTime) + ' + Diff calc: ' +
                      str(PageCountingEndTime - PageAnalysisEndTime) + ' = ' + str(PageCountingEndTime - PageAnalysisStartTime))
         PageAnalysisStartTime = None
         PageAnalysisEndTime = None
@@ -220,7 +222,7 @@ for title, platform in task_pages_dict.items():
         SQL_Connector_inst.PushContributionDatagramByID(CurrentPage)
         SQL_Connector_inst.PushContributionByUser(CurrentPage)
     elif CurrentPage.dbVersion == CurrentPage.page_versions:
-        Logger.info('"' + CurrentPage.page_title + '" is up-to-date')
+        Logger.info('Page "' + CurrentPage.page_title + '" is up-to-date')
         PageAnalysisEndTime = datetime.now()
         SQL_Connector_inst.UpdateKnownPagesLast_check(CurrentPage)
 

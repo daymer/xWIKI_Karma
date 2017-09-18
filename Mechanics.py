@@ -47,7 +47,7 @@ class PageCreator:
                 else:
                     new_created_page = Page(title, platform)
                     return new_created_page
-        elif platform == 'xWIKI' or platform == 'xwiki':
+        elif platform.lower() == 'xwiki':
             if title.endswith('.WebHome'):
                 replaced_title = title.replace('.WebHome', '')
                 replaced_title = replaced_title.replace('\\.', '<dirtyhack>')
@@ -77,7 +77,7 @@ class PageCreator:
                 return None
 
     def collect_page_id(self, page):
-        print(page.page_platform)
+        #print(page.page_platform)
         if page.page_platform == 'Confluence':
             page_content = self.confluenceAPI.get_content(content_type='page', title=page.page_title)
             try:
@@ -90,7 +90,7 @@ class PageCreator:
             self.current_mediaWiki_page = self.MediaWikiAPI_instance.Pages[page.page_title]
             return self.current_mediaWiki_page.pageid
         elif page.page_platform.lower() == 'xwiki':
-            print(self.current_xWiki_page)
+            #print(self.current_xWiki_page)
             return self.current_xWiki_page['id']
 
     def collect_page_history(self, page):
@@ -203,7 +203,7 @@ class Page:
         self.PageVersionsDict = []
         self.VersionsGlobalArray = []
         self.TotalContribute = {}
-        self.TOTALCharacters = 0
+        self.TotalCharacters = 0
         self.page_platform = current_platform
         self.dbVersion = ''
         self.pageSQL_id = ''
@@ -395,12 +395,14 @@ class SQLConnector:
         return raw
 
     def PushNewPage(self, CurrentPage):
+        # TODO: remove hardcoded CurrentPage.page_platform
+        page_platform = 'xwiki'
         try:
             self.cursor.execute(
                 "insert into [dbo].[KnownPages] ([ID],[page_title],[page_id],[author],[author_ID],[added],"
                 "[last_modified],[version],[last_check],[is_uptodate], [characters_total], [platform]) values (NEWID(),?,?,?,?,getdate(),getdate(),?,getdate(),'1',?,?)",
                 CurrentPage.page_title, CurrentPage.page_id, CurrentPage.page_author, 'Null', CurrentPage.page_versions,
-                CurrentPage.TOTALCharacters, CurrentPage.page_platform)
+                CurrentPage.TotalCharacters, page_platform)
             self.connection.commit()
             pageID = self.GetPageSQLID(CurrentPage)
             return pageID
@@ -526,7 +528,7 @@ class SQLConnector:
     def UpdatePagebyID(self, CurrentPage):
         self.cursor.execute(
             "update [dbo].[KnownPages] set [is_uptodate]='1', [last_check]=getdate(),[last_modified]=getdate(), version = ?, characters_total = ? where [id] =?",
-            CurrentPage.page_versions, CurrentPage.TOTALCharacters, CurrentPage.pageSQL_id)
+            CurrentPage.page_versions, CurrentPage.TotalCharacters, CurrentPage.pageSQL_id)
         self.connection.commit()
 
     def UpdateDatagramByID(self, CurrentPage):

@@ -24,18 +24,23 @@ CustomLogging = CustomLogging('NOT_silent')
 
 
 def start_core_as_subprocess(dict_to_pickle: dict):
-    print(dict_to_pickle)
-    pickled_data = pickle.dumps(dict_to_pickle, 0)
-    pickled_and_decoded_dict = pickled_data.decode('latin1')
-    temp_id = str(uuid.uuid4())
-    os.environ[temp_id] = pickled_and_decoded_dict
-    print('---------sub process started-------------')
-    subprocess.call("python C:/Projects/xWIKI_Karma/Comparer_core_v2_0.py INFO False -b" + temp_id, shell=True)
+    try:
+        #print(dict_to_pickle)
+        pickled_data = pickle.dumps(dict_to_pickle, 0)
+        pickled_and_decoded_dict = pickled_data.decode('latin1')
+        temp_id = str(uuid.uuid4())
+        os.environ[temp_id] = pickled_and_decoded_dict
+        print('---------sub process started-------------')
+        subprocess.call("python C:/Projects/xWIKI_Karma/Comparer_core_v2_0.py INFO False -b" + temp_id, shell=True)
+        return True
+    except:
+        return False
 
 
 def post_request_analyse(request_body):
     request_body = request_body.decode("utf-8")
     request = parse_qs(request_body)
+    #print(request)
     try:
         method = request['method'][0]
     except:
@@ -90,13 +95,13 @@ def post_request_analyse(request_body):
                 return page_unknown_answer
 
             Current_Page.pageSQL_id = temp_array[0]
-            Current_Page.TOTALCharacters = int(temp_array[1])
+            Current_Page.TotalCharacters = int(temp_array[1])
             Current_Page.TotalContribute = pickle.loads(SQLConnector.GetPagePageContribution(Current_Page))
             result = SQLConnector.GetPageKarmaAndVotes_byID(Current_Page.pageSQL_id)
             up_votes = result[0]
             down_votes = result[1]
             karma_score = result[2]
-            if Current_Page.TOTALCharacters != 0:
+            if Current_Page.TotalCharacters != 0:
                 answer = {
                     'Error': 0,
                     'page_title': Current_Page.page_title,
@@ -107,7 +112,7 @@ def post_request_analyse(request_body):
                     'contributors_percents': {}
                 }
                 for Contributor, Value in Current_Page.TotalContribute.items():
-                    Percent = round(((Value / Current_Page.TOTALCharacters) * 100), 2)
+                    Percent = round(((Value / Current_Page.TotalCharacters) * 100), 2)
                     answer['contributors_percents'].update({Contributor: Percent})
                 contributors_percents_sorted = sorted(answer['contributors_percents'].items(),
                                                      key=operator.itemgetter(1), reverse=True)
@@ -352,8 +357,11 @@ def post_request_analyse(request_body):
                     return page_unknown_answer
                 # print('XWD_FULLNAME', 'xwiki:'+XWD_FULLNAME, 'page_id', page_id, 'platform', platform)
                 dict_to_pickle = {XWD_FULLNAME: platform}
-                start_core_as_subprocess(dict_to_pickle)
-                answer = 'added to processing'
+                result = start_core_as_subprocess(dict_to_pickle)
+                if result is True:
+                    answer = {'Success': 'Added to processing'}
+                else:
+                    answer = {'Error': 'Failed to add to processing'}
                 return json.dumps(answer, separators=(',', ':'))
 
         else:

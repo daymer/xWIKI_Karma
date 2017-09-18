@@ -78,6 +78,7 @@ TaskExclusions = ExclusionsDict()
 # TaskExclusions['MediaWIKI'] = 'Team Members'
 TaskExclusions['xWIKI'] = 'Main.WebHome'
 TaskExclusions['xWIKI'] = 'StagingWiki.WebHome'
+TaskExclusions['xWIKI'] = 'StagingWiki.Personal Spaces%'
 
 
 def build_task_array(task_dict: dict, task_exclusions_dict: dict, Logger):
@@ -175,7 +176,9 @@ for title, platform in task_pages_dict.items():
         try:
             Contrib_Compare_inst.initial_compare(CurrentPage)
         except:
-            print(CurrentPage.PageVersionsDict)
+            Logger.critical('initial compare has failed on the following PageVersionsDict:')
+            Logger.critical(CurrentPage.PageVersionsDict)
+            exit(1)
         CurrentPage.TOTALCharacters = len(CurrentPage.VersionsGlobalArray)
         for VersionNum in range(1, CurrentPage.page_versions + 1):
             # print(CurrentPage.contributors[VersionNum] +' has contributed ' + str(len(UserXContribute)) + ' in version ' + str(VersionNum))
