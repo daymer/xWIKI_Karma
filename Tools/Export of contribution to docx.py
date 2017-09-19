@@ -10,8 +10,8 @@ xWikiConfig = Configuration.xWikiConfig('Migration pool')
 xWikiClient = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
 
 PageTitle = 'Linux basics'
-platform = 'confluence'
-SQLQuery = SQLConnector.GetDatagramsByPageTitleandPlatform(PageTitle,platform)
+platform = 'xWIKI'
+SQLQuery = SQLConnector.GetDatagramsByPageTitleandPlatform(PageTitle, platform)
 datagram = SQLQuery[0]
 contributors_datagram = SQLQuery[1]
 Colors = ['BRIGHT_GREEN','YELLOW','TEAL','VIOLET','PINK','RED','TURQUOISE','DARK_YELLOW','GRAY_50','GRAY_25','DARK_BLUE','DARK_RED','BLUE','GREEN']

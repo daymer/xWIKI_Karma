@@ -11,7 +11,7 @@ SQLConnector = SQLConnector(SQLConfig)
 CustomLogging = CustomLogging('NotSilent')
 
 
-CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform('Investigating error "The storage file was not verified."', 'Confluence')
+CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform('Linux basics', 'Confluence')
 if CurrentPage is None: exit()
 CustomLogging.page_analysis_started(CurrentPage.page_title)
 CurrentPage.page_id = PAGE_CREATOR.collect_page_id(CurrentPage)

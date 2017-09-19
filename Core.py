@@ -76,9 +76,9 @@ TaskExclusions = ExclusionsDict()
 # TaskExclusions['MediaWIKI'] = 'bug%'
 # TaskExclusions['MediaWIKI'] = 'Case Handling'
 # TaskExclusions['MediaWIKI'] = 'Team Members'
-TaskExclusions['xWIKI'] = 'Main.WebHome'
-TaskExclusions['xWIKI'] = 'StagingWiki.WebHome'
-TaskExclusions['xWIKI'] = 'StagingWiki.Personal Spaces%'
+# TaskExclusions['xWIKI'] = 'Main.WebHome'
+# TaskExclusions['xWIKI'] = 'StagingWiki.WebHome'
+# TaskExclusions['xWIKI'] = 'StagingWiki.Personal Spaces%'
 
 
 def build_task_array(task_dict: dict, task_exclusions_dict: dict, Logger):

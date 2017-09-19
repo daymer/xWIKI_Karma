@@ -363,9 +363,8 @@ if (@karma_total_score = 0 and @up != @down)
 select @up as up, @down as down, @karma_total_score as karma_total_score
 GO
 
-USE Karma;  
-GO 
-CREATE PROCEDURE make_new_global_karma_slice
+
+CREATE PROCEDURE [dbo].[make_new_global_karma_slice]
 AS   
     SET NOCOUNT ON; 
 	DECLARE @user_id as uniqueidentifier
@@ -381,4 +380,31 @@ BEGIN
 FETCH NEXT FROM @CURSOR INTO @user_id
 END
 CLOSE @CURSOR
+GO 
+
+CREATE PROCEDURE [dbo].[delete_page]
+    @page_id uniqueidentifier
+AS   
+SET NOCOUNT ON
+
+delete [dbo].[KnownPages_contribution] where KnownPageID = @page_id
+delete [dbo].[KnownPages_datagrams] where KnownPageID = @page_id
+delete [dbo].[KnownPages_UsersContribution] where KnownPageID = @page_id
+delete [dbo].[Page_Karma_votes] where page_id = @page_id
+delete [dbo].[KnownPages] where id = @page_id
+
+GO 
+
+CREATE PROCEDURE [dbo].[delete_page_by_page_id]
+    @page_id varchar(MAX)
+AS   
+SET NOCOUNT ON
+declare @id as uniqueidentifier
+select @id=[id] from [dbo].[KnownPages] where [page_id] = @page_id
+delete [dbo].[KnownPages_contribution] where KnownPageID = @id
+delete [dbo].[KnownPages_datagrams] where KnownPageID = @id
+delete [dbo].[KnownPages_UsersContribution] where KnownPageID = @id
+delete [dbo].[Page_Karma_votes] where page_id = @id
+delete [dbo].[KnownPages] where id = @id
+
 GO 

@@ -606,6 +606,26 @@ class SQLConnector:
             else:
                 return None
 
+    def DeletePageByPageID(self, page_id):
+        try:
+            self.cursor.execute(
+                "exec [dbo].[delete_page_by_page_id] ?",
+                page_id)
+            self.connection.commit()
+            return True
+        except:
+            self.connection.rollback()
+            return False
+
+    def MakeNewGlobalKarmaSlice(self):
+        try:
+            self.cursor.execute(
+                "exec [dbo].[make_new_global_karma_slice]")
+            self.connection.commit()
+            return True
+        except:
+            self.connection.rollback()
+            return False
 
 class ContributionComparator:
     def __init__(self, logging_mode='silent'):
