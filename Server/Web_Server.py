@@ -216,6 +216,20 @@ def post_request_analyse(request_body):
                       'karma_score': karma_score,
                       }
             return json.dumps(answer, separators=(',', ':'))
+        if method == 'get_karma_score_global':
+            answer = {
+                'Error': 0,
+                'result': {},
+                'len' : 0
+            }
+            result = SQLConnector.GetGlobalCurrentKarma()
+            if result is None:
+                return json.dumps({'Error': 'Unable to get statistics'}, separators=(',', ':'))
+            for user, score in result:
+                karma_score = round(score, 2)
+                answer['result'].update({user: karma_score})
+            answer['len'] = len(result)
+            return json.dumps(answer, separators=(',', ':'))
         if method == 'get_user_karma_current_score_detailed_by_user':
             try:  # zero title exception
                 request['user'][0]
@@ -311,9 +325,7 @@ def post_request_analyse(request_body):
                     answer['result'].update({change_time_epoch:score})
             return json.dumps(answer, separators=(',', ':'))
         if method == 'reindex_page_by_XWD_FULLNAME':
-            platform = None
-            XWD_FULLNAME = None
-            try:  # zero title exception
+            try:
                 platform = request['platform'][0]
                 XWD_FULLNAME = request['XWD_FULLNAME'][0]
             except:
@@ -322,6 +334,10 @@ def post_request_analyse(request_body):
             if XWD_FULLNAME is not None:
                 if XWD_FULLNAME == 'XWiki.WebHome' or XWD_FULLNAME == 'Main.WebHome' or XWD_FULLNAME == 'StagingWiki.Personal Spaces%':
                     answer = {'Error': 'XWD_FULLNAME is deprecated'}
+                    return json.dumps(answer, separators=(',', ':'))
+                if not str(XWD_FULLNAME).lower().startswith('main') and not str(XWD_FULLNAME).lower().startswith('staging'):
+                    answer = {'Error': 'Indexing of non-main and non-staging pages using this request is not allowed'}
+                    print(answer)
                     return json.dumps(answer, separators=(',', ':'))
                 # print('page_title', page_title, 'page_id', page_id)
                 dict_to_pickle = {XWD_FULLNAME: platform}
@@ -374,7 +390,7 @@ def server_logic(environ, start_response):
     if environ["REQUEST_METHOD"] == "POST":
         start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
         request_body = environ["wsgi.input"].read()
-        answer_body = post_request_analyse(request_body)
+        answer_body = post_request_analyse(request_body) # TODO: reindex_page_by_XWD_FULLNAME returns None in case when try fails
         yield answer_body.encode()
     elif environ["REQUEST_METHOD"] == 'GET':
         start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])

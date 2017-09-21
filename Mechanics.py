@@ -627,6 +627,15 @@ class SQLConnector:
             self.connection.rollback()
             return False
 
+    def GetGlobalCurrentKarma(self):
+        self.cursor.execute(
+            "exec [dbo].[get_user_karma_current_score_global]")
+        raw = self.cursor.fetchall()
+        if raw is not None:
+            return raw
+        else:
+            return None
+
 class ContributionComparator:
     def __init__(self, logging_mode='silent'):
         self.temp_array = []

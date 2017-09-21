@@ -7,6 +7,7 @@ import logging
 from datetime import datetime
 import argparse
 import os
+import re
 
 
 GlobalStartTime = datetime.now()
@@ -102,6 +103,31 @@ Contrib_Compare_inst, Mysql_Connector_inst, ConfluenceAPI_inst, SQL_Connector_in
 Logger.info('Initialization finished, job started at ' + str(GlobalStartTime))
 
 TaskStartTime = datetime.now()
+
+
+def re_info_for_bug_page(page_content: str) -> tuple:
+    bug_id_func = None
+    product_func = None
+    tbfi_func = None
+    components_func = None
+    regex = r"\*\*Bug ID:\*\* (.*)"
+    matches = re.search(regex, page_content)
+    if matches:
+        bug_id_func = matches.group(1).replace('\r', '')
+    regex = r"\*\*Product:\*\* (.*)"
+    matches = re.search(regex, page_content)
+    if matches:
+        product_func = matches.group(1).replace('\r', '')
+    regex = r"\*\*To be fixed in:\*\* (.*)"
+    matches = re.search(regex, page_content)
+    if matches:
+        tbfi_func = matches.group(1).replace('\r', '')
+    regex = r"\*\*Components:\*\* (.*)"
+    matches = re.search(regex, page_content)
+    if matches:
+        components_func = matches.group(1).replace('\r', '')
+    return bug_id_func, product_func, tbfi_func, components_func
+
 for title, platform in task_pages_dict.items():
     # Creating new page instance. Practically, page inst is everything what we need to get page index
     PageAnalysisStartTime = datetime.now()
@@ -111,7 +137,7 @@ for title, platform in task_pages_dict.items():
         # page (used in api path) and title (unused).
         # So, first we have to find it's name to make sure that the provided page exists
         real_title = Mysql_Connector_inst.get_XWD_TITLE(title)
-        if real_title is None:
+        if real_title is None or len(real_title) == 0:
             Logger.error('Unable to find title of page "' + title + '". Skipping.')
             continue
         CurrentPage = PageXWiki(page=title, page_title=real_title, xWikiClient_inst=xWikiClient_inst)
@@ -231,6 +257,23 @@ for title, platform in task_pages_dict.items():
         Logger.info('Page "' + CurrentPage.page_title + '" is up-to-date')
         PageAnalysisEndTime = datetime.now()
         SQL_Connector_inst.UpdateKnownPagesLast_check(CurrentPage)
+    # ----------------BUG ADD TO DB----------------------------------------------------------
+    # now we need to check, if it's a bug page to update [dbo].[KnownBugs] if needed
+    if CurrentPage.page_id.lower().startswith('xwiki:main.bugs and fixes.found bugs'):
+        Logger.info('Starting bug analyze sequence')
+        # ---it's a bug, need to find it's product (migrated bugs have invalid paths)
+        if len(CurrentPage.VersionsGlobalArray) == 0:
+            CurrentPage.pageSQL_id = SQL_Connector_inst.GetPageSQLID(CurrentPage)
+            TempArray = SQL_Connector_inst.GetDatagrams(CurrentPage)
+            CurrentPage.VersionsGlobalArray = pickle.loads(TempArray[0])
+        content_as_list = [x[0] for x in CurrentPage.VersionsGlobalArray]
+        page_content = ''.join(content_as_list)
+        bug_id, product, tbfi, components = re_info_for_bug_page(page_content=page_content)
+        if bug_id is not None and product is not None and tbfi is not None and components is not None:
+            Logger.info('Bug info is parsed, pushing it to DB')
+            # here we push the data to [dbo].[KnownBugs]
+        else:
+            Logger.error('Unable to parse bug info, aborting bug analyze')
 
 TaskEndTime = datetime.now()
 TotalElapsed = TaskEndTime - TaskStartTime
