@@ -635,6 +635,15 @@ class SQLConnector:
             return raw
         else:
             return None
+    def Update_or_Add_bug_page(self, known_pages_id: str, bug_id: str,  product: str, tbfi: str, xml: bytearray) -> bool:
+        try:
+            self.cursor.execute(
+                "exec [dbo].[update_or_Add_bug_page] ?, ?, ?, ?, ?", known_pages_id, bug_id, product, tbfi, xml)
+            self.connection.commit()
+            return True
+        except:
+            self.connection.rollback()
+            return False
 
 class ContributionComparator:
     def __init__(self, logging_mode='silent'):

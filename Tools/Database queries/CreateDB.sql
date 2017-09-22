@@ -487,6 +487,7 @@ CREATE TABLE KnownBugs
 PRIMARY KEY (ID),
 KnownPages_id uniqueidentifier not Null,
 FOREIGN KEY (KnownPages_id) REFERENCES KnownPages(ID),
+bug_id nvarchar(max) not Null,
 product nvarchar(max) not Null,
 tbfi nvarchar(max) not Null,
 components xml not Null
@@ -500,3 +501,25 @@ Create PRIMARY XML Index icomponents ON KnownBugs (components)
 
 
 */
+
+USE Karma;  
+GO 
+CREATE PROCEDURE [dbo].[update_or_Add_bug_page]
+@KnownPages_id as uniqueidentifier,
+@bug_id as varchar(max), 
+@product as varchar(max),
+@tbfi as varchar(max),
+@xml as xml
+AS
+  BEGIN
+   IF NOT EXISTS (SELECT * FROM [dbo].[KnownBugs] 
+                   WHERE [KnownPages_id] = @KnownPages_id)
+   BEGIN
+       insert into [dbo].[KnownBugs] ([ID],[KnownPages_id],[bug_id],[product],[tbfi],[components])
+	   values (newid(), @KnownPages_id, @bug_id, @product, @tbfi, @xml)
+   END
+   ELSE
+	BEGIN
+	update [dbo].[KnownBugs] set [bug_id] = @bug_id, [product] = @product, [tbfi] = @tbfi, [components] = @xml where [KnownPages_id] = @KnownPages_id
+	END
+END

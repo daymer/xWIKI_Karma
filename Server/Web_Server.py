@@ -377,7 +377,17 @@ def post_request_analyse(request_body):
                     return json.dumps({'Error': 'Failed to invoke'}, separators=(',', ':'))
             except:
                 return json.dumps({'Error': 'Failed to invoke'}, separators=(',', ':'))
-
+        if method == 'get_bugs':
+            try:  # zero title exception
+                filer = request['filer'][0]
+                start = request['start'][0]
+                end = request['end'][0]
+            except:
+                return json.dumps({'Error': 'Bad request - no filer was provided or start/end is incorrect'}, separators=(',', ':'))
+            if int(start) > int(end):
+                return json.dumps({'Error': 'Bad request - start > end'},
+                                  separators=(',', ':'))
+            return json.dumps({'Success': 'Result'}, separators=(',', ':'))
 
     except Exception as exception:
         print(exception)

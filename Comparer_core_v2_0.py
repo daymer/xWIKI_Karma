@@ -105,27 +105,64 @@ Logger.info('Initialization finished, job started at ' + str(GlobalStartTime))
 TaskStartTime = datetime.now()
 
 
-def re_info_for_bug_page(page_content: str) -> tuple:
+def re_info_for_bug_page(page_content: str, page_title: str) -> tuple:
     bug_id_func = None
     product_func = None
     tbfi_func = None
     components_func = None
-    regex = r"\*\*Bug ID:\*\* (.*)"
-    matches = re.search(regex, page_content)
-    if matches:
-        bug_id_func = matches.group(1).replace('\r', '')
-    regex = r"\*\*Product:\*\* (.*)"
-    matches = re.search(regex, page_content)
-    if matches:
-        product_func = matches.group(1).replace('\r', '')
-    regex = r"\*\*To be fixed in:\*\* (.*)"
-    matches = re.search(regex, page_content)
-    if matches:
-        tbfi_func = matches.group(1).replace('\r', '')
+    style = None
+    # determination of page syntax
     regex = r"\*\*Components:\*\* (.*)"
     matches = re.search(regex, page_content)
     if matches:
-        components_func = matches.group(1).replace('\r', '')
+        style = 'xwiki'
+    else:
+        regex = r"'''Components: '''(.*)"
+        matches = re.search(regex, page_content)
+        if matches:
+            style = 'mwiki'
+    if style is None:
+        return False
+    elif style == 'xwiki':
+        regex = r"\*\*Bug ID:\*\* (.*)"
+        matches = re.search(regex, page_content)
+        if matches:
+            bug_id_func = matches.group(1).replace('\r', '')
+        regex = r"\*\*Product:\*\* (.*)"
+        matches = re.search(regex, page_content)
+        if matches:
+            product_func = matches.group(1).replace('\r', '')
+        regex = r"\*\*To be fixed in:\*\* (.*)"
+        matches = re.search(regex, page_content)
+        if matches:
+            tbfi_func = matches.group(1).replace('\r', '')
+        regex = r"\*\*Components:\*\* (.*)"
+        matches = re.search(regex, page_content)
+        if matches:
+            components_func = matches.group(1).replace('\r', '')
+    elif style == 'mwiki':
+        regex = r"bug\W*(\d*)\W*"
+        matches = re.search(regex, page_title, re.IGNORECASE)
+        if matches:
+            bug_id_func = matches.group(1)
+        else:
+            bug_id_func = 'Undefined'
+        product_func = 'Undefined'
+        regex = r"'''To be fixed in: '''(.*)"
+        matches = re.search(regex, page_content)
+        if matches:
+            tbfi_func = matches.group(1).replace('\r', '')
+        else:
+            regex = r"'''Fixed in: '''(.*)"
+            matches = re.search(regex, page_content)
+            if matches:
+                tbfi_func = matches.group(1).replace('\r', '')
+            else:
+                tbfi_func = 'Undefined'
+        regex = r"'''Components: '''(.*)"
+        matches = re.search(regex, page_content)
+        if matches:
+            components_func = matches.group(1).replace('\r', '')
     return bug_id_func, product_func, tbfi_func, components_func
 
 for title, platform in task_pages_dict.items():
@@ -261,19 +298,39 @@ for title, platform in task_pages_dict.items():
     # now we need to check, if it's a bug page to update [dbo].[KnownBugs] if needed
     if CurrentPage.page_id.lower().startswith('xwiki:main.bugs and fixes.found bugs'):
         Logger.info('Starting bug analyze sequence')
-        # ---it's a bug, need to find it's product (migrated bugs have invalid paths)
+        # ---it's a bug, need to find it's product and other fields (migrated bugs have invalid paths)
         if len(CurrentPage.VersionsGlobalArray) == 0:
             CurrentPage.pageSQL_id = SQL_Connector_inst.GetPageSQLID(CurrentPage)
             TempArray = SQL_Connector_inst.GetDatagrams(CurrentPage)
             CurrentPage.VersionsGlobalArray = pickle.loads(TempArray[0])
         content_as_list = [x[0] for x in CurrentPage.VersionsGlobalArray]
         page_content = ''.join(content_as_list)
-        bug_id, product, tbfi, components = re_info_for_bug_page(page_content=page_content)
-        if bug_id is not None and product is not None and tbfi is not None and components is not None:
-            Logger.info('Bug info is parsed, pushing it to DB')
-            # here we push the data to [dbo].[KnownBugs]
+        result = re_info_for_bug_page(page_content=page_content, page_title=CurrentPage.page_title)
+        if result is not bool:
+            bug_id, product, tbfi, components = result
+            if bug_id is not None and product is not None and tbfi is not None and components is not None:
+                Logger.info('Bug info is parsed, pushing it to DB')
+                # here we push the data into [dbo].[KnownBugs]
+                components_as_list = components.split(',')
+                xml = '<?xml version="1.0" encoding="UTF-8" ?><components>'
+                for component in components_as_list:
+                    if component.startswith(' '):
+                        component = component[1:]
+                    xml += '<component><name>' + component + '</name></component>'
+                xml += '</components>'
+                byte_xml = bytearray()
+                byte_xml.extend(map(ord, xml))
+                result = SQL_Connector_inst.Update_or_Add_bug_page(known_pages_id=CurrentPage.pageSQL_id, bug_id=bug_id,
+                                                                   product=product, tbfi=tbfi, xml=byte_xml)
+                if result is True:
+                    Logger.info('Bug info updated')
+                else:
+                    Logger.error(
+                        'Unable to update bug info in SQL, query params: known_pages_id:' + CurrentPage.pageSQL_id + ' bug_id: ' + bug_id + ' product: ' + product + ' tbfi: ' + tbfi + ' xml: ' + xml)
+            else:
+                Logger.error('Failed to parse some of fields, aborting bug analyze')
         else:
-            Logger.error('Unable to parse bug info, aborting bug analyze')
+            Logger.error('Unable to parse bug info style, aborting bug analyze')
 
 TaskEndTime = datetime.now()
 TotalElapsed = TaskEndTime - TaskStartTime

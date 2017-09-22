@@ -58,6 +58,7 @@ class PageXWiki(PageGlobal):
         else:
             self.is_terminal_page = True
         self.page_from_API = self.xWikiClient_inst.page(space=self.space, page=self.page, nested_space=self.nested_spaces, is_terminal_page=self.is_terminal_page)
+
         self.page_id = self.page_from_API['id']
         self.page_versions = self.page_from_API['majorVersion']
         self.page_author = self.page_from_API['creator']

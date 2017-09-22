@@ -1,26 +1,10 @@
-import re
+from Mechanics import SQLConnector
+import Configuration
 
-def re_info_for_bug_page(page_content: str):
-    bug_id = None
-    product = None
-    tbfi = None
-    components = None
-    regex = r"\*\*Bug ID:\*\* (.*)"
-    matches = re.search(regex, page_content)
-    if matches:
-        bug_id = matches.group(1)
-    regex = r"\*\*Product:\*\* (.*)"
-    matches = re.search(regex, page_content)
-    if matches:
-        product = matches.group(1)
-    regex = r"\*\*To be fixed in:\*\* (.*)"
-    matches = re.search(regex, page_content)
-    if matches:
-        tbfi = matches.group(1)
-    regex = r"\*\*Components:\*\* (.*)"
-    matches = re.search(regex, page_content)
-    if matches:
-        components = matches.group(1)
-    print(bug_id, product, tbfi, components)
-    return bug_id, product, tbfi, components
-
+SQL_config_inst = Configuration.SQLConfig()
+SQL_Connector_inst = SQLConnector(SQL_config_inst)
+xml = '<?xml version="1.0" encoding="UTF-8" ?><components><component><name>BackupToTape</name></component><component><name>BackupValidator</name></component><component><name>BoSS</name></component></components>'
+b = bytearray()
+b.extend(map(ord, xml))
+result = SQL_Connector_inst.Update_or_Add_bug_page(known_pages_id='D65FB534-358B-443D-A704-5E61CDE8909F', bug_id='222444',  product='BNR 9.5.0.1038', tbfi='9.5 update 3', xml=b)
+print(result)
