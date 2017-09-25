@@ -11,6 +11,7 @@ import ctypes
 import os
 import subprocess
 import uuid
+import re
 
 is_admin = ctypes.windll.shell32.IsUserAnAdmin()
 if is_admin != 1:
@@ -379,15 +380,43 @@ def post_request_analyse(request_body):
                 return json.dumps({'Error': 'Failed to invoke'}, separators=(',', ':'))
         if method == 'get_bugs':
             try:  # zero title exception
-                filer = request['filer'][0]
+                components_filer = request['component_filter[]']
+            except:
+                components_filer = []
+            try:
+                product_filter = request['product_filter[]']
+            except:
+                product_filter = []
+            try:
+                tbfi_filter = request['tbfi_filter[]']
+            except:
+                tbfi_filter = []
+            try:
                 start = request['start'][0]
                 end = request['end'][0]
             except:
-                return json.dumps({'Error': 'Bad request - no filer was provided or start/end is incorrect'}, separators=(',', ':'))
+                return json.dumps({'Error': 'Bad request - start/end is incorrect'}, separators=(',', ':'))
             if int(start) > int(end):
                 return json.dumps({'Error': 'Bad request - start > end'},
                                   separators=(',', ':'))
-            return json.dumps({'Success': 'Result'}, separators=(',', ':'))
+            result = SQLConnector.GetBugs(components_filer, product_filter, tbfi_filter, start, end)
+            if len(result) != 0:
+                answer = {
+                    'error': 0,
+                    'len': len(result),
+                    'bugs': {}
+                }
+                for row in result:
+                    regex = r"<component><name>(.[^<]*)</name></component>"
+                    components = []
+                    matches = re.finditer(regex, row.components, re.IGNORECASE)
+                    if matches:
+                        for match in matches:
+                            components.append(match.group(1))
+                    answer['bugs'].update({row.page_title: {'bug_id': row.bug_id, 'product': row.product, 'tbfi': row.tbfi, 'components': components}})
+                return json.dumps(answer, separators=(',', ':'))
+            else:
+                return json.dumps({'error': 'Nothing was found'}, separators=(',', ':'))
 
     except Exception as exception:
         print(exception)
@@ -400,7 +429,7 @@ def server_logic(environ, start_response):
     if environ["REQUEST_METHOD"] == "POST":
         start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
         request_body = environ["wsgi.input"].read()
-        answer_body = post_request_analyse(request_body) # TODO: reindex_page_by_XWD_FULLNAME returns None in case when try fails
+        answer_body = post_request_analyse(request_body)
         yield answer_body.encode()
     elif environ["REQUEST_METHOD"] == 'GET':
         start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])

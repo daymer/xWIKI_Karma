@@ -44,6 +44,26 @@
         <input type="button" id="btn9" value="get_karma_score_global">
         <br>
         <br>
+        <select name="product_filter" id="get_bugs_product_filter" multiple>
+          <option value="BNR 9.5.0.1038">BNR 9.5.0.1038</option>
+          <option value="Undefined">Undefined</option>
+        </select>
+        <select name="tbfi_filter" id="get_bugs_tbfi_filter" multiple>
+          <option value="9.X Next">9.X Next</option>
+          <option value="10.X Next">10.X Next</option>
+          <option value="9.5">9.5</option>
+        </select>
+        <select name="component_filter" id="get_bugs_component_filter" multiple>
+          <option value="BackupCopy">BackupCopy</option>
+          <option value="Endpoint Backup">Endpoint Backup</option>
+          <option value="WAN Accelerator">WAN Accelerator</option>
+          <option value="Encryption">Encryption</option>
+        </select>
+        <input type="text" placeholder='start' id="get_bugs_start">
+        <input type="text" placeholder='end' id="get_bugs_end">
+        <input type="button" id="btn10" value="get_bugs">
+        <br>
+        <br>
         <div id="servermsg"><h1>Message log:</h1></div>
         <script>
         function EpochToDate(epoch) {
@@ -52,6 +72,38 @@
             var epoch = epoch + (new Date().getTimezoneOffset() * -1); //for timeZone
             return new Date(epoch);
         }
+        $('#btn10').click(function(e) {
+                var product_filter_var = $('#get_bugs_product_filter').val();
+                var component_filter_var = $('#get_bugs_component_filter').val();
+                var tbfi_filter_var = $('#get_bugs_tbfi_filter').val();
+                var start_var = $('#get_bugs_start').val();
+                var end_var = $('#get_bugs_end').val();
+                var data = {
+                        "method": "get_bugs",
+                        "product_filter": product_filter_var,
+                        "component_filter": component_filter_var,
+                        "tbfi_filter": tbfi_filter_var,
+                        "start": start_var,
+                        "end": end_var
+
+                    };
+                console.log(data);
+                $.ajax({
+                    type: 'POST',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    data: data,
+                    dataType: 'json',
+                    success: function (data) {
+                        console.log(data);
+                        servermsg.innerHTML = servermsg.innerHTML + "<br>Filter: <b>"+ product_filter_var + " "+component_filter_var+" "+tbfi_filter_var+" "+start_var+" "+end_var+"</b><br>";
+                        if (data.error != 0) {
+                           jQuery.each(data.bugs, function(i, val) {
+                                servermsg.innerHTML = servermsg.innerHTML  + " " +  data.bugs + "<br>"
+                                });
+                        }
+                    }
+                });
+            });
         $('#btn9').click(function(e) {
                 var data = {
                         method: "get_karma_score_global",

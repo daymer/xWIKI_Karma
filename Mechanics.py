@@ -635,6 +635,7 @@ class SQLConnector:
             return raw
         else:
             return None
+
     def Update_or_Add_bug_page(self, known_pages_id: str, bug_id: str,  product: str, tbfi: str, xml: bytearray) -> bool:
         try:
             self.cursor.execute(
@@ -645,6 +646,39 @@ class SQLConnector:
             self.connection.rollback()
             return False
 
+    def GetBugs(self, components_filer: list, product_filter: list, tbfi_filter: list, start: str, end: str) -> list:
+
+        query = "WITH OrderedRecords AS"\
+                    "("\
+                        "SELECT [dbo].[KnownPages].[page_title], [dbo].[KnownBugs].[bug_id], [dbo].[KnownBugs].[product], [dbo].[KnownBugs].[tbfi], [dbo].[KnownBugs].[components],"\
+                        "ROW_NUMBER() OVER (ORDER BY [dbo].[KnownPages].id) AS 'RowNumber' "\
+                        "FROM [dbo].[KnownBugs] "\
+                        "left join [dbo].[KnownPages] on [dbo].[KnownBugs].KnownPages_id = [dbo].[KnownPages].id "\
+                        "WHERE "
+        for idx, component in enumerate(components_filer):
+            query += "(Charindex('"+component+"',CAST(components AS VARCHAR(MAX)))>0 )"
+            if idx != len(components_filer)-1:
+                query += " AND "
+        if len(components_filer) != 0 and len(product_filter) > 0:
+            query += " AND "
+        for idx, product in enumerate(product_filter):
+            query += "([product]='"+product+"')"
+            if idx != len(product_filter)-1:
+                query += " AND "
+        if len(product_filter) != 0 and len(tbfi_filter) > 0:
+            query += " AND "
+        for idx, tbfi in enumerate(tbfi_filter):
+            query += "([tbfi]='"+tbfi+"')"
+            if idx != len(tbfi_filter)-1:
+                query += " AND "
+        query += ")"
+        query += "SELECT [page_title], [bug_id], [product], [tbfi], [components], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN "+start+" and "+end+" order by bug_id"
+        print(query)
+        self.cursor.execute(query)
+        raw = self.cursor.fetchall()
+        if raw is None:
+            return []
+        return raw
 class ContributionComparator:
     def __init__(self, logging_mode='silent'):
         self.temp_array = []
