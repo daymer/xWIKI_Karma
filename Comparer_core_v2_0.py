@@ -105,7 +105,7 @@ Logger.info('Initialization finished, job started at ' + str(GlobalStartTime))
 TaskStartTime = datetime.now()
 
 
-def re_info_for_bug_page(page_content: str, page_title: str) -> tuple:
+def re_info_for_bug_page(page_content: str, page_title: str):
     bug_id_func = None
     product_func = None
     tbfi_func = None
@@ -306,7 +306,7 @@ for title, platform in task_pages_dict.items():
         content_as_list = [x[0] for x in CurrentPage.VersionsGlobalArray]
         page_content = ''.join(content_as_list)
         result = re_info_for_bug_page(page_content=page_content, page_title=CurrentPage.page_title)
-        if result is not bool:
+        if result is not False:
             bug_id, product, tbfi, components = result
             if bug_id is not None and product is not None and tbfi is not None and components is not None:
                 Logger.info('Bug info is parsed, pushing it to DB')
