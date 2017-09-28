@@ -1,5 +1,5 @@
 from gevent import pywsgi
-from datetime import datetime
+from datetime import datetime, timedelta
 from gevent import monkey
 import Configuration
 from urllib.parse import parse_qs
@@ -326,6 +326,11 @@ def post_request_analyse(request_body):
                     answer['result'].update({change_time_epoch:score})
             return json.dumps(answer, separators=(',', ':'))
         if method == 'reindex_page_by_XWD_FULLNAME':
+            global last_page
+            timeout = 3
+            allowed_tdelta = timedelta(seconds=timeout)
+            if 'last_page' not in globals():
+                last_page = [None, datetime.now()]
             try:
                 platform = request['platform'][0]
                 XWD_FULLNAME = request['XWD_FULLNAME'][0]
@@ -340,8 +345,13 @@ def post_request_analyse(request_body):
                     answer = {'Error': 'Indexing of non-main and non-staging pages using this request is not allowed'}
                     print(answer)
                     return json.dumps(answer, separators=(',', ':'))
-                # print('page_title', page_title, 'page_id', page_id)
                 dict_to_pickle = {XWD_FULLNAME: platform}
+                if last_page[0] == XWD_FULLNAME and (datetime.now()-last_page[1]) < allowed_tdelta:  # TODO: fix xWiki, for unclear the platform doubles page-update events
+                    answer = {'Error': 'Doubled request from indexing of the same page before ' + str(timeout) + ' timeout'}
+                    print('Doubled request from indexing of the same page, denied')
+                    return json.dumps(answer, separators=(',', ':'))
+                else:
+                    last_page = [XWD_FULLNAME, datetime.now()]
                 result = start_core_as_subprocess(dict_to_pickle)
                 if result is True:
                     answer = {'Success': 'Added to processing'}

@@ -222,10 +222,6 @@ for title, platform in task_pages_dict.items():
             new_version = Page_Creator_inst.get_version_content_by_version(VersionNumber, CurrentPage)
             CurrentPage.add_new_page_version(new_version)
         PageAnalysisEndTime = datetime.now()
-        Logger.info('Page "' + CurrentPage.page_title + '" with ID ' + str(
-                CurrentPage.page_id) + ', created by ' + CurrentPage.page_author + ' was parsed, ' + str(
-                CurrentPage.page_versions) + ' versions were found', '\n',
-                  'Sources are collected, calculating difference... ')
         # loading old datagram
         CurrentPage.pageSQL_id = SQL_Connector_inst.GetPageSQLID(CurrentPage)
         TempArray = SQL_Connector_inst.GetDatagrams(CurrentPage)

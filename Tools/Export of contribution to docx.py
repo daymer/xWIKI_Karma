@@ -9,7 +9,7 @@ SQLConnector = SQLConnector(SQLConfig)
 xWikiConfig = Configuration.xWikiConfig('Migration pool')
 xWikiClient = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
 
-PageTitle = 'Linux basics'
+PageTitle = '3. Backup copy Schedule (Copy intervals)'
 platform = 'xWIKI'
 SQLQuery = SQLConnector.GetDatagramsByPageTitleandPlatform(PageTitle, platform)
 datagram = SQLQuery[0]

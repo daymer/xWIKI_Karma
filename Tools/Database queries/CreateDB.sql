@@ -1,8 +1,17 @@
-CREATE database Karma; 
-GO 
-USE Karma;  
-GO  
-CREATE TABLE KnownPages
+if db_id('Karma') is null BEGIN 
+	CREATE DATABASE [Karma];
+	END
+ELSE BEGIN
+	print 'Error: DB already exists'
+	END
+GO
+
+if db_id('Karma') is not null BEGIN 
+	USE [Karma]
+	END 
+GO
+
+CREATE TABLE [dbo].[KnownPages]
 (ID uniqueidentifier,
 page_title nvarchar(max),
 page_id varchar(MAX),
@@ -68,8 +77,9 @@ CREATE INDEX iKnownPageID ON KnownPages_UsersContribution (KnownPageID)
 
 */
 USE Karma;  
-GO  
-CREATE PROCEDURE get_user_karma_raw_score  
+GO
+
+CREATE PROCEDURE [dbo].[get_user_karma_raw_score]
     @id uniqueidentifier
 
 AS   
@@ -83,12 +93,9 @@ AS
 	left join [dbo].[KnownPages_Users] on [dbo].[KnownPages_UsersContribution].UserID=[KnownPages_Users].id
 	where UserID = @id and [characters_total] >0
 	select SUM(persent) from #TempTable;  
-GO  
+GO
 
-
-USE Karma;  
-GO  
-CREATE PROCEDURE get_user_karma_raw 
+CREATE PROCEDURE [dbo].[get_user_karma_raw]
     @id uniqueidentifier
 
 OUTPUT AS   
@@ -97,9 +104,9 @@ OUTPUT AS
 	left join [dbo].[KnownPages] on [dbo].[KnownPages_UsersContribution].KnownPageID = [dbo].[KnownPages].ID
 	left join [dbo].[KnownPages_Users] on [dbo].[KnownPages_UsersContribution].UserID=[KnownPages_Users].id
 	where UserID = @id and [characters_total] >0
-GO  
+GO
 
-CREATE TABLE Page_Karma_votes
+CREATE TABLE [dbo].[Page_Karma_votes]
 (ID uniqueidentifier PRIMARY KEY CLUSTERED,
 page_id uniqueidentifier not NULL,
 user_id uniqueidentifier not NULL,
@@ -150,8 +157,9 @@ CREATE UNIQUE INDEX iUser_ID ON UserKarma_current (user_id)
 */
 
 USE Karma;  
-GO  
-CREATE PROCEDURE get_user_karma_current_score 
+GO
+
+CREATE PROCEDURE [dbo].[get_user_karma_current_score] 
     @user_id uniqueidentifier
 AS   
     SET NOCOUNT ON;  
@@ -197,11 +205,9 @@ FETCH NEXT FROM @CURSOR INTO @page_id, @persent
 END
 CLOSE @CURSOR
 select @karma_total_score
-GO  
+GO
 
-USE Karma;  
-GO  
-CREATE PROCEDURE [get_user_karma_current_score_detailed] 
+CREATE PROCEDURE [dbo].[get_user_karma_current_score_detailed] 
     @user_id uniqueidentifier
 
 OUTPUT AS 
@@ -261,10 +267,7 @@ select * from #Temp order by added_to_karma desc;
 --select sum(added_to_karma) from #Temp
 GO
 
-
-USE Karma;  
-GO 
-CREATE PROCEDURE get_user_karma_current_score_to_var
+CREATE PROCEDURE [dbo].[get_user_karma_current_score_to_var]
     @user_id uniqueidentifier,
 	@return_value float OUTPUT
 AS   
@@ -311,16 +314,6 @@ FETCH NEXT FROM @CURSOR INTO @page_id, @persent
 END
 CLOSE @CURSOR
 set @return_value = @karma_total_score
-GO  
-
-
-USE [Karma]
-GO
-/****** Object:  StoredProcedure [dbo].[make_new_karma_slice]    Script Date: 7/17/2017 4:45:03 PM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [dbo].[make_new_karma_slice]
@@ -343,7 +336,6 @@ else
 
 GO
 
-
 CREATE PROCEDURE [dbo].[get_page_karma_and_votes]
     @page_id uniqueidentifier
 AS   
@@ -363,7 +355,6 @@ if (@karma_total_score = 0 and @up != @down)
 select @up as up, @down as down, @karma_total_score as karma_total_score
 GO
 
-
 CREATE PROCEDURE [dbo].[make_new_global_karma_slice]
 AS   
     SET NOCOUNT ON; 
@@ -380,7 +371,7 @@ BEGIN
 FETCH NEXT FROM @CURSOR INTO @user_id
 END
 CLOSE @CURSOR
-GO 
+GO
 
 CREATE PROCEDURE [dbo].[delete_page]
     @page_id uniqueidentifier
@@ -393,7 +384,7 @@ delete [dbo].[KnownPages_UsersContribution] where KnownPageID = @page_id
 delete [dbo].[Page_Karma_votes] where page_id = @page_id
 delete [dbo].[KnownPages] where id = @page_id
 
-GO 
+GO
 
 CREATE PROCEDURE [dbo].[delete_page_by_page_id]
     @page_id varchar(MAX)
@@ -407,11 +398,9 @@ delete [dbo].[KnownPages_UsersContribution] where KnownPageID = @id
 delete [dbo].[Page_Karma_votes] where page_id = @id
 delete [dbo].[KnownPages] where id = @id
 
-GO 
+GO
 
-USE Karma;  
-GO 
-CREATE PROCEDURE get_user_karma_current_score_global
+CREATE PROCEDURE [dbo].[get_user_karma_current_score_global]
 AS
 		declare @page_id as uniqueidentifier
 		declare @user_name as nvarchar(MAX)
@@ -479,10 +468,7 @@ AS
 	select user_name, karma_total_score from #TempKarmaTotal order by karma_total_score desc
 GO
 
-
-USE Karma;  
-GO  
-CREATE TABLE KnownBugs
+CREATE TABLE [dbo].[KnownBugs]
 (ID uniqueidentifier not Null,
 PRIMARY KEY (ID),
 KnownPages_id uniqueidentifier not Null,
@@ -503,7 +489,8 @@ Create PRIMARY XML Index icomponents ON KnownBugs (components)
 */
 
 USE Karma;  
-GO 
+GO
+
 CREATE PROCEDURE [dbo].[update_or_Add_bug_page]
 @KnownPages_id as uniqueidentifier,
 @bug_id as varchar(max), 
@@ -523,3 +510,4 @@ AS
 	update [dbo].[KnownBugs] set [bug_id] = @bug_id, [product] = @product, [tbfi] = @tbfi, [components] = @xml where [KnownPages_id] = @KnownPages_id
 	END
 END
+GO
