@@ -50,7 +50,7 @@ for title, platform in task_pages_dict.items():
         if title == 'Veeam B&R releases':
             continue
         try:
-            result = Mechanics.Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE, MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig, MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList)
+            result = Mechanics.Migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE, MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig, MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList)
             if result[0] is True:
                 counter += 1
                 log_statement = result[1], 'migrated in total:', str(counter) + '/' + Total_pages_to_process

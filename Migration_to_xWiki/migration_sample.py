@@ -24,7 +24,7 @@ SQLConnector_instance = Mechanics.SQLConnector(SQLConfig)
 
 title = 'Hyper-V Basics'
 platform = 'Confluence'
-result = Mechanics.Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE,
-                                     MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig_instance,
-                                     MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList)
+result = Mechanics.Migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE,
+                                MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig_instance,
+                                MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList)
 print(result)

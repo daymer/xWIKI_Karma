@@ -94,8 +94,8 @@ UserList = Users()
 SQLConnector_instance = Mechanics.SQLConnector(SQLConfig)
 
 
-result = Mechanics.Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE,
-                                     MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig,
-                                     MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList)
+result = Mechanics.Migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE,
+                                MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig,
+                                MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList)
 
 print(result)

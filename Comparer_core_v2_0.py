@@ -2,7 +2,7 @@ from PythonConfluenceAPI import ConfluenceAPI
 import Configuration
 import pickle
 from Mechanics import SQLConnector, ContributionComparator, MysqlConnector, PageCreator, xWikiClient
-from Page_mechanics import PageXWiki
+from Page_mechanics import PageXWiki, PageGlobal
 import logging
 from datetime import datetime
 import argparse
@@ -165,6 +165,16 @@ def re_info_for_bug_page(page_content: str, page_title: str):
             components_func = matches.group(1).replace('\r', '')
     return bug_id_func, product_func, tbfi_func, components_func
 
+def check_if_system_page(current_page: PageXWiki) -> bool:
+    tags = current_page.xWikiClient_inst.get_tags_of_page(space=current_page.space, page=current_page.page, nested_space=current_page.nested_spaces, is_terminal_page=current_page.is_terminal_page)
+    print(tags)
+    for tag in tags['tags']:
+        if tag['name'] == 'no_karma':
+            return True
+    return False
+
+
+
 for title, platform in task_pages_dict.items():
     # Creating new page instance. Practically, page inst is everything what we need to get page index
     PageAnalysisStartTime = datetime.now()
@@ -184,7 +194,20 @@ for title, platform in task_pages_dict.items():
         if CurrentPage.page_id is None:
             Logger.warning(title + ' is redirect or unable to find ID, skipping')
             continue
+        result = check_if_system_page(CurrentPage)
+        if result is True:
+            Logger.info('System page, indexing is not needed')
+            CurrentPage.dbVersion = SQL_Connector_inst.CheckExistencebyID(CurrentPage)
+            if CurrentPage.dbVersion is not None:
+                Logger.info('System page was indexed before, removing from DB')
+                result = SQL_Connector_inst.DeletePageByPageID(CurrentPage.page_id)
+                if result is True:
+                    Logger.info('Page deleted from DB')
+                else:
+                    Logger.error('Failed to delete page from DB')
+            exit(0)
     # incremental or full mode
+
     CurrentPage.dbVersion = SQL_Connector_inst.CheckExistencebyID(CurrentPage)
 
     #FULL MODE:

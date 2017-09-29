@@ -71,13 +71,14 @@ class PageCreator:
                 except:
                     print('no content was found')
                     return None
-                new_created_page = Page(title, platform, page_xWIKI_nested_space=path_array, page_xWIKI_page=page, page_xWIKI_space=space)
+                new_created_page = Page(title, platform, page_xWIKI_nested_space=path_array, page_xWIKI_page=page,
+                                        page_xWIKI_space=space)
                 return new_created_page
             elif current_page is None:
                 return None
 
     def collect_page_id(self, page):
-        #print(page.page_platform)
+        # print(page.page_platform)
         if page.page_platform == 'Confluence':
             page_content = self.confluenceAPI.get_content(content_type='page', title=page.page_title)
             try:
@@ -90,7 +91,7 @@ class PageCreator:
             self.current_mediaWiki_page = self.MediaWikiAPI_instance.Pages[page.page_title]
             return self.current_mediaWiki_page.pageid
         elif page.page_platform.lower() == 'xwiki':
-            #print(self.current_xWiki_page)
+            # print(self.current_xWiki_page)
             return self.current_xWiki_page['id']
 
     def collect_page_history(self, page):
@@ -277,7 +278,7 @@ class SQLConnector:
 
     def GetPageSQLID_and_characters_total_by_page_id_and_platform(self, XWD, platform):
         if platform.lower() == 'xwiki':
-            XWD = 'xwiki:'+XWD
+            XWD = 'xwiki:' + XWD
         self.cursor.execute(
             "select [id],[characters_total] FROM [dbo].[KnownPages] where [page_id] = ? and [platform] LIKE LOWER(?)",
             XWD, platform)
@@ -380,7 +381,8 @@ class SQLConnector:
 
     def GetPagePageContribution(self, CurrentPage):
         self.cursor.execute(
-            "select [datagram_contribution] from [dbo].[KnownPages_contribution] where [KnownPageID] = ?", CurrentPage.pageSQL_id)
+            "select [datagram_contribution] from [dbo].[KnownPages_contribution] where [KnownPageID] = ?",
+            CurrentPage.pageSQL_id)
         raw = self.cursor.fetchone()
         if raw:
             return raw[0]
@@ -436,7 +438,7 @@ class SQLConnector:
             self.connection.commit()
             error_handler = traceback.format_exc()
             print(datetime.now(),
-                  'Initial add of ' + CurrentPage.page_title + ' rolled back due to the following error while adding its datagram:\n' + error_handler)
+                   'Initial add of ' + CurrentPage.page_title + ' rolled back due to the following error while adding its datagram:\n' + error_handler)
 
     def PushContributionDatagramByID(self, CurrentPage):
         binaryTotalContribute = pickle.dumps(CurrentPage.TotalContribute, 4)
@@ -636,7 +638,7 @@ class SQLConnector:
         else:
             return None
 
-    def Update_or_Add_bug_page(self, known_pages_id: str, bug_id: str,  product: str, tbfi: str, xml: bytearray) -> bool:
+    def Update_or_Add_bug_page(self, known_pages_id: str, bug_id: str, product: str, tbfi: str, xml: bytearray) -> bool:
         try:
             self.cursor.execute(
                 "exec [dbo].[update_or_Add_bug_page] ?, ?, ?, ?, ?", known_pages_id, bug_id, product, tbfi, xml)
@@ -648,37 +650,39 @@ class SQLConnector:
 
     def GetBugs(self, components_filer: list, product_filter: list, tbfi_filter: list, start: str, end: str) -> list:
 
-        query = "WITH OrderedRecords AS"\
-                    "("\
-                        "SELECT [dbo].[KnownPages].[page_title], [dbo].[KnownBugs].[bug_id], [dbo].[KnownBugs].[product], [dbo].[KnownBugs].[tbfi], [dbo].[KnownBugs].[components],"\
-                        "ROW_NUMBER() OVER (ORDER BY [dbo].[KnownPages].id) AS 'RowNumber' "\
-                        "FROM [dbo].[KnownBugs] "\
-                        "left join [dbo].[KnownPages] on [dbo].[KnownBugs].KnownPages_id = [dbo].[KnownPages].id "\
-                        "WHERE "
+        query = "WITH OrderedRecords AS" \
+                "(" \
+                "SELECT [dbo].[KnownPages].[page_title], [dbo].[KnownBugs].[bug_id], [dbo].[KnownBugs].[product], [dbo].[KnownBugs].[tbfi], [dbo].[KnownBugs].[components]," \
+                "ROW_NUMBER() OVER (ORDER BY [dbo].[KnownPages].id) AS 'RowNumber' " \
+                "FROM [dbo].[KnownBugs] " \
+                "left join [dbo].[KnownPages] on [dbo].[KnownBugs].KnownPages_id = [dbo].[KnownPages].id " \
+                "WHERE "
         for idx, component in enumerate(components_filer):
-            query += "(Charindex('"+component+"',CAST(components AS VARCHAR(MAX)))>0 )"
-            if idx != len(components_filer)-1:
+            query += "(Charindex('" + component + "',CAST(components AS VARCHAR(MAX)))>0 )"
+            if idx != len(components_filer) - 1:
                 query += " AND "
         if len(components_filer) != 0 and len(product_filter) > 0:
             query += " AND "
         for idx, product in enumerate(product_filter):
-            query += "([product]='"+product+"')"
-            if idx != len(product_filter)-1:
+            query += "([product]='" + product + "')"
+            if idx != len(product_filter) - 1:
                 query += " AND "
         if len(product_filter) != 0 and len(tbfi_filter) > 0:
             query += " AND "
         for idx, tbfi in enumerate(tbfi_filter):
-            query += "([tbfi]='"+tbfi+"')"
-            if idx != len(tbfi_filter)-1:
+            query += "([tbfi]='" + tbfi + "')"
+            if idx != len(tbfi_filter) - 1:
                 query += " AND "
         query += ")"
-        query += "SELECT [page_title], [bug_id], [product], [tbfi], [components], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN "+start+" and "+end+" order by bug_id"
+        query += "SELECT [page_title], [bug_id], [product], [tbfi], [components], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
         print(query)
         self.cursor.execute(query)
         raw = self.cursor.fetchall()
         if raw is None:
             return []
         return raw
+
+
 class ContributionComparator:
     def __init__(self, logging_mode='silent'):
         self.temp_array = []
@@ -1018,7 +1022,7 @@ class xWikiClient:
         self.auth_pass = auth_pass
 
     def _build_url(self, path):
-        #print(path)
+        # print(path)
         for idx, val in enumerate(path):
             path[idx] = val.replace('/', '%2F')
         url = self.api_root + "/".join(path)
@@ -1111,12 +1115,12 @@ class xWikiClient:
             pages.append(details['title'])
         return pages
 
-    def page(self, space: str, page: str, nested_space: list=None, is_terminal_page: bool=False):
+    def page(self, space: str, page: str, nested_space: list = None, is_terminal_page: bool = False):
         if nested_space is None:
-                if is_terminal_page is True:
-                    path = ['spaces', space, 'pages', page]
-                else:
-                    path = ['spaces', space, 'spaces', page, 'pages', 'WebHome']
+            if is_terminal_page is True:
+                path = ['spaces', space, 'pages', page]
+            else:
+                path = ['spaces', space, 'spaces', page, 'pages', 'WebHome']
         else:
             path = ['spaces', space]
             for space in nested_space:
@@ -1130,7 +1134,35 @@ class xWikiClient:
             return content
         except requests.exceptions.HTTPError:
             try:
-                #print('It\'s a terminal page')
+                # print('It\'s a terminal page')
+                l = ['pages', page]
+                terminal_path = path[:-3]
+                terminal_path.extend(l)
+                content = self._make_request(terminal_path, data)
+                return content
+            except:
+                return None
+
+    def get_tags_of_page(self, space: str, page: str, nested_space: list = None, is_terminal_page: bool = False):
+        if nested_space is None:
+            if is_terminal_page is True:
+                path = ['spaces', space, 'pages', page, 'tags']
+            else:
+                path = ['spaces', space, 'spaces', page, 'pages', 'WebHome', 'tags']
+        else:
+            path = ['spaces', space]
+            for space in nested_space:
+                l = ['spaces', space]
+                path.extend(l)
+            l = ['spaces', page, 'pages', 'WebHome', 'tags']
+            path.extend(l)
+        data = {}
+        try:
+            content = self._make_request(path, data)
+            return content
+        except requests.exceptions.HTTPError:
+            try:
+                # print('It\'s a terminal page')
                 l = ['pages', page]
                 terminal_path = path[:-3]
                 terminal_path.extend(l)
@@ -1254,12 +1286,13 @@ class xWikiClient:
         content = self._make_request(path, data)
         return content
 
-    def get_page_version_content_and_author(self, space, page, version, nested_space=None, is_terminal_page: bool =False):
+    def get_page_version_content_and_author(self, space, page, version, nested_space=None,
+                                            is_terminal_page: bool = False):
         if nested_space is None:
-                if is_terminal_page is True:
-                    path = ['spaces', space, 'pages', page, 'history', version]
-                else:
-                    path = ['spaces', space, 'spaces', page, 'pages', 'WebHome','history', version]
+            if is_terminal_page is True:
+                path = ['spaces', space, 'pages', page, 'history', version]
+            else:
+                path = ['spaces', space, 'spaces', page, 'pages', 'WebHome', 'history', version]
         else:
             # print('It\'s not a terminal page')
             path = ['spaces', space]
@@ -1274,7 +1307,7 @@ class xWikiClient:
             return content['content'], content['author']
         except requests.exceptions.HTTPError:
             try:
-                #print('It\'s a terminal page')
+                # print('It\'s a terminal page')
                 l = ['pages', page, 'history', version]
                 terminal_path = path[:-6]
                 terminal_path.extend(l)
@@ -1415,8 +1448,8 @@ class Migrator(object):
             return result
 
 
-def Migrate_dat_bitch(title, platform, target_pool, parent, MySQLconfig_INSTANCE, MysqlConnector_INSTANCE, SQLConfig,
-                      SQLConnector, ConfluenceConfig, MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList):
+def Migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE, MysqlConnector_INSTANCE, SQLConfig,
+                 SQLConnector, ConfluenceConfig, MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList):
     # Initializing agent
     # Starting migration process
     my_str_as_bytes = str.encode(title)
