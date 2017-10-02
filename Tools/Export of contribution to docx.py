@@ -9,7 +9,7 @@ SQLConnector = SQLConnector(SQLConfig)
 xWikiConfig = Configuration.xWikiConfig('Migration pool')
 xWikiClient = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
 
-PageTitle = '3. Backup copy Schedule (Copy intervals)'
+PageTitle = 'Using WMI to query Veeam BnR information'
 platform = 'xWIKI'
 SQLQuery = SQLConnector.GetDatagramsByPageTitleandPlatform(PageTitle, platform)
 datagram = SQLQuery[0]

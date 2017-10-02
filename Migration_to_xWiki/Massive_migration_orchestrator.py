@@ -12,10 +12,10 @@ from Migration_to_xWiki.Users_association import Users
 
 log_name = "Migration_log_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S", )) + '.txt'
 
-target_pool = 'Migrated bugs'
-parent = 'Migrated bugs'
+target_pool = 'Delta bugs'
+parent = 'Delta bugs'
 migrate_statement = None
-migrate_statement = "SELECT page_title, platform FROM [Karma].[dbo].[KnownPages] where page_title like LOWER('bug%') and platform != 'xWiki'"
+migrate_statement = "select page_title, platform from [dbo].[KnownPages] where last_modified > '2017-10-01'  and page_title like LOWER('bug%')"
 title_like = None
 #title_like = 'bug%'
 

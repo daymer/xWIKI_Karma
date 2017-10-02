@@ -11,7 +11,7 @@ SQLConnector = SQLConnector(SQLConfig)
 CustomLogging = CustomLogging('NotSilent')
 
 
-CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform('Linux basics', 'Confluence')
+CurrentPage = PAGE_CREATOR.create_new_page_by_title_and_platform('Resolving "Unable to delete host... is used by the following jobs..." in Veeam v9.0 and v9.5', 'Confluence')
 if CurrentPage is None: exit()
 CustomLogging.page_analysis_started(CurrentPage.page_title)
 CurrentPage.page_id = PAGE_CREATOR.collect_page_id(CurrentPage)

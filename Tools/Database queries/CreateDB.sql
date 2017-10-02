@@ -382,6 +382,7 @@ delete [dbo].[KnownPages_contribution] where KnownPageID = @page_id
 delete [dbo].[KnownPages_datagrams] where KnownPageID = @page_id
 delete [dbo].[KnownPages_UsersContribution] where KnownPageID = @page_id
 delete [dbo].[Page_Karma_votes] where page_id = @page_id
+delete [dbo].[KnownBugs] where KnownPages_id = @page_id
 delete [dbo].[KnownPages] where id = @page_id
 
 GO
@@ -396,6 +397,7 @@ delete [dbo].[KnownPages_contribution] where KnownPageID = @id
 delete [dbo].[KnownPages_datagrams] where KnownPageID = @id
 delete [dbo].[KnownPages_UsersContribution] where KnownPageID = @id
 delete [dbo].[Page_Karma_votes] where page_id = @id
+delete [dbo].[KnownBugs] where KnownPages_id = @page_id
 delete [dbo].[KnownPages] where id = @id
 
 GO

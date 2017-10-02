@@ -5,16 +5,16 @@ import uuid
 import base64
 os.supports_bytes_environ = True
 
-dict_to_pickle = {'StagingWiki.Issue of the week.WebHome': 'xwiki'}
+dict_to_pickle = {'StagingWiki.Internal Technical Docs.Knowledge Domains.Troubleshooting.TroubleshootingTools.Using WMI to query Veeam BnR information': 'xwiki'}
 
 
 def start_core_as_subprocess(dict_to_pickle: dict):
     pickled_data = pickle.dumps(dict_to_pickle, 0)
     pickled_and_decoded_dict = pickled_data.decode('latin1')
-    id = str(uuid.uuid4())
-    os.environ[id] = pickled_and_decoded_dict
+    temp_id = str(uuid.uuid4())
+    os.environ[temp_id] = pickled_and_decoded_dict
     print('---------sub process started-------------')
-    subprocess.call("python C:/Projects/xWIKI_Karma/Comparer_core_v2_0.py INFO True -b" + id, shell=True)
+    subprocess.call("python C:/Projects/xWIKI_Karma/Comparer_core_v2_0.py INFO True -b" + temp_id, shell=True)
 
 
 start_core_as_subprocess(dict_to_pickle)

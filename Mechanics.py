@@ -255,7 +255,7 @@ class SQLConnector:
 
     def GetPageSQLID(self, CurrentPage):
         self.cursor.execute(
-            "select [id] from [dbo].[KnownPages] where [page_id] like '" + CurrentPage.page_id + "'")
+            "select [id] from [dbo].[KnownPages] where [page_id] like '" + str(CurrentPage.page_id) + "'")
         raw = self.cursor.fetchone()
         return raw[0]
 
@@ -485,7 +485,7 @@ class SQLConnector:
 
     def CheckExistencebyID(self, CurrentPage):
         self.cursor.execute(
-            "select [version] from [dbo].[KnownPages] where [page_id] = '" + CurrentPage.page_id + "'")
+            "select [version] from [dbo].[KnownPages] where [page_id] = '" + str(CurrentPage.page_id) + "'")
         row = self.cursor.fetchone()
         if row:
             self.cursor.execute(
@@ -515,7 +515,7 @@ class SQLConnector:
             try:
                 self.cursor.execute(
                     "update [dbo].[KnownPages] set [is_uptodate]=0, [last_check]=? where [page_id]=?",
-                    str(datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S.%f")[:-3]), CurrentPage.page_id)
+                    str(datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S.%f")[:-3]),  str(CurrentPage.page_id))
                 self.connection.commit()
             except:
                 self.connection.rollback()
@@ -1150,12 +1150,20 @@ class xWikiClient:
             else:
                 path = ['spaces', space, 'spaces', page, 'pages', 'WebHome', 'tags']
         else:
-            path = ['spaces', space]
-            for space in nested_space:
-                l = ['spaces', space]
+            if is_terminal_page is True:
+                path = ['spaces', space]
+                for space in nested_space:
+                    l = ['spaces', space]
+                    path.extend(l)
+                l = ['pages', page, 'tags']
                 path.extend(l)
-            l = ['spaces', page, 'pages', 'WebHome', 'tags']
-            path.extend(l)
+            elif is_terminal_page is False:
+                path = ['spaces', space]
+                for space in nested_space:
+                    l = ['spaces', space]
+                    path.extend(l)
+                l = ['spaces', page, 'pages', 'WebHome', 'tags']
+                path.extend(l)
         data = {}
         try:
             content = self._make_request(path, data)

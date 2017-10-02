@@ -167,7 +167,6 @@ def re_info_for_bug_page(page_content: str, page_title: str):
 
 def check_if_system_page(current_page: PageXWiki) -> bool:
     tags = current_page.xWikiClient_inst.get_tags_of_page(space=current_page.space, page=current_page.page, nested_space=current_page.nested_spaces, is_terminal_page=current_page.is_terminal_page)
-    print(tags)
     for tag in tags['tags']:
         if tag['name'] == 'no_karma':
             return True
@@ -261,9 +260,6 @@ for title, platform in task_pages_dict.items():
     elif CurrentPage.dbVersion < CurrentPage.page_versions:
         Logger.info('"' + CurrentPage.page_title + '" will be processed in INCREMENTAL mode')
         PageAnalysisEndTime = datetime.now()
-        Logger.info('Page "' + CurrentPage.page_title + '" with ID ' + str(
-                CurrentPage.page_id) + ', created by ' + CurrentPage.page_author + ' was parsed, ' + str(
-                CurrentPage.page_versions) + ' versions were found')
         Logger.debug('Sources are loaded, collecting incremental data and calculating difference... ')
         SQL_Connector_inst.UpdateKnownPagesLast_check(CurrentPage)
         # getting sources for all missing versions + latest in DB

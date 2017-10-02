@@ -4,3 +4,5 @@
 *.log
 Tools/test.py
 Tools/test.py
+*.txt
+Migration_to_xWiki/__pycache__/Users_association.cpython-36.pyc

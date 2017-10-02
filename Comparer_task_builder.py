@@ -60,28 +60,28 @@ Logger.info('Initialization finished, job started at ' + str(GlobalStartTime))
 #    MediaWIKI: just all
 #    xWIKI: ['Blog', 'Main', 'Sandbox', 'XWiki']
 Task = {
-    # 'VB': 'Confluence',
-    # 'WB': 'Confluence',
-    # 'GZ': 'Confluence',
-    # 'ALL mWIKI': 'MediaWIKI'
+     'VB': 'Confluence',
+     'WB': 'Confluence',
+     'GZ': 'Confluence',
+     'ALL mWIKI': 'MediaWIKI'
     # 'Main': 'xWIKI',
     # 'Sandbox': 'xWIKI',
     # 'Migration pool': 'xWIKI',
     # 'Migrated bugs': 'xWIKI'
-    'Main': 'xWIKI',
-    'StagingWiki': 'xWIKI'
+    # 'Main': 'xWIKI',
+    # 'StagingWiki': 'xWIKI'
 }
 TaskExclusions = ExclusionsDict()
-# TaskExclusions['Confluence'] = 'List of all KBs'
-# TaskExclusions['MediaWIKI'] = 'Found Bugs'
-# TaskExclusions['MediaWIKI'] = 'Registry values B&R'
-# TaskExclusions['MediaWIKI'] = 'Veeam ONE Registry Keys'
-# TaskExclusions['MediaWIKI'] = 'Patches and fixes for B&R'
-# TaskExclusions['MediaWIKI'] = 'Bug%'
-# TaskExclusions['MediaWIKI'] = 'BUG%'
-# TaskExclusions['MediaWIKI'] = 'bug%'
-# TaskExclusions['MediaWIKI'] = 'Case Handling'
-# TaskExclusions['MediaWIKI'] = 'Team Members'
+TaskExclusions['Confluence'] = 'List of all KBs'
+TaskExclusions['MediaWIKI'] = 'Found Bugs'
+TaskExclusions['MediaWIKI'] = 'Registry values B&R'
+TaskExclusions['MediaWIKI'] = 'Veeam ONE Registry Keys'
+TaskExclusions['MediaWIKI'] = 'Patches and fixes for B&R'
+TaskExclusions['MediaWIKI'] = 'Bug%'
+TaskExclusions['MediaWIKI'] = 'BUG%'
+TaskExclusions['MediaWIKI'] = 'bug%'
+TaskExclusions['MediaWIKI'] = 'Case Handling'
+TaskExclusions['MediaWIKI'] = 'Team Members'
 TaskExclusions['xWIKI'] = 'Main.WebHome'
 TaskExclusions['xWIKI'] = 'StagingWiki.WebHome'
 TaskExclusions['xWIKI'] = 'StagingWiki.Personal Spaces%'

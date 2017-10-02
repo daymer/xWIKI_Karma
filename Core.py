@@ -57,25 +57,25 @@ Task = {
     # 'VB': 'Confluence',
     # 'WB': 'Confluence',
     # 'GZ': 'Confluence',
-    # 'ALL mWIKI': 'MediaWIKI'
+    'ALL mWIKI': 'MediaWIKI'
     # 'Main': 'xWIKI',
     # 'Sandbox': 'xWIKI',
     # 'Migration pool': 'xWIKI',
     # 'Migrated bugs': 'xWIKI'
-    'Main': 'xWIKI',
-    'StagingWiki': 'xWIKI'
+    #'Main': 'xWIKI',
+    #'StagingWiki': 'xWIKI'
 }
 TaskExclusions = ExclusionsDict()
-# TaskExclusions['Confluence'] = 'List of all KBs'
-# TaskExclusions['MediaWIKI'] = 'Found Bugs'
-# TaskExclusions['MediaWIKI'] = 'Registry values B&R'
-# TaskExclusions['MediaWIKI'] = 'Veeam ONE Registry Keys'
-# TaskExclusions['MediaWIKI'] = 'Patches and fixes for B&R'
+TaskExclusions['Confluence'] = 'List of all KBs'
+TaskExclusions['MediaWIKI'] = 'Found Bugs'
+TaskExclusions['MediaWIKI'] = 'Registry values B&R'
+TaskExclusions['MediaWIKI'] = 'Veeam ONE Registry Keys'
+TaskExclusions['MediaWIKI'] = 'Patches and fixes for B&R'
 # TaskExclusions['MediaWIKI'] = 'Bug%'
 # TaskExclusions['MediaWIKI'] = 'BUG%'
 # TaskExclusions['MediaWIKI'] = 'bug%'
-# TaskExclusions['MediaWIKI'] = 'Case Handling'
-# TaskExclusions['MediaWIKI'] = 'Team Members'
+TaskExclusions['MediaWIKI'] = 'Case Handling'
+TaskExclusions['MediaWIKI'] = 'Team Members'
 # TaskExclusions['xWIKI'] = 'Main.WebHome'
 # TaskExclusions['xWIKI'] = 'StagingWiki.WebHome'
 # TaskExclusions['xWIKI'] = 'StagingWiki.Personal Spaces%'
@@ -214,7 +214,7 @@ for title, platform in task_pages_dict.items():
         PageAnalysisEndTime = datetime.now()
         Logger.info('Page "' + CurrentPage.page_title + '" with ID ' + str(
                 CurrentPage.page_id) + ', created by ' + CurrentPage.page_author + ' was parsed, ' + str(
-                CurrentPage.page_versions) + ' versions were found', '\n',
+                CurrentPage.page_versions) + ' versions were found ' +
                   'Sources are collected, calculating difference... ')
         SQL_Connector_inst.UpdateKnownPagesLast_check(CurrentPage)
         # getting sources for all missing versions + latest in DB
@@ -251,7 +251,7 @@ for title, platform in task_pages_dict.items():
                 Percent = (Value / CurrentPage.TOTALCharacters) * 100
                 Logger.debug('Contribution of ' + Contributor + ' = ' + str(Percent) + '%' + ' (' + str(
                     Value) + ') characters')
-        Logger.info('Time elapsed: Analysis: ' + str(PageAnalysisEndTime - PageAnalysisStartTime) + ' + Diff calc: ',
+        Logger.info('Time elapsed: Analysis: ' + str(PageAnalysisEndTime - PageAnalysisStartTime) + ' + Diff calc: ' +
                      str(PageCountingEndTime - PageAnalysisEndTime) + ' = ' + str(PageCountingEndTime - PageAnalysisStartTime))
         PageAnalysisStartTime = None
         PageAnalysisEndTime = None
