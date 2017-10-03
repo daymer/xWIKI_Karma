@@ -106,7 +106,7 @@ for title, platform in task_pages_dict.items():
         if real_title is None or len(real_title) == 0:
             Logger.error('Unable to find title of page "' + title + '". Skipping.')
             continue
-        CurrentPage = PageXWiki(page=title, page_title=real_title, xWikiClient_inst=xWikiClient_inst)
+        CurrentPage = PageXWiki(page=title, page_title=real_title, client_instance=xWikiClient_inst)
         if CurrentPage is None:
             Logger.error('Unable to initialize PageXWiki instance "' + title + '". Skipping.')
             continue

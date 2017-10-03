@@ -12,10 +12,10 @@ from Migration_to_xWiki.Users_association import Users
 
 log_name = "Migration_log_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S", )) + '.txt'
 
-target_pool = 'Delta bugs'
-parent = 'Delta bugs'
+target_pool = 'Delta migration'
+parent = 'Delta migration'
 migrate_statement = None
-migrate_statement = "select page_title, platform from [dbo].[KnownPages] where last_modified > '2017-10-01'  and page_title like LOWER('bug%')"
+migrate_statement = "select page_title, platform from [dbo].[KnownPages] where page_title = 'Generating and Uploading Summary.xml to backup file'"
 title_like = None
 #title_like = 'bug%'
 

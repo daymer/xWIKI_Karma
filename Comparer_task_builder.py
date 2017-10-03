@@ -60,16 +60,15 @@ Logger.info('Initialization finished, job started at ' + str(GlobalStartTime))
 #    MediaWIKI: just all
 #    xWIKI: ['Blog', 'Main', 'Sandbox', 'XWiki']
 Task = {
-     'VB': 'Confluence',
-     'WB': 'Confluence',
-     'GZ': 'Confluence',
-     'ALL mWIKI': 'MediaWIKI'
-    # 'Main': 'xWIKI',
+     # 'VB': 'Confluence',
+     # 'WB': 'Confluence',
+     # 'GZ': 'Confluence',
+     # 'ALL mWIKI': 'MediaWIKI'
+     'Main': 'xWIKI',
     # 'Sandbox': 'xWIKI',
     # 'Migration pool': 'xWIKI',
     # 'Migrated bugs': 'xWIKI'
-    # 'Main': 'xWIKI',
-    # 'StagingWiki': 'xWIKI'
+     'StagingWiki': 'xWIKI'
 }
 TaskExclusions = ExclusionsDict()
 TaskExclusions['Confluence'] = 'List of all KBs'

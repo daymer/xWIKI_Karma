@@ -338,7 +338,7 @@ def post_request_analyse(request_body):
                 return json.dumps({'Error': 'Bad request - no XWD_FULLNAME or platform was provided'},
                                   separators=(',', ':'))
             if XWD_FULLNAME is not None:
-                if XWD_FULLNAME == 'XWiki.WebHome' or XWD_FULLNAME == 'Main.WebHome' or XWD_FULLNAME == 'StagingWiki.Personal Spaces%':
+                if XWD_FULLNAME == 'XWiki.WebHome' or XWD_FULLNAME == 'Main.WebHome' or XWD_FULLNAME == 'StagingWiki.Personal Spaces%' or XWD_FULLNAME.endswith('.WebPreferences'):
                     answer = {'Error': 'XWD_FULLNAME is deprecated'}
                     return json.dumps(answer, separators=(',', ':'))
                 if not str(XWD_FULLNAME).lower().startswith('main') and not str(XWD_FULLNAME).lower().startswith('staging'):

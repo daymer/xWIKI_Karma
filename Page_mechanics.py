@@ -1,8 +1,11 @@
 import Mechanics
 from abc import ABCMeta
+import mwclient
+import PythonConfluenceAPI
 
 class PageGlobal(object):
     __metaclass__ = ABCMeta
+
     def __init__(self):
         self.creation_date = None
         self.latest_version = None
@@ -12,7 +15,7 @@ class PageGlobal(object):
         self.VersionsGlobalArray = []
         self.TotalContribute = {}
         self.TotalCharacters = 0
-        self.dbVersion = None # version of page in the Karma DB. None means that this Page wasn't indexed yet
+        self.dbVersion = None  # version of page in the Karma DB. None means that this Page wasn't indexed yet
         self.SQL_id = None
         self.ID = None
 
@@ -28,22 +31,36 @@ class PageGlobal(object):
         if type(self) is PageXWiki:
             print('Page_mechanics.PageXWiki')
 
+
 class PageConfluence(PageGlobal):
-    def __init__(self, page_title: str):
+    def __init__(self, page_title: str,  client_instance: PythonConfluenceAPI.ConfluenceAPI):
         PageGlobal.__init__(self)
         self.title = page_title
-
+        self.ConfluenceClient_inst = client_instance
 
 class PageMediaWiki(PageGlobal):
-    def __init__(self, page_title: str):
+    def __init__(self, page_title: str, client_instance: mwclient.Site):
         PageGlobal.__init__(self)
+        self.mWikiClient_inst = client_instance
         self.title = page_title
+        test_page = self.mWikiClient_inst.Pages[self.title]
+        if test_page.redirect:
+            # testing, if the page is question is only a redirect
+            del test_page
+            raise ValueError('Page was not found on the mWiki side')
+        else:
+            test_page_text = test_page.text()
+            if not test_page_text:
+                # testing, if the page has any text
+                del test_page
+                del test_page_text
+                raise ValueError('Page has no text')
 
 
 class PageXWiki(PageGlobal):
-    def __init__(self, page: str, page_title: str, xWikiClient_inst: Mechanics.xWikiClient):
+    def __init__(self, page: str, page_title: str, client_instance: Mechanics.xWikiClient):
         PageGlobal.__init__(self)
-        self.xWikiClient_inst = xWikiClient_inst
+        self.xWikiClient_inst = client_instance
         self.page_title = page_title  # XWD_TITLE
         self.page = page  # XWD_FULLNAME
         self.path = self.set_space_and_nested_space(self.page)
@@ -58,11 +75,12 @@ class PageXWiki(PageGlobal):
         else:
             self.is_terminal_page = True
         self.page_from_API = self.xWikiClient_inst.page(space=self.space, page=self.page, nested_space=self.nested_spaces, is_terminal_page=self.is_terminal_page)
-
-        self.page_id = self.page_from_API['id']
-        self.page_versions = self.page_from_API['majorVersion']
-        self.page_author = self.page_from_API['creator']
-
+        if self.page_from_API is None:
+            raise ValueError('Page was not found on the xWiki side')
+        else:
+            self.page_id = self.page_from_API['id']
+            self.page_versions = self.page_from_API['majorVersion']
+            self.page_author = self.page_from_API['creator']
 
     def set_space_and_nested_space(self, XWD_FULLNAME: str):
         replaced_title = XWD_FULLNAME.replace('.WebHome', '')
@@ -72,12 +90,6 @@ class PageXWiki(PageGlobal):
         for each in array:
             path_array.append(each.replace('<dirtyhack>', '\\.'))
         return path_array
-
-        #/wikis/{wikiName}/spaces/{spaceName}[/spaces/{nestedSpaceName}]*/pages/{pageName}[?prettyNames={true,false}&objects={true,false}&class={true,false}&attachments={true,false}]
-        # var1: Main.Bugs and Fixes.Found Bugs.Migrated from mediaWIKI.0061b1c914a094d577ceb4c8e7bc00ae
-        # http://xwiki.support2.veeam.local/rest/wikis/xwiki/spaces/Main/spaces/Bugs%20and%20Fixes/spaces/Found%20Bugs/spaces/Migrated%20from%20mediaWIKI/spaces/0df2efe3d77be114667307af657eaa71/pages/WebHome
-        # var2: Main.Bugs and Fixes.Fix Upload.WebHome
-        # http://xwiki.support2.veeam.local/rest/wikis/xwiki/spaces/Main/spaces/Bugs%20and%20Fixes/spaces/Fix%20Upload/pages/WebHome
 
     def get_version_content_by_version(self, version_number: int) -> tuple:
         if type(self) is PageXWiki:

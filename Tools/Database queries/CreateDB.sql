@@ -51,7 +51,7 @@ CREATE UNIQUE INDEX iKnownPagesID ON KnownPages_datagrams (KnownPageID)
 
 */
 
-CREATE TABLE KnownPages_contribution
+CREATE TABLE [dbo].[KnownPages_UsersContribution]
 (KnownPageID uniqueidentifier,
 datagram_contribution varbinary(max)
 )
@@ -69,7 +69,8 @@ KnownPageID uniqueidentifier,
 contribution int
 )
 CREATE INDEX iKnownPageID ON KnownPages_UsersContribution (KnownPageID)
-
+CREATE UNIQUE NONCLUSTERED INDEX I_KnownPageIDxUserID
+   ON [KnownPages_UsersContribution] (KnownPageID, UserID);
 /*
 	drop index KnownPages_UsersContribution.iKnownPageID
     drop table [dbo].[KnownPages_UsersContribution]
@@ -397,7 +398,7 @@ delete [dbo].[KnownPages_contribution] where KnownPageID = @id
 delete [dbo].[KnownPages_datagrams] where KnownPageID = @id
 delete [dbo].[KnownPages_UsersContribution] where KnownPageID = @id
 delete [dbo].[Page_Karma_votes] where page_id = @id
-delete [dbo].[KnownBugs] where KnownPages_id = @page_id
+delete [dbo].[KnownBugs] where KnownPages_id = @id
 delete [dbo].[KnownPages] where id = @id
 
 GO

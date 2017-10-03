@@ -5,7 +5,7 @@ import uuid
 import base64
 os.supports_bytes_environ = True
 
-dict_to_pickle = {'StagingWiki.Internal Technical Docs.Knowledge Domains.Troubleshooting.TroubleshootingTools.Using WMI to query Veeam BnR information': 'xwiki'}
+dict_to_pickle = {'Main.Bugs and Fixes.Found Bugs.Migrated from mediaWIKI.88b849695a11b03c05c5aff1a6sdfdd8efd': 'xwiki'}
 
 
 def start_core_as_subprocess(dict_to_pickle: dict):

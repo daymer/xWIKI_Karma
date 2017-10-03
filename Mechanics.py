@@ -455,7 +455,7 @@ class SQLConnector:
                 binaryTotalContribute, CurrentPage.pageSQL_id)
             self.connection.commit()
 
-    def PushContributionByUser(self, CurrentPage):
+    def PushContributionByUser(self, CurrentPage):  # TODO: add update in case of update to avoid  doubles
         for user, value in CurrentPage.TotalContribute.items():
             self.cursor.execute(
                 "select [ID] from [dbo].[KnownPages_Users] where [user_name] = ?",
@@ -473,6 +473,10 @@ class SQLConnector:
                     user)
                 raw = self.cursor.fetchone()
                 UserID = raw[0]
+            self.cursor.execute(
+                "delete from [dbo].[KnownPages_UsersContribution] where [UserID] = ? and [KnownPageID] = ?",
+                UserID, CurrentPage.pageSQL_id)
+            self.connection.commit()
             self.cursor.execute(
                 "insert into [dbo].[KnownPages_UsersContribution] ([UserID],[KnownPageID],[contribution]) values (?,?,?)",
                 UserID, CurrentPage.pageSQL_id, value)
@@ -681,6 +685,24 @@ class SQLConnector:
         if raw is None:
             return []
         return raw
+
+    def GetPageTitle(self, native_sql_id: str):
+        self.cursor.execute(
+            "SELECT [page_title] FROM [dbo].[KnownPages] where [ID] = ?", native_sql_id)
+        raw = self.cursor.fetchone()
+        if raw is not None:
+            return raw[0]
+        else:
+            return None
+
+    def UpdatePageTitle(self, native_sql_id: str, new_title: str) -> bool:
+        try:
+            self.cursor.execute("update [dbo].[KnownPages] set [page_title] = ? where [ID] = ?", new_title, native_sql_id)
+            self.connection.commit()
+            return True
+        except:
+            self.connection.rollback()
+            return False
 
 
 class ContributionComparator:
