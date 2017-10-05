@@ -5,7 +5,7 @@ import uuid
 import base64
 os.supports_bytes_environ = True
 
-dict_to_pickle = {'Main.Bugs and Fixes.Found Bugs.Migrated from mediaWIKI.88b849695a11b03c05c5aff1a6sdfdd8efd': 'xwiki'}
+dict_to_pickle = {'Main.Bugs and Fixes.Found Bugs.Migrated from mediaWIKI.4600f15effb1d9d6a96f3780c7173c9d': 'xwiki'}
 
 
 def start_core_as_subprocess(dict_to_pickle: dict):

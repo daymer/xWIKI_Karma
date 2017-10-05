@@ -15,7 +15,7 @@ log_name = "Migration_log_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S", )
 target_pool = 'Delta migration'
 parent = 'Delta migration'
 migrate_statement = None
-migrate_statement = "select page_title, platform from [dbo].[KnownPages] where page_title = 'Generating and Uploading Summary.xml to backup file'"
+migrate_statement = "select page_title, platform from [dbo].[KnownPages] where page_title = 'VMware vSphere Basics' and platform = 'confluence'"
 title_like = None
 #title_like = 'bug%'
 

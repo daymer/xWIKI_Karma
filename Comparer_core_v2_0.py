@@ -334,7 +334,11 @@ for title, platform in task_pages_dict.items():
         if len(CurrentPage.VersionsGlobalArray) == 0:
             CurrentPage.pageSQL_id = SQL_Connector_inst.GetPageSQLID(CurrentPage)
             TempArray = SQL_Connector_inst.GetDatagrams(CurrentPage)
-            CurrentPage.VersionsGlobalArray = pickle.loads(TempArray[0])
+            if TempArray is None:
+                Logger.error('Kernel panic: Page is indexed, but has no datagram in DB!')
+                exit(1)
+            else:
+                CurrentPage.VersionsGlobalArray = pickle.loads(TempArray[0])
         content_as_list = [x[0] for x in CurrentPage.VersionsGlobalArray]
         page_content = ''.join(content_as_list)
         result = re_info_for_bug_page(page_content=page_content, page_title=CurrentPage.page_title)
