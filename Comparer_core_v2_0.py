@@ -72,7 +72,7 @@ def initialize(task_pages_dict: dict, logging_mode: str = 'INFO', log_to_file_va
         if len(task_pages_dict) == 1:
             task_pages_dict_temp = task_pages_dict.copy()
             log_title, log_platform = task_pages_dict_temp.popitem()
-            log_name = integration_config.log_location + "Core_v2.0_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S")) + '_' + str(log_title).replace('/', '').replace('\\', '') + '_' + log_platform + '.log'
+            log_name = integration_config.log_location + "Core_v2.0_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S")) + '_' + str(log_title[:20]).replace('/', '').replace('\\', '') + '_' + log_platform + '.log'
         else:
             log_name = integration_config.log_location + "Core_v2.0_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S")) + '.log'
         fh = logging.FileHandler(log_name)
