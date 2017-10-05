@@ -1046,7 +1046,7 @@ class xWikiClient:
     def _build_url(self, path):
         # print(path)
         for idx, val in enumerate(path):
-            path[idx] = val.replace('/', '%2F')
+            path[idx] = val.replace('/', '%2F').replace('\\.', '.')
         url = self.api_root + "/".join(path)
         if url.endswith('.'):
             url = url[:-1]
