@@ -1,7 +1,10 @@
-import Mechanics
 from abc import ABCMeta
-import mwclient
+
 import PythonConfluenceAPI
+import mwclient
+
+from CustomModules import Mechanics
+
 
 class PageGlobal(object):
     __metaclass__ = ABCMeta
@@ -18,6 +21,7 @@ class PageGlobal(object):
         self.dbVersion = None  # version of page in the Karma DB. None means that this Page wasn't indexed yet
         self.SQL_id = None
         self.ID = None
+        self.page_versions = 0
 
     def get_version_content_by_version(self, version_number: str) -> tuple:
         """Used to collect a content of some particular page version. Returns tuple in form: version_number, page_version, contributor"""
@@ -38,6 +42,7 @@ class PageConfluence(PageGlobal):
         self.title = page_title
         self.ConfluenceClient_inst = client_instance
 
+
 class PageMediaWiki(PageGlobal):
     def __init__(self, page_title: str, client_instance: mwclient.Site):
         PageGlobal.__init__(self)
@@ -55,10 +60,17 @@ class PageMediaWiki(PageGlobal):
                 del test_page
                 del test_page_text
                 raise ValueError('Page has no text')
+        self.page_id = self.get_page_id(self.title)
+
+    def get_page_id(self, title):
+        test_page = self.mWikiClient_inst.Pages[title]
+        if test_page is None :
+            return None
+        return test_page.pageid
 
 
 class PageXWiki(PageGlobal):
-    def __init__(self, page: str, page_title: str, client_instance: Mechanics.xWikiClient):
+    def __init__(self, page: str, page_title: str, client_instance: Mechanics.XWikiClient):
         PageGlobal.__init__(self)
         self.xWikiClient_inst = client_instance
         self.page_title = page_title  # XWD_TITLE

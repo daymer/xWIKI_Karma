@@ -1,9 +1,13 @@
-from PythonConfluenceAPI import ConfluenceAPI
-import Configuration
-import pickle
-from Mechanics import PageCreator, SQLConnector, ContributionComparator, ExclusionsDict, MysqlConnector
 import logging
+import pickle
 from datetime import datetime
+
+from PythonConfluenceAPI import ConfluenceAPI
+
+import Configuration
+from CustomModules.Mechanics import PageCreator, ContributionComparator, ExclusionsDict, MysqlConnector
+from CustomModules.SQL_Connector import SQLConnector
+
 GlobalStartTime = datetime.now()
 
 def initialize(logging_mode: str = 'INFO', log_to_file: bool = True):
@@ -157,7 +161,7 @@ for title, platform in task_pages_dict.items():
         Logger.warning(title + ' is redirect or unable to find ID, skipping')
         continue
     # incremental or full mode
-    CurrentPage.dbVersion = SQL_Connector_inst.CheckExistencebyID(CurrentPage)
+    CurrentPage.dbVersion = SQL_Connector_inst.select_version_from_dbo_knownpages(CurrentPage)
     CurrentPage.page_versions = Page_Creator_inst.collect_page_history(CurrentPage)
     CurrentPage.page_author = Page_Creator_inst.collect_page_author(CurrentPage)
 
@@ -205,10 +209,10 @@ for title, platform in task_pages_dict.items():
         PageAnalysisEndTime = None
         PageCountingEndTime = None
         # pushing new page to SQL
-        CurrentPage.pageSQL_id = SQL_Connector_inst.PushNewPage(CurrentPage)
-        SQL_Connector_inst.PushNewDatagram(CurrentPage)
-        SQL_Connector_inst.PushContributionDatagramByID(CurrentPage)
-        SQL_Connector_inst.PushContributionByUser(CurrentPage)
+        CurrentPage.pageSQL_id = SQL_Connector_inst.insert_into_dbo_knownpages(CurrentPage)
+        SQL_Connector_inst.insert_into_dbo_knownpages_datagrams(CurrentPage)
+        SQL_Connector_inst.insert_into_dbo_knownpages_contribution(CurrentPage)
+        SQL_Connector_inst.insert_into_dbo_knownpages_userscontribution(CurrentPage)
     elif CurrentPage.dbVersion < CurrentPage.page_versions:
         Logger.info('"' + CurrentPage.page_title + '" will be processed in INCREMENTAL mode')
         PageAnalysisEndTime = datetime.now()
@@ -216,15 +220,15 @@ for title, platform in task_pages_dict.items():
                 CurrentPage.page_id) + ', created by ' + CurrentPage.page_author + ' was parsed, ' + str(
                 CurrentPage.page_versions) + ' versions were found ' +
                   'Sources are collected, calculating difference... ')
-        SQL_Connector_inst.UpdateKnownPagesLast_check(CurrentPage)
+        SQL_Connector_inst.update_dbo_knownpages_is_uptodate(CurrentPage)
         # getting sources for all missing versions + latest in DB
         for VersionNumber in range(CurrentPage.dbVersion, CurrentPage.page_versions + 1):
             new_version = Page_Creator_inst.get_version_content_by_version(VersionNumber, CurrentPage)
             CurrentPage.add_new_page_version(new_version)
         PageAnalysisEndTime = datetime.now()
         # loading old datagram
-        CurrentPage.pageSQL_id = SQL_Connector_inst.GetPageSQLID(CurrentPage)
-        TempArray = SQL_Connector_inst.GetDatagrams(CurrentPage)
+        CurrentPage.pageSQL_id = SQL_Connector_inst.select_id_from_dbo_knownpages(CurrentPage.page_id)
+        TempArray = SQL_Connector_inst.select_datagram_contributors_datagram_from_dbo_knownpages_datagrams(sql_id=CurrentPage.SQL_id)
         CurrentPage.VersionsGlobalArray = pickle.loads(TempArray[0])
         TempContributors = pickle.loads(TempArray[1])
         # comparing latest versions
@@ -257,14 +261,14 @@ for title, platform in task_pages_dict.items():
         PageAnalysisEndTime = None
         PageCountingEndTime = None
         # pushing updates to SQL
-        SQL_Connector_inst.UpdatePagebyID(CurrentPage)
-        SQL_Connector_inst.UpdateDatagramByID(CurrentPage)
-        SQL_Connector_inst.PushContributionDatagramByID(CurrentPage)
-        SQL_Connector_inst.PushContributionByUser(CurrentPage)
+        SQL_Connector_inst.update_dbo_knownpages_last_check_last_modified(CurrentPage)
+        SQL_Connector_inst.update_dbo_knownpages_datagrams(CurrentPage)
+        SQL_Connector_inst.insert_into_dbo_knownpages_contribution(CurrentPage)
+        SQL_Connector_inst.insert_into_dbo_knownpages_userscontribution(CurrentPage)
     elif CurrentPage.dbVersion == CurrentPage.page_versions:
         Logger.info('"' + CurrentPage.page_title + '" is up-to-date')
         PageAnalysisEndTime = datetime.now()
-        SQL_Connector_inst.UpdateKnownPagesLast_check(CurrentPage)
+        SQL_Connector_inst.update_dbo_knownpages_is_uptodate(CurrentPage)
 
 TaskEndTime = datetime.now()
 TotalElapsed = TaskEndTime - TaskStartTime

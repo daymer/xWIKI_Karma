@@ -1,14 +1,17 @@
-from PythonConfluenceAPI import ConfluenceAPI
-import Configuration
-import pickle
-from Mechanics import SQLConnector, ContributionComparator, MysqlConnector, xWikiClient
-from Page_mechanics import PageXWiki, PageMediaWiki, PageConfluence, PageGlobal
-import logging
-from datetime import datetime
 import argparse
+import logging
 import os
+import pickle
 import re
+from datetime import datetime
+
+from PythonConfluenceAPI import ConfluenceAPI
 from mwclient import Site
+
+import Configuration
+from CustomModules.Mechanics import ContributionComparator, MysqlConnector, XWikiClient
+from CustomModules.PageMechanics import PageXWiki, PageMediaWiki, PageConfluence
+from CustomModules.SQL_Connector import SQLConnector
 
 GlobalStartTime = datetime.now()
 
@@ -93,8 +96,8 @@ def initialize(task_pages_dict: dict, logging_mode: str = 'INFO', log_to_file_va
     sql_connector_inst = SQLConnector(sql__config_inst)
     confluence_api_inst = ConfluenceAPI(confluence__config_inst.USER, confluence__config_inst.PASS,
                                        confluence__config_inst.ULR)
-    x_wiki_api_inst = xWikiClient(x_wiki__config_inst.api_root, x_wiki__config_inst.auth_user,
-                                   x_wiki__config_inst.auth_pass)
+    x_wiki_api_inst = XWikiClient(x_wiki__config_inst.api_root, x_wiki__config_inst.auth_user,
+                                  x_wiki__config_inst.auth_pass)
     m_wiki_api_instance = Site((m_wiki__config_inst.Protocol, m_wiki__config_inst.URL), path=m_wiki__config_inst.APIPath,
                                           clients_useragent=m_wiki__config_inst.UserAgent)
     return contrib_compare_inst, mysql_connector_inst, confluence_api_inst, sql_connector_inst, logger_inst, x_wiki_api_inst, m_wiki_api_instance
@@ -166,14 +169,6 @@ def re_info_for_bug_page(page_content: str, page_title: str):
     return bug_id_func, product_func, tbfi_func, components_func
 
 
-def check_if_system_page(current_page: PageXWiki) -> bool:
-    tags = current_page.xWikiClient_inst.get_tags_of_page(space=current_page.space, page=current_page.page, nested_space=current_page.nested_spaces, is_terminal_page=current_page.is_terminal_page)
-    for tag in tags['tags']:
-        if tag['name'] == 'no_karma':
-            return True
-    return False
-
-
 for title, platform in task_pages_dict.items():
     # Creating new page instance. Practically, page inst is everything what we need to get page index
     PageAnalysisStartTime = datetime.now()
@@ -194,10 +189,34 @@ for title, platform in task_pages_dict.items():
         if CurrentPage.page_id is None:
             Logger.warning(title + ' is redirect or unable to find ID, skipping')
             continue
+    elif platform.lower() == 'mwiki':
+        try:
+            CurrentPage = PageMediaWiki(page_title=title, client_instance=mWikiAPI_instance)
+        except ValueError:
+            Logger.warning(title + ' is redirect or unable to find ID, skipping')
+        if CurrentPage.page_id is None:
+            Logger.warning(title + ' is redirect or unable to find ID, skipping')
+            continue
+    elif platform.lower() == 'confluence':
+        try:
+            CurrentPage = PageConfluence(page_title=title, client_instance=ConfluenceAPI_inst)
+        except ValueError:
+            Logger.warning(title + ' is redirect or unable to find ID, skipping')
+
+    # Now we check if this page has "no_karma" tag. This check works only for xWiki pages
+    if isinstance(CurrentPage, PageXWiki):
+        def check_if_system_page(current_page: PageXWiki) -> bool:
+            tags = current_page.xWikiClient_inst.get_tags_of_page(space=current_page.space, page=current_page.page,
+                                                                  nested_space=current_page.nested_spaces,
+                                                                  is_terminal_page=current_page.is_terminal_page)
+            for tag in tags['tags']:
+                if tag['name'] == 'no_karma':
+                    return True
+            return False
         result = check_if_system_page(CurrentPage)
         if result is True:
             Logger.info('System page, indexing is not needed')
-            CurrentPage.dbVersion = SQL_Connector_inst.CheckExistencebyID(CurrentPage)
+            CurrentPage.dbVersion = SQL_Connector_inst.select_version_from_dbo_knownpages(page_id=CurrentPage.page_id)
             if CurrentPage.dbVersion is not None:
                 Logger.info('System page was indexed before, removing from DB')
                 result = SQL_Connector_inst.DeletePageByPageID(CurrentPage.page_id)
@@ -206,19 +225,8 @@ for title, platform in task_pages_dict.items():
                 else:
                     Logger.error('Failed to delete page from DB')
             exit(0)
-    elif platform.lower() == 'mwiki':
-        try:
-            CurrentPage = PageMediaWiki(page_title=title, client_instance=mWikiAPI_instance)
-        except ValueError:
-            Logger.warning(title + ' is redirect or unable to find ID, skipping')
-    elif platform.lower() == 'confluence':
-        try:
-            CurrentPage = PageConfluence(page_title=title, client_instance=ConfluenceAPI_inst)
-        except ValueError:
-            Logger.warning(title + ' is redirect or unable to find ID, skipping')
 
-
-    CurrentPage.dbVersion = SQL_Connector_inst.CheckExistencebyID(CurrentPage)
+    CurrentPage.dbVersion = SQL_Connector_inst.select_version_from_dbo_knownpages(page_id=CurrentPage.page_id)
 
     # FULL MODE:
     if CurrentPage.dbVersion is None:
@@ -263,17 +271,17 @@ for title, platform in task_pages_dict.items():
         PageAnalysisEndTime = None
         PageCountingEndTime = None
         # pushing new page to SQL
-        CurrentPage.pageSQL_id = SQL_Connector_inst.PushNewPage(CurrentPage)
+        CurrentPage.SQL_id = SQL_Connector_inst.insert_into_dbo_knownpages(page_object=CurrentPage)
         Logger.info(CurrentPage.page_title + ' was added to DB')
-        SQL_Connector_inst.PushNewDatagram(CurrentPage)
-        SQL_Connector_inst.PushContributionDatagramByID(CurrentPage)
-        SQL_Connector_inst.PushContributionByUser(CurrentPage)
+        SQL_Connector_inst.insert_into_dbo_knownpages_datagrams(page_object=CurrentPage)
+        SQL_Connector_inst.insert_into_dbo_knownpages_contribution(page_object=CurrentPage)
+        SQL_Connector_inst.insert_into_dbo_knownpages_userscontribution(page_object=CurrentPage)
     # INCREMENTAL MODE:
     elif CurrentPage.dbVersion < CurrentPage.page_versions:
         Logger.info('"' + CurrentPage.page_title + '" will be processed in INCREMENTAL mode')
         PageAnalysisEndTime = datetime.now()
         Logger.debug('Sources are loaded, collecting incremental data and calculating difference... ')
-        SQL_Connector_inst.UpdateKnownPagesLast_check(CurrentPage)
+        SQL_Connector_inst.update_dbo_knownpages_is_uptodate(page_id=CurrentPage.page_id, up_to_date=False)
         # getting sources for all missing versions + latest in DB
         for VersionNumber in range(CurrentPage.dbVersion, CurrentPage.page_versions + 1):
             CurrentPage.add_new_page_version(CurrentPage.get_version_content_by_version(VersionNumber))
@@ -283,8 +291,8 @@ for title, platform in task_pages_dict.items():
                 CurrentPage.page_versions) + ' versions were found')
         Logger.debug('Sources are loaded, calculating difference... ')
         # loading old datagram
-        CurrentPage.pageSQL_id = SQL_Connector_inst.GetPageSQLID(CurrentPage)
-        TempArray = SQL_Connector_inst.GetDatagrams(CurrentPage)
+        CurrentPage.SQL_id = SQL_Connector_inst.select_id_from_dbo_knownpages(object_type=type(CurrentPage), page_id=CurrentPage.page_id)
+        TempArray = SQL_Connector_inst.select_datagram_contributors_datagram_from_dbo_knownpages_datagrams(sql_id=CurrentPage.SQL_id)
         CurrentPage.VersionsGlobalArray = pickle.loads(TempArray[0])
         TempContributors = pickle.loads(TempArray[1])
         # comparing latest versions
@@ -317,23 +325,26 @@ for title, platform in task_pages_dict.items():
         PageAnalysisEndTime = None
         PageCountingEndTime = None
         # pushing updates to SQL
-        SQL_Connector_inst.UpdatePagebyID(CurrentPage)
-        SQL_Connector_inst.UpdateDatagramByID(CurrentPage)
-        SQL_Connector_inst.PushContributionDatagramByID(CurrentPage)
-        SQL_Connector_inst.PushContributionByUser(CurrentPage)
+        SQL_Connector_inst.update_dbo_knownpages_last_check_last_modified(CurrentPage.SQL_id, CurrentPage.page_versions, CurrentPage.TotalCharacters)
+        SQL_Connector_inst.update_dbo_knownpages_datagrams(page_object=CurrentPage)
+        SQL_Connector_inst.insert_into_dbo_knownpages_contribution(page_object=CurrentPage)
+        SQL_Connector_inst.insert_into_dbo_knownpages_userscontribution(page_object=CurrentPage)
+        SQL_Connector_inst.update_dbo_knownpages_is_uptodate(page_id=CurrentPage.page_id, up_to_date=True)
     elif CurrentPage.dbVersion == CurrentPage.page_versions:
-        CurrentPage.SQL_id = SQL_Connector_inst.GetPageSQLID(CurrentPage)
+        CurrentPage.SQL_id = SQL_Connector_inst.select_id_from_dbo_knownpages(object_type=type(CurrentPage),
+                                                                              page_id=CurrentPage.page_id)
         Logger.info('Page "' + CurrentPage.page_title + '" is up-to-date')
         PageAnalysisEndTime = datetime.now()
-        SQL_Connector_inst.UpdateKnownPagesLast_check(CurrentPage)
+        SQL_Connector_inst.update_dbo_knownpages_is_uptodate(page_id=CurrentPage.page_id, up_to_date=True)
     # ----------------BUG ADD TO DB----------------------------------------------------------
     # now we need to check, if it's a bug page to update [dbo].[KnownBugs] if needed
     if CurrentPage.page_id.lower().startswith('xwiki:main.bugs and fixes.found bugs'):
         Logger.info('Starting bug analyze sequence')
         # ---it's a bug, need to find it's product and other fields (migrated bugs have invalid paths)
         if len(CurrentPage.VersionsGlobalArray) == 0:
-            CurrentPage.pageSQL_id = SQL_Connector_inst.GetPageSQLID(CurrentPage)
-            TempArray = SQL_Connector_inst.GetDatagrams(CurrentPage)
+            CurrentPage.SQL_id = SQL_Connector_inst.select_id_from_dbo_knownpages(object_type=type(CurrentPage),
+                                                                                  page_id=CurrentPage.page_id)
+            TempArray = SQL_Connector_inst.select_datagram_contributors_datagram_from_dbo_knownpages_datagrams(sql_id=CurrentPage.SQL_id)
             if TempArray is None:
                 Logger.error('Kernel panic: Page is indexed, but has no datagram in DB!')
                 exit(1)
@@ -356,13 +367,13 @@ for title, platform in task_pages_dict.items():
                 xml += '</components>'
                 byte_xml = bytearray()
                 byte_xml.extend(map(ord, xml))
-                result = SQL_Connector_inst.Update_or_Add_bug_page(known_pages_id=CurrentPage.pageSQL_id, bug_id=bug_id,
+                result = SQL_Connector_inst.Update_or_Add_bug_page(known_pages_id=CurrentPage.SQL_id, bug_id=bug_id,
                                                                    product=product, tbfi=tbfi, xml=byte_xml)
                 if result is True:
                     Logger.info('Bug info updated')
                 else:
                     Logger.error(
-                        'Unable to update bug info in SQL, query params: known_pages_id:' + CurrentPage.pageSQL_id + ' bug_id: ' + bug_id + ' product: ' + product + ' tbfi: ' + tbfi + ' xml: ' + xml)
+                        'Unable to update bug info in SQL, query params: known_pages_id:' + CurrentPage.SQL_id + ' bug_id: ' + bug_id + ' product: ' + product + ' tbfi: ' + tbfi + ' xml: ' + xml)
             else:
                 Logger.error('Failed to parse some of fields, aborting bug analyze')
         else:

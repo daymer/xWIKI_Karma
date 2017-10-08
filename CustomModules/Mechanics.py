@@ -1,18 +1,19 @@
+import copy
+import difflib
+import hashlib
+import re
+import sys
+import traceback
+from datetime import datetime
+
+import mysql.connector
+import requests
 from PythonConfluenceAPI import \
     ConfluenceAPI  # http://htmlpreview.github.io/?https://github.com/pushrodtechnology/PythonConfluenceAPI/blob/master/doc/html/index.html
 from mwclient import Site
-import difflib
-import pyodbc
-import traceback
-import pickle
-from datetime import datetime
-import requests
-import copy
-import sys
-import mysql.connector
+
 import Configuration
-import re
-import hashlib
+
 
 sys.setrecursionlimit(10 ** 6)
 
@@ -23,7 +24,7 @@ class PageCreator:
         self.MediaWikiAPI_instance = Site((MediaWIKIConfig.Protocol, MediaWIKIConfig.URL), path=MediaWIKIConfig.APIPath,
                                           clients_useragent=MediaWIKIConfig.UserAgent)
         self.xWikiSpaces = xWikiConfig.spaces
-        self.xWikiAPI = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
+        self.xWikiAPI = XWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
         self.current_mediaWiki_page = None
         self.current_version_to_versionID = []
         self.current_xWiki_page = None
@@ -236,475 +237,6 @@ class Page:
                 exit()
 
 
-class SQLConnector:
-    def __init__(self, SQLConfig):
-        self.connection = pyodbc.connect(
-            'DRIVER=' + SQLConfig.Driver + ';PORT=1433;SERVER=' + SQLConfig.Server + ';PORT=1443;DATABASE='
-            + SQLConfig.Database + ';UID=' + SQLConfig.Username + ';PWD=' + SQLConfig.Password)
-        self.cursor = self.connection.cursor()
-
-    def GetPageID_by_title_and_platform(self, page_title, platform):
-        self.cursor.execute(
-            "select page_id FROM [Karma].[dbo].[KnownPages] where [page_title] = ? and [platform]= ?", page_title,
-            platform)
-        raw = self.cursor.fetchone()
-        if raw is not None:
-            return raw[0]
-        else:
-            return None
-
-    def GetPageSQLID(self, CurrentPage):
-        self.cursor.execute(
-            "select [id] from [dbo].[KnownPages] where [page_id] like '" + str(CurrentPage.page_id) + "'")
-        raw = self.cursor.fetchone()
-        return raw[0]
-
-    def GetPageSQLID_and_characters_total_by_title(self, title):
-        self.cursor.execute(
-            "select [id],[characters_total]  from [dbo].[KnownPages] where [page_title] = ?", title)
-        raw = self.cursor.fetchone()
-        # if raw is None:
-        #    return None
-        return raw
-
-    def GetPageSQLID_and_characters_total_by_title_and_platform(self, title, platform):
-        self.cursor.execute(
-            "select [id],[characters_total] from [dbo].[KnownPages] where [page_title] = ? and platform=?", title,
-            platform)
-        raw = self.cursor.fetchone()
-        # if raw is None:
-        #    return None
-        return raw
-
-    def GetPageSQLID_and_characters_total_by_page_id_and_platform(self, XWD, platform):
-        if platform.lower() == 'xwiki':
-            XWD = 'xwiki:' + XWD
-        self.cursor.execute(
-            "select [id],[characters_total] FROM [dbo].[KnownPages] where [page_id] = ? and [platform] LIKE LOWER(?)",
-            XWD, platform)
-        raw = self.cursor.fetchone()
-        if raw is None:
-            return None
-        return raw
-
-    def GetUserIDbyName(self, username):
-        self.cursor.execute(
-            "select [id] from [dbo].[KnownPages_Users] where [user_name] = ?", username)
-        raw = self.cursor.fetchone()
-        if raw is not None:
-            return raw[0]
-        else:
-            return None
-
-    def GetUserKarmaRawScore_byID(self, id):
-        self.cursor.execute(
-            "EXEC get_user_karma_raw_score @id = ?", id)
-        raw = self.cursor.fetchone()
-        if raw is not None:
-            return raw[0]
-        else:
-            return None
-
-    def GetPageKarmaAndVotes_byID(self, page_id):
-        self.cursor.execute(
-            "EXEC dbo.[get_page_karma_and_votes] @page_id = ?", page_id)
-        raw = self.cursor.fetchone()
-        if raw is not None:
-            return raw
-        else:
-            return None
-
-    def GetUserKarmaDetailedScore_byID(self, id):
-        self.cursor.execute(
-            "EXEC [dbo].[get_user_karma_current_score_detailed] @user_id = ?", id)
-        while self.cursor.nextset():  # NB: This always skips the first resultset
-            try:
-                raw = self.cursor.fetchall()
-                break
-            except pyodbc.ProgrammingError:
-                continue
-        if raw is not None:
-            return raw
-        else:
-            return None
-
-    def GetUserKarmaScore_byID(self, id):
-        self.cursor.execute(
-            "EXEC get_user_karma_current_score @user_id = ?", id)
-        raw = self.cursor.fetchone()
-        if raw is not None:
-            return raw[0]
-        else:
-            return None
-
-    def MakeNewKarmaSlice_byUserID(self, id):
-        self.cursor.execute(
-            "exec [dbo].[make_new_karma_slice] @user_id = ?", id)
-        raw = self.cursor.fetchone()
-        if raw is not None:
-            self.cursor.connection.commit()
-            return raw[0]
-        else:
-            return None
-
-    def GetKarmaSlicesByUSERIDandDates(self, user_id, date_start, date_end):
-        date_end_year = '%02d' % date_end.year
-        date_end_month = '%02d' % date_end.month
-        date_end_day = '%02d' % date_end.day
-        date_start_year = '%02d' % date_start.year
-        date_start_month = '%02d' % date_start.month
-        date_start_day = '%02d' % date_start.day
-        try:
-            self.cursor.execute(
-                "select [karma_score], CONVERT(varchar(max), DATEDIFF(second,{d '1970-01-01'},[change_time])) as [change_time] FROM [Karma].[dbo].[UserKarma_slice] where [user_id] = ? and change_time between CONVERT(datetime, ?+?+?) and CONVERT(datetime, ?+?+?)",
-                user_id, date_start_year, date_start_month, date_start_day, date_end_year, date_end_month, date_end_day)
-            raw = self.cursor.fetchall()
-            if raw is not None:
-                return raw
-            else:
-                return None
-        except:
-            print("Sad story, but your query is shit")
-            print(
-                "select [karma_score], [change_time] FROM [Karma].[dbo].[UserKarma_slice] where [user_id] = " + user_id + " and change_time between CONVERT(datetime, " + str(
-                    date_start.year) + str(date_start.month) + str(date_start.day) + ") and CONVERT(datetime, " + str(
-                    date_end.year) + str(date_end.month) + str(date_end.day) + ")")
-
-    def GetUserRawKarmabyID(self, id):
-        self.cursor.execute(
-            "EXEC get_user_karma_raw @id = ?", id)
-        raw = self.cursor.fetchall()
-        if raw is not None:
-            return raw
-        else:
-            return None
-
-    def GetPagePageContribution(self, CurrentPage):
-        self.cursor.execute(
-            "select [datagram_contribution] from [dbo].[KnownPages_contribution] where [KnownPageID] = ?",
-            CurrentPage.pageSQL_id)
-        raw = self.cursor.fetchone()
-        if raw:
-            return raw[0]
-        else:
-            return None
-
-    def GetDatagrams(self, CurrentPage):
-        self.cursor.execute(
-            "select [datagram], [contributors_datagram] from [dbo].[KnownPages_datagrams] where [KnownPageID] = ?",
-            CurrentPage.pageSQL_id)
-        raw = self.cursor.fetchone()
-        return raw
-
-    def PushNewPage(self, CurrentPage):
-        # TODO: remove hardcoded CurrentPage.page_platform
-        page_platform = 'xwiki'
-        try:
-            self.cursor.execute(
-                "insert into [dbo].[KnownPages] ([ID],[page_title],[page_id],[author],[author_ID],[added],"
-                "[last_modified],[version],[last_check],[is_uptodate], [characters_total], [platform]) values (NEWID(),?,?,?,?,getdate(),getdate(),?,getdate(),'1',?,?)",
-                CurrentPage.page_title, CurrentPage.page_id, CurrentPage.page_author, 'Null', CurrentPage.page_versions,
-                CurrentPage.TotalCharacters, page_platform)
-            self.connection.commit()
-            pageID = self.GetPageSQLID(CurrentPage)
-            return pageID
-        except pyodbc.DataError:
-            self.connection.rollback()
-            error_handler = traceback.format_exc()
-            print(datetime.now(),
-                  'Initial add of ' + CurrentPage.page_title + ' rolled back due to the following error:\n' + error_handler)
-            print("insert into [dbo].[KnownPages] ([ID],[page_title],[page_id],[author],[author_ID],[added],"
-                  "[last_modified],[version],[last_check],[is_uptodate], [characters_total], [platform]) values (NEWID(),'" + CurrentPage.page_title + "','" + CurrentPage.page_id + "','" + CurrentPage.page_author + "','Null',getdate(),getdate()," + str(
-                CurrentPage.page_versions) + ",getdate(),'1','" + str(
-                CurrentPage.TOTALCharacters) + "','" + CurrentPage.page_platform + "')")
-            self.connection.rollback()
-            error_handler = traceback.format_exc()
-            print(datetime.now(),
-                  'Initial add of ' + CurrentPage.page_title + ' rolled back due to the following error: page with this [page_id] already exists, need to make incremental run')
-
-    def PushNewDatagram(self, CurrentPage):
-        binaryGlobalArray = pickle.dumps(CurrentPage.VersionsGlobalArray, 4)
-        binaryContributors = pickle.dumps(CurrentPage.contributors, 4)
-        try:
-            self.cursor.execute(
-                "insert into [dbo].[KnownPages_datagrams] ([ID],[KnownPageID],[datagram], [contributors_datagram]) values (NEWID(),?,?,?)",
-                CurrentPage.pageSQL_id, binaryGlobalArray, binaryContributors)
-            self.connection.commit()
-        except:
-            self.connection.rollback()
-            self.cursor.execute(
-                "delete [dbo].[KnownPages] where ID =?",
-                CurrentPage.pageSQL_id)
-            self.connection.commit()
-            error_handler = traceback.format_exc()
-            print(datetime.now(),
-                   'Initial add of ' + CurrentPage.page_title + ' rolled back due to the following error while adding its datagram:\n' + error_handler)
-
-    def PushContributionDatagramByID(self, CurrentPage):
-        binaryTotalContribute = pickle.dumps(CurrentPage.TotalContribute, 4)
-        # is already added?
-        SQLContribution = self.GetPagePageContribution(CurrentPage)
-        if SQLContribution == None:
-            self.cursor.execute(
-                "insert into [dbo].[KnownPages_contribution] ([KnownPageID],[datagram_contribution]) values (?,?)",
-                CurrentPage.pageSQL_id, binaryTotalContribute)
-            self.connection.commit()
-        else:
-            self.cursor.execute(
-                "update [dbo].[KnownPages_contribution] set [datagram_contribution] = ? where KnownPageID=?",
-                binaryTotalContribute, CurrentPage.pageSQL_id)
-            self.connection.commit()
-
-    def PushContributionByUser(self, CurrentPage):  # TODO: add update in case of update to avoid  doubles
-        for user, value in CurrentPage.TotalContribute.items():
-            self.cursor.execute(
-                "select [ID] from [dbo].[KnownPages_Users] where [user_name] = ?",
-                user)
-            raw = self.cursor.fetchone()
-            if raw:
-                UserID = raw[0]
-            else:
-                self.cursor.execute(
-                    "insert into [dbo].[KnownPages_Users] ([ID],[user_name]) values (NEWID(),?)",
-                    user)
-                self.connection.commit()
-                self.cursor.execute(
-                    "select [ID] from [dbo].[KnownPages_Users] where [user_name] = ?",
-                    user)
-                raw = self.cursor.fetchone()
-                UserID = raw[0]
-            self.cursor.execute(
-                "delete from [dbo].[KnownPages_UsersContribution] where [UserID] = ? and [KnownPageID] = ?",
-                UserID, CurrentPage.pageSQL_id)
-            self.connection.commit()
-            self.cursor.execute(
-                "insert into [dbo].[KnownPages_UsersContribution] ([UserID],[KnownPageID],[contribution]) values (?,?,?)",
-                UserID, CurrentPage.pageSQL_id, value)
-            self.connection.commit()
-            if user == CurrentPage.page_author:
-                self.cursor.execute(
-                    "update [dbo].[KnownPages] set author_ID = ? where ID = ?",
-                    UserID, CurrentPage.pageSQL_id)
-                self.connection.commit()
-
-    def CheckExistencebyID(self, CurrentPage):
-        self.cursor.execute(
-            "select [version] from [dbo].[KnownPages] where [page_id] = '" + str(CurrentPage.page_id) + "'")
-        row = self.cursor.fetchone()
-        if row:
-            self.cursor.execute(
-                "update [dbo].[KnownPages] set page_title = ? where [page_id] = '" + str(CurrentPage.page_id) + "'",
-                CurrentPage.page_title)
-            self.connection.commit()
-            return int(row[0])
-        else:
-            return None
-
-    def UpdateKnownPagesLast_check(self, CurrentPage):
-        if CurrentPage.page_versions == CurrentPage.dbVersion:
-            try:
-                self.cursor.execute(
-                    "update [dbo].[KnownPages] set [is_uptodate]=1, [last_check]=CONVERT(datetime,?) where [page_id]=?",
-                    str(datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S.%f")[:-3]), str(CurrentPage.page_id))
-                self.connection.commit()
-            except:
-                self.connection.rollback()
-                error_handler = traceback.format_exc()
-                print(datetime.now(),
-                      'Update of last_check status of ' + CurrentPage.page_title + ' rolled back due to the following error:\n' + error_handler)
-                print('query:', "update [dbo].[KnownPages] set [is_uptodate]=1, [last_check]=" + str(
-                    datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S.%f")[:-3]) + " where [page_id] =" + str(
-                    CurrentPage.page_id))
-        else:
-            try:
-                self.cursor.execute(
-                    "update [dbo].[KnownPages] set [is_uptodate]=0, [last_check]=? where [page_id]=?",
-                    str(datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S.%f")[:-3]),  str(CurrentPage.page_id))
-                self.connection.commit()
-            except:
-                self.connection.rollback()
-                error_handler = traceback.format_exc()
-                print(datetime.now(),
-                      'Update of last_check status of ' + CurrentPage.page_title + ' rolled back due to the following error:\n' + error_handler)
-                print('query:',
-                      "update [dbo].[KnownPages] set [is_uptodate]=0, [last_check]=" + str(
-                          datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S.%f")[:-3]) + " where [page_id] =" + str(
-                          CurrentPage.page_id))
-
-    def UpdatePagebyID(self, CurrentPage):
-        self.cursor.execute(
-            "update [dbo].[KnownPages] set [is_uptodate]='1', [last_check]=getdate(),[last_modified]=getdate(), version = ?, characters_total = ? where [id] =?",
-            CurrentPage.page_versions, CurrentPage.TotalCharacters, CurrentPage.pageSQL_id)
-        self.connection.commit()
-
-    def UpdateDatagramByID(self, CurrentPage):
-        binaryGlobalArray = pickle.dumps(CurrentPage.VersionsGlobalArray, 4)
-        binaryContributors = pickle.dumps(CurrentPage.contributors, 4)
-        self.cursor.execute(
-            "update [dbo].[KnownPages_datagrams] set datagram=?,contributors_datagram=? where [KnownPageID] =?",
-            binaryGlobalArray, binaryContributors, CurrentPage.pageSQL_id)
-        self.connection.commit()
-
-    def NewPageVote(self, page_SQL_id, user_id, direction):
-        # checking if this user has already voted for this page
-        direction = bool(int(direction))
-        try:
-            self.cursor.execute(
-                "select id, [direction] from [dbo].[Page_Karma_votes] where page_id=? and user_id =?",
-                page_SQL_id, user_id)
-            raw = self.cursor.fetchone()
-        except Exception as exception:
-            print(
-                'select id from [dbo].[Page_Karma_votes] where page_id=' + page_SQL_id + ' and user_id =' + user_id + ' was aborted due to the following error:')
-            print(exception)
-        if raw is not None:
-            current_direction = raw[1]
-            if current_direction is True and direction is True or current_direction is False and direction is False:
-                return 'Error: Already voted'
-            if current_direction is False and direction is True or current_direction is True and direction is False:
-                self.cursor.execute(
-                    "delete from [dbo].[Page_Karma_votes] where id =?",
-                    raw[0])
-                self.connection.commit()
-                return 'Vote deleted'
-        else:
-            self.cursor.execute(
-                "insert into [dbo].[Page_Karma_votes] values(NEWID(), ?, ?, ?, GETDATE())",
-                page_SQL_id, user_id, direction)
-            self.connection.commit()
-            return 'Vote committed'
-
-    def GetDatagramsByPageTitleandPlatform(self, page_title, platform):
-        self.cursor.execute(
-            "select [id] from [dbo].[KnownPages] where [page_title] = ? and platform = ?", page_title, platform)
-        raw = self.cursor.fetchone()
-        if raw:
-            page_id = raw[0]
-        else:
-            return None
-        self.cursor.execute(
-            "select [datagram], [contributors_datagram] from [dbo].[KnownPages_datagrams] where [KnownPageID] = ?",
-            page_id)
-        raw = self.cursor.fetchone()
-        if raw:
-            datagram = pickle.loads(raw[0])
-            contributors_datagram = pickle.loads(raw[1])
-            return datagram, contributors_datagram
-
-    def GetPagesByTitle(self, page_title: str = None, query: str = None):
-        if page_title is None and query is None:
-            return None
-        if page_title is not None and query is not None:
-            return None
-        if query is not None:
-            self.cursor.execute(query)
-            raw = self.cursor.fetchall()
-            if raw:
-                return raw
-            else:
-                return None
-        elif page_title is not None:
-            self.cursor.execute(
-                "SELECT page_title, platform FROM [Karma].[dbo].[KnownPages] where page_title like LOWER('%" + page_title + "%')")
-            raw = self.cursor.fetchall()
-            if raw:
-                return raw
-            else:
-                return None
-
-    def DeletePageByPageID(self, page_id):
-        try:
-            self.cursor.execute(
-                "exec [dbo].[delete_page_by_page_id] ?",
-                page_id)
-            self.connection.commit()
-            return True
-        except:
-            self.connection.rollback()
-            return False
-
-    def MakeNewGlobalKarmaSlice(self):
-        try:
-            self.cursor.execute(
-                "exec [dbo].[make_new_global_karma_slice]")
-            self.connection.commit()
-            return True
-        except:
-            self.connection.rollback()
-            return False
-
-    def GetGlobalCurrentKarma(self):
-        self.cursor.execute(
-            "exec [dbo].[get_user_karma_current_score_global]")
-        raw = self.cursor.fetchall()
-        if raw is not None:
-            return raw
-        else:
-            return None
-
-    def Update_or_Add_bug_page(self, known_pages_id: str, bug_id: str, product: str, tbfi: str, xml: bytearray) -> bool:
-        try:
-            self.cursor.execute(
-                "exec [dbo].[update_or_Add_bug_page] ?, ?, ?, ?, ?", known_pages_id, bug_id, product, tbfi, xml)
-            self.connection.commit()
-            return True
-        except:
-            self.connection.rollback()
-            return False
-
-    def GetBugs(self, components_filer: list, product_filter: list, tbfi_filter: list, start: str, end: str) -> list:
-
-        query = "WITH OrderedRecords AS" \
-                "(" \
-                "SELECT [dbo].[KnownPages].[page_title], [dbo].[KnownBugs].[bug_id], [dbo].[KnownBugs].[product], [dbo].[KnownBugs].[tbfi], [dbo].[KnownBugs].[components]," \
-                "ROW_NUMBER() OVER (ORDER BY [dbo].[KnownPages].id) AS 'RowNumber' " \
-                "FROM [dbo].[KnownBugs] " \
-                "left join [dbo].[KnownPages] on [dbo].[KnownBugs].KnownPages_id = [dbo].[KnownPages].id " \
-                "WHERE "
-        for idx, component in enumerate(components_filer):
-            query += "(Charindex('" + component + "',CAST(components AS VARCHAR(MAX)))>0 )"
-            if idx != len(components_filer) - 1:
-                query += " AND "
-        if len(components_filer) != 0 and len(product_filter) > 0:
-            query += " AND "
-        for idx, product in enumerate(product_filter):
-            query += "([product]='" + product + "')"
-            if idx != len(product_filter) - 1:
-                query += " AND "
-        if len(product_filter) != 0 and len(tbfi_filter) > 0:
-            query += " AND "
-        for idx, tbfi in enumerate(tbfi_filter):
-            query += "([tbfi]='" + tbfi + "')"
-            if idx != len(tbfi_filter) - 1:
-                query += " AND "
-        query += ")"
-        query += "SELECT [page_title], [bug_id], [product], [tbfi], [components], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
-        print(query)
-        self.cursor.execute(query)
-        raw = self.cursor.fetchall()
-        if raw is None:
-            return []
-        return raw
-
-    def GetPageTitle(self, native_sql_id: str):
-        self.cursor.execute(
-            "SELECT [page_title] FROM [dbo].[KnownPages] where [ID] = ?", native_sql_id)
-        raw = self.cursor.fetchone()
-        if raw is not None:
-            return raw[0]
-        else:
-            return None
-
-    def UpdatePageTitle(self, native_sql_id: str, new_title: str) -> bool:
-        try:
-            self.cursor.execute("update [dbo].[KnownPages] set [page_title] = ? where [ID] = ?", new_title, native_sql_id)
-            self.connection.commit()
-            return True
-        except:
-            self.connection.rollback()
-            return False
-
-
 class ContributionComparator:
     def __init__(self, logging_mode='silent'):
         self.temp_array = []
@@ -865,7 +397,7 @@ class MysqlConnector(object):
                                            database=config.database)
         self.cursor = self.cnx.cursor(buffered=True)
         self.xWikiConfig_instance = Configuration.xWikiConfig('Sandbox')
-        self.xWikiClient_instance = xWikiClient(self.xWikiConfig_instance.api_root, self.xWikiConfig_instance.auth_user,
+        self.xWikiClient_instance = XWikiClient(self.xWikiConfig_instance.api_root, self.xWikiConfig_instance.auth_user,
                                                 self.xWikiConfig_instance.auth_pass)
 
     def get_XWD_ID(self, XWD_WEB):
@@ -1037,7 +569,7 @@ class MysqlConnector(object):
             return None
 
 
-class xWikiClient:
+class XWikiClient(object):
     def __init__(self, api_root, auth_user=None, auth_pass=None):
         self.api_root = api_root
         self.auth_user = auth_user
@@ -1389,7 +921,7 @@ class Migrator(object):
         self.ConfluenceConfig = ConfluenceConfig
         self.MediaWIKIConfig_instance = MediaWIKIConfig
         self.xWikiConfig = xWikiConfig
-        self.xWikiClient = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
+        self.xWikiClient = XWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
         self.tag_list = []
         self.file_list = []
         self.current_page_id = None
@@ -1487,7 +1019,7 @@ def Migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE, Mys
     page_hash = m.hexdigest()
     print('~~~~~~~~~~~~STATE: Starting migration process of', '"' + title + '"', 'from platform', platform,
           '~~~~~~~~~~~~')
-    SQLQuery = SQLConnector.GetDatagramsByPageTitleandPlatform(page_title=title, platform=platform)
+    SQLQuery = SQLConnector.select_datagrams_from_dbo_knownpages_datagrams(page_title=title, platform=platform)
     if SQLQuery is None:
         result = 'ERROR: Page', title, 'on platform', platform, 'isn\'t indexed yet'
         return False, result
@@ -1575,7 +1107,7 @@ def Migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE, Mys
         tags = False
         files = False
         if platform == 'Confluence':
-            page_id = SQLConnector.GetPageID_by_title_and_platform(title, platform)
+            page_id = SQLConnector.select_page_id_from_dbo_knownpages(title, platform)
             tags = Migrator.get_tags(platform=platform, id=page_id, test_str=None)
             files = Migrator.get_files(platform=platform, id=page_id, test_str=latest_text)
         elif platform == 'MediaWIKI':

@@ -1,17 +1,20 @@
-from gevent import pywsgi
-from datetime import datetime, timedelta
-from gevent import monkey
-import Configuration
-from urllib.parse import parse_qs
-from Mechanics import Page, SQLConnector, CustomLogging, MysqlConnector, PageCreator
-import json
-import pickle
-import operator
 import ctypes
+import json
+import operator
 import os
+import pickle
+import re
 import subprocess
 import uuid
-import re
+from datetime import datetime, timedelta
+from urllib.parse import parse_qs
+
+from gevent import monkey
+from gevent import pywsgi
+
+import Configuration
+from CustomModules.Mechanics import Page, CustomLogging, MysqlConnector
+from CustomModules.SQL_Connector import SQLConnector
 
 is_admin = ctypes.windll.shell32.IsUserAnAdmin()
 if is_admin != 1:
@@ -57,23 +60,19 @@ def post_request_analyse(request_body):
             if page_id is not None:
                 MySQLconfig_INSTANCE = Configuration.MySQLConfig()
                 MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
-                #print('page_title', page_title, 'page_id', page_id)
                 XWD_FULLNAME = MysqlConnector_INSTANCE.get_XWD_FULLNAME(XWD_ID=page_id)
                 if XWD_FULLNAME is None:
                     page_unknown_answer = json.dumps({
                         'Error': 'Bad request - there is no known page with id "' + page_id + '" in the database'},
                         separators=(',', ':'))
                     return page_unknown_answer
-                #print('XWD_FULLNAME', 'xwiki:'+XWD_FULLNAME, 'page_id', page_id, 'platform', platform)
-                temp_array = SQLConnector.GetPageSQLID_and_characters_total_by_page_id_and_platform(
-                    XWD_FULLNAME, platform)
-                #print('temp_array', temp_array)
+                temp_array = SQLConnector.select_id_characters_total_from_dbo_knownpages(
+                    page_id=XWD_FULLNAME, platform=platform)
                 if temp_array is None:  # page is unknown exception
                     page_unknown_answer = json.dumps({
                         'Error': 'Bad request - there is no known page with ID "' + page_id + '" in the database'},
                         separators=(',', ':'))
                     return page_unknown_answer
-                Current_Page = Page(XWD_FULLNAME, platform)
 
             if temp_array is None:  # page is unknown exception
                 page_unknown_answer = json.dumps({
@@ -81,25 +80,25 @@ def post_request_analyse(request_body):
                                                  separators=(',', ':'))
                 return page_unknown_answer
 
-            Current_Page.pageSQL_id = temp_array[0]
-            Current_Page.TotalCharacters = int(temp_array[1])
-            Current_Page.TotalContribute = pickle.loads(SQLConnector.GetPagePageContribution(Current_Page))
-            result = SQLConnector.GetPageKarmaAndVotes_byID(Current_Page.pageSQL_id)
+            SQL_id_of_requested_page = temp_array[0]
+            total_characters_of_requested_page = int(temp_array[1])
+            total_contribute_of_requested_page = pickle.loads(SQLConnector.select_datagram_contribution_from_dbo_knownpages_contribution(sql_id=SQL_id_of_requested_page))
+            result = SQLConnector.exec_get_page_karma_and_votes(page_id=SQL_id_of_requested_page)
             up_votes = result[0]
             down_votes = result[1]
             karma_score = result[2]
-            if Current_Page.TotalCharacters != 0:
+            if total_characters_of_requested_page != 0:
                 answer = {
                     'Error': 0,
-                    'page_title': Current_Page.page_title,
-                    'page_DB_id': Current_Page.pageSQL_id,
+                    'page_title': XWD_FULLNAME,
+                    'page_DB_id': SQL_id_of_requested_page,
                     'up_votes': up_votes,
                     'down_votes': down_votes,
                     'page_karma_score': karma_score,
                     'contributors_percents': {}
                 }
-                for Contributor, Value in Current_Page.TotalContribute.items():
-                    Percent = round(((Value / Current_Page.TotalCharacters) * 100), 2)
+                for Contributor, Value in total_contribute_of_requested_page.items():
+                    Percent = round(((Value / total_characters_of_requested_page) * 100), 2)
                     answer['contributors_percents'].update({Contributor: Percent})
                 contributors_percents_sorted = sorted(answer['contributors_percents'].items(),
                                                      key=operator.itemgetter(1), reverse=True)
@@ -116,22 +115,22 @@ def post_request_analyse(request_body):
             except:
                 return json.dumps({'Error': 'bad request - no username was provided'}, separators=(',', ':'))
             username = request['user'][0]
-            userID = SQLConnector.GetUserIDbyName(username)
-            if userID is None:
+            user_id = SQLConnector.select_id_from_dbo_knownpages_users(username=username)
+            if user_id is None:
                 return json.dumps({'Error': 'bad request - username not found'}, separators=(',', ':'))
-            karma_score = round(SQLConnector.GetUserKarmaRawScore_byID(userID), 2)
-            table = SQLConnector.GetUserRawKarmabyID(userID)
+            karma_score = round(SQLConnector.exec_get_user_karma_raw_score(user_id=user_id), 2)
+            table = SQLConnector.exec_get_user_karma_raw(user_id=user_id)
             answer = {
                         'Error': 0,
                       'user': username,
-                      'userID': userID,
+                      'user_id': user_id,
                       'karma_score': karma_score,
                       'raw_karma': {}
                       }
             for row in table:
                 answer['raw_karma'].update({'"'+row.page_title+'"': row.percent})
             return json.dumps(answer, separators=(',', ':'))
-        if method == 'vote_for_page_as_user': # need to re-write this function
+        if method == 'vote_for_page_as_user':
             page_id = None
             page_title = None
             try:  # zero title exception
@@ -151,16 +150,15 @@ def post_request_analyse(request_body):
                 except:
                     return json.dumps({'Error': 'Bad request - no title, id or platform was provided'},
                                       separators=(',', ':'))
+            user_id = SQLConnector.select_id_from_dbo_knownpages_users(username=user_name)
 
-            user_id = SQLConnector.GetUserIDbyName(user_name)
-            #old or new logic
+            # old or new logic
             if user_id is None:
                 return json.dumps({'Error': 'bad request - username not found'}, separators=(',', ':'))
             if page_title is not None:
-               Current_Page = Page(page_title, platform)
-               temp_array = SQLConnector.GetPageSQLID_and_characters_total_by_title_and_platform(
-                   Current_Page.page_title, Current_Page.page_platform)
-               if temp_array is None:  # page is unknown exception
+                temp_array = SQLConnector.select_id_characters_total_from_dbo_knownpages(
+                   page_title=page_title, platform=platform)
+                if temp_array is None:  # page is unknown exception
                    page_unknown_answer = json.dumps({
                        'Error': 'Bad request - there is no known page with title "' + Current_Page.page_title + '" in the database'},
                        separators=(',', ':'))
@@ -168,28 +166,22 @@ def post_request_analyse(request_body):
             if page_id is not None and page_title is None:
                 MySQLconfig_INSTANCE = Configuration.MySQLConfig()
                 MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
-                #print('page_title', page_title, 'page_id', page_id)
                 XWD_FULLNAME = MysqlConnector_INSTANCE.get_XWD_FULLNAME(XWD_ID=page_id)
                 if XWD_FULLNAME != None:
-                    XWD_FULLNAME = XWD_FULLNAME#.decode('utf-8')
+                    XWD_FULLNAME = XWD_FULLNAME
                 else:
                     page_unknown_answer = json.dumps({
                         'Error': 'Bad request - there is no known page with id "' + page_id + '" in the database'},
                         separators=(',', ':'))
                     return page_unknown_answer
-                #print('XWD_FULLNAME', XWD_FULLNAME, 'page_id', page_id)
-                temp_array = SQLConnector.GetPageSQLID_and_characters_total_by_page_id_and_platform(
-                    XWD_FULLNAME, platform)
-                #print('temp_array', temp_array)
+                temp_array = SQLConnector.select_id_characters_total_from_dbo_knownpages(
+                    page_id=XWD_FULLNAME, platform=platform)
                 if temp_array is None:  # page is unknown exception
                     page_unknown_answer = json.dumps({
                         'Error': 'Bad request - there is no known page with ID "' + page_id + '" in the database'},
                         separators=(',', ':'))
                     return page_unknown_answer
-                Current_Page = Page(XWD_FULLNAME, platform)
-
-            #print(temp_array[0], user_id, direction)
-            result = SQLConnector.NewPageVote(temp_array[0], user_id, direction)
+            result = SQLConnector.insert_into_dbo_page_karma_votes(sql_id=temp_array[0], user_id=user_id, direction=direction)
             if result.startswith('Error'):
                 error = result
                 result = 'Already voted'
@@ -206,14 +198,14 @@ def post_request_analyse(request_body):
             except:
                 return json.dumps({'Error': 'bad request - no username was provided'}, separators=(',', ':'))
             username = request['user'][0]
-            userID = SQLConnector.GetUserIDbyName(username)
-            if userID is None:
+            user_id = SQLConnector.select_id_from_dbo_knownpages_users(username=username)
+            if user_id is None:
                 return json.dumps({'Error': 'bad request - username not found'}, separators=(',', ':'))
-            karma_score = round(SQLConnector.GetUserKarmaScore_byID(userID), 2)
+            karma_score = round(SQLConnector.exec_get_user_karma_current_score(user_id), 2)
             answer = {
                         'Error': 0,
                       'user': username,
-                      'userID': userID,
+                      'user_id': user_id,
                       'karma_score': karma_score,
                       }
             return json.dumps(answer, separators=(',', ':'))
@@ -237,15 +229,15 @@ def post_request_analyse(request_body):
             except:
                 return json.dumps({'Error': 'bad request - no username was provided'}, separators=(',', ':'))
             username = request['user'][0]
-            userID = SQLConnector.GetUserIDbyName(username)
-            if userID is None:
+            user_id = SQLConnector.select_id_from_dbo_knownpages_users(username=username)
+            if user_id is None:
                 return json.dumps({'Error': 'bad request - username not found'}, separators=(',', ':'))
-            karma_score = round(SQLConnector.GetUserKarmaScore_byID(userID), 2)
-            table = SQLConnector.GetUserKarmaDetailedScore_byID(userID)
+            karma_score = round(SQLConnector.exec_get_user_karma_current_score(user_id=user_id), 2)
+            table = SQLConnector.exec_get_user_karma_current_score_detailed(user_id=user_id)
             answer = {
                 'Error': 0,
                 'user': username,
-                'userID': userID,
+                'user_id': user_id,
                 'karma_score': karma_score,
                 'detailed_karma_score': {}
             }
@@ -266,10 +258,10 @@ def post_request_analyse(request_body):
             except:
                 return json.dumps({'Error': 'bad request - no username was provided'}, separators=(',', ':'))
             username = request['user'][0]
-            userID = SQLConnector.GetUserIDbyName(username)
-            if userID is None:
+            user_id = SQLConnector.select_id_from_dbo_knownpages_users(username=username)
+            if user_id is None:
                 return json.dumps({'Error': 'bad request - username not found'}, separators=(',', ':'))
-            result = SQLConnector.MakeNewKarmaSlice_byUserID(userID)
+            result = SQLConnector.exec_make_new_karma_slice(user_id=user_id)
             if result == 'Karma wasn\'t changed':
                 error = 406
                 result == 'Karma wasn\'t changed since the last slice'
@@ -278,7 +270,7 @@ def post_request_analyse(request_body):
             answer = {
                 'Error': error,
                 'user': username,
-                'userID': userID,
+                'user_id': user_id,
                 'result': result
             }
 
@@ -308,14 +300,14 @@ def post_request_analyse(request_body):
                 return json.dumps({'Error': 'bad request: date_start > date_end'}, separators=(',', ':'))
             elif date_start == date_end:
                 return json.dumps({'Error': 'bad request: date_start == date_end'}, separators=(',', ':'))
-            userID = SQLConnector.GetUserIDbyName(username)
-            if userID is None:
+            user_id = SQLConnector.select_id_from_dbo_knownpages_users(username=username)
+            if user_id is None:
                 return json.dumps({'Error': 'bad request - username not found'}, separators=(',', ':'))
-            result = SQLConnector.GetKarmaSlicesByUSERIDandDates(userID, date_start, date_end)
+            result = SQLConnector.select_karma_score_from_userkarma_slice(user_id, date_start, date_end)
             answer = {
                 'Error': 0,
                 'user': username,
-                'userID': userID,
+                'user_id': user_id,
                 'result': {}
             }
             if DIRTY_HACK_FOR_Eugene is False:

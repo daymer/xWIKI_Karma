@@ -1,17 +1,18 @@
 from docx import Document
-import pyodbc
-import Configuration
-import pickle
 from docx.enum.text import WD_COLOR_INDEX
-from Mechanics import PageCreator, SQLConnector, ContributionComparator, CustomLogging, ExclusionsDict, xWikiClient
+
+import Configuration
+from CustomModules.Mechanics import XWikiClient
+from CustomModules.SQL_Connector import SQLConnector
+
 SQLConfig = Configuration.SQLConfig()
 SQLConnector = SQLConnector(SQLConfig)
 xWikiConfig = Configuration.xWikiConfig('Migration pool')
-xWikiClient = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
+xWikiClient = XWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
 
 PageTitle = 'Using WMI to query Veeam BnR information'
 platform = 'xWIKI'
-SQLQuery = SQLConnector.GetDatagramsByPageTitleandPlatform(PageTitle, platform)
+SQLQuery = SQLConnector.select_datagrams_from_dbo_knownpages_datagrams(PageTitle, platform)
 datagram = SQLQuery[0]
 contributors_datagram = SQLQuery[1]
 Colors = ['BRIGHT_GREEN','YELLOW','TEAL','VIOLET','PINK','RED','TURQUOISE','DARK_YELLOW','GRAY_50','GRAY_25','DARK_BLUE','DARK_RED','BLUE','GREEN']

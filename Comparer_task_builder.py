@@ -1,13 +1,17 @@
-from PythonConfluenceAPI import ConfluenceAPI
-import Configuration
-import pickle
-from Mechanics import PageCreator, SQLConnector, ContributionComparator, ExclusionsDict, MysqlConnector
 import logging
-from datetime import datetime
-import uuid
 import os
+import pickle
 import subprocess
 import sys
+import uuid
+from datetime import datetime
+
+from PythonConfluenceAPI import ConfluenceAPI
+
+import Configuration
+from CustomModules.Mechanics import PageCreator, ContributionComparator, ExclusionsDict, MysqlConnector
+from CustomModules.SQL_Connector import SQLConnector
+
 GlobalStartTime = datetime.now()
 
 

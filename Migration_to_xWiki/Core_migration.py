@@ -2,10 +2,11 @@ import getopt
 import sys
 
 import Configuration
-import Mechanics
+import CustomModules.SQL_Connector
 from Configuration import MySQLConfig, ConfluenceConfig, MediaWIKIConfig
-from Mechanics import xWikiClient, MysqlConnector, Migrator, ConfluenceAPI
 from Migration_to_xWiki.Users_association import Users
+from CustomModules import Mechanics
+from CustomModules.Mechanics import XWikiClient, MysqlConnector, Migrator, ConfluenceAPI
 
 ##############################################################
 #                      Test variables                        #
@@ -85,13 +86,13 @@ MySQLconfig_INSTANCE = MySQLConfig()
 MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
 SQLConfig = Configuration.SQLConfig()
 xWikiConfig = Configuration.xWikiConfig(target_pool)
-xWikiClient = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
+xWikiClient = XWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
 ConfluenceConfig_instance = Configuration.ConfluenceConfig()
 confluenceAPI_instance = ConfluenceAPI(username=ConfluenceConfig_instance.USER, password=ConfluenceConfig_instance.PASS, uri_base=ConfluenceConfig_instance.ULR)
 MediaWIKIConfig = MediaWIKIConfig()
 Migrator = Migrator(ConfluenceConfig=ConfluenceConfig_instance, MediaWIKIConfig=MediaWIKIConfig, xWikiConfig=xWikiConfig)
 UserList = Users()
-SQLConnector_instance = Mechanics.SQLConnector(SQLConfig)
+SQLConnector_instance = CustomModules.SQL_Connector.SQLConnector(SQLConfig)
 
 
 result = Mechanics.Migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE,

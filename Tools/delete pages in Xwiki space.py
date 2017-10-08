@@ -1,8 +1,9 @@
 
-from Configuration import MySQLConfig, ConfluenceConfig, MediaWIKIConfig, xWikiConfig
-from Mechanics import SQLConnector, xWikiClient, MysqlConnector, Migrator, PageCreator
-import hashlib
 import requests
+
+from Configuration import MySQLConfig, ConfluenceConfig, MediaWIKIConfig, xWikiConfig
+from CustomModules.Mechanics import XWikiClient, MysqlConnector, PageCreator
+
 target_pool = 'Migrated bugs'
 parent = 'Migrated bugs'
 platform = 'MediaWIKI'
@@ -15,7 +16,7 @@ m = hashlib.md5()
 page = m.hexdigest()
 '''
 xWikiConfig = xWikiConfig(target_pool)
-xWikiClient_instance = xWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
+xWikiClient_instance = XWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
 MySQLconfig_INSTANCE = MySQLConfig()
 MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
 MediaWIKIConfig = MediaWIKIConfig()

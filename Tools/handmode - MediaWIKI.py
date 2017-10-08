@@ -1,6 +1,8 @@
-import Configuration
-from Mechanics import PageCreator, SQLConnector, ContributionComparator, CustomLogging
 import pickle
+
+import Configuration
+from CustomModules.Mechanics import PageCreator, ContributionComparator, CustomLogging
+from CustomModules.SQL_Connector import SQLConnector
 
 SQLConfig = Configuration.SQLConfig()
 ConfluenceConfig = Configuration.ConfluenceConfig()
@@ -17,7 +19,7 @@ if CurrentPage is None:
 CustomLogging.page_analysis_started(CurrentPage.page_title)
 CurrentPage.page_id = PAGE_CREATOR.collect_page_id(CurrentPage)
 # incremental or full mode
-CurrentPage.dbVersion = SQLConnector.CheckExistencebyID(CurrentPage)
+CurrentPage.dbVersion = SQLConnector.select_version_from_dbo_knownpages(CurrentPage)
 CurrentPage.page_author = PAGE_CREATOR.collect_page_author(CurrentPage)
 CurrentPage.page_versions = PAGE_CREATOR.collect_page_history(CurrentPage)
 CustomLogging.page_processing_started(CurrentPage)
@@ -44,19 +46,19 @@ if CurrentPage.dbVersion == None:
     CustomLogging.page_counting_finished(CurrentPage)
     CustomLogging.page_summary(CurrentPage)
     # pushing new page to SQL
-    CurrentPage.pageSQL_id = SQLConnector.PushNewPage(CurrentPage)
-    SQLConnector.PushNewDatagram(CurrentPage)
-    SQLConnector.PushContributionDatagramByID(CurrentPage)
-    SQLConnector.PushContributionByUser(CurrentPage)
+    CurrentPage.pageSQL_id = SQLConnector.insert_into_dbo_knownpages(CurrentPage)
+    SQLConnector.insert_into_dbo_knownpages_datagrams(CurrentPage)
+    SQLConnector.insert_into_dbo_knownpages_contribution(CurrentPage)
+    SQLConnector.insert_into_dbo_knownpages_userscontribution(CurrentPage)
 elif CurrentPage.dbVersion < CurrentPage.page_versions:
-    SQLConnector.UpdateKnownPagesLast_check(CurrentPage)
+    SQLConnector.update_dbo_knownpages_is_uptodate(CurrentPage)
     #getting sources for all missing versions + latest in DB
     for VersionNumber in range(CurrentPage.dbVersion, CurrentPage.page_versions + 1):
         CurrentPage.add_new_page_version(PAGE_CREATOR.get_version_content_by_version(VersionNumber, CurrentPage))
     CustomLogging.page_processing_target(CurrentPage)
     #loading old datagram
-    CurrentPage.pageSQL_id = SQLConnector.GetPageSQLID(CurrentPage)
-    TempArray = SQLConnector.GetDatagrams(CurrentPage)
+    CurrentPage.pageSQL_id = SQLConnector.select_id_from_dbo_knownpages(CurrentPage)
+    TempArray = SQLConnector.select_datagram_contributors_datagram_from_dbo_knownpages_datagrams(sql_id=CurrentPage.SQL_id)
     CurrentPage.VersionsGlobalArray = pickle.loads(TempArray[0])
     TempContributors = pickle.loads(TempArray[1])
     # comparing latest versions
@@ -78,9 +80,9 @@ elif CurrentPage.dbVersion < CurrentPage.page_versions:
     CustomLogging.page_counting_finished(CurrentPage)
     CustomLogging.page_summary(CurrentPage)
     #pushing updates to SQL
-    SQLConnector.UpdatePagebyID(CurrentPage)
-    SQLConnector.UpdateDatagramByID(CurrentPage)
-    SQLConnector.PushContributionDatagramByID(CurrentPage)
-    SQLConnector.PushContributionByUser(CurrentPage)
+    SQLConnector.update_dbo_knownpages_last_check_last_modified(CurrentPage)
+    SQLConnector.update_dbo_knownpages_datagrams(CurrentPage)
+    SQLConnector.insert_into_dbo_knownpages_contribution(CurrentPage)
+    SQLConnector.insert_into_dbo_knownpages_userscontribution(CurrentPage)
 elif CurrentPage.dbVersion == CurrentPage.page_versions:
-    SQLConnector.UpdateKnownPagesLast_check(CurrentPage)
+    SQLConnector.update_dbo_knownpages_is_uptodate(CurrentPage)

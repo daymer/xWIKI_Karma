@@ -6,3 +6,11 @@ Tools/test.py
 Tools/test.py
 *.txt
 Migration_to_xWiki/__pycache__/Users_association.cpython-36.pyc
+*.pyc
+*.pyc
+*.pyc
+CustomModules/__pycache__/SQL_Connector.cpython-36.pyc
+CustomModules/__pycache__/Mechanics.cpython-36.pyc
+CustomModules/__pycache__/Mechanics.cpython-36.pyc
+CustomModules/__pycache__/Mechanics.cpython-36.pyc
+CustomModules/__pycache__/SQL_Connector.cpython-36.pyc

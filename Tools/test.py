@@ -1,3 +1,6 @@
-log_title = 'dffffffffffffffffffffffffffffffffffffff'
+import inspect
 
-print(log_title[:20])
+from CustomModules import Mechanics as Module
+
+functions = inspect.getmembers(Module, inspect.isfunction)
+print(functions)
