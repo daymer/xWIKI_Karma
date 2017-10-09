@@ -71,7 +71,7 @@ def initialize(task_pages_dict: dict, logging_mode: str = 'INFO', log_to_file_va
     logger_inst = logging.getLogger()
     logger_inst.setLevel(logging_mode)
     integration_config = Configuration.Integration()
-    if log_to_file is True:
+    if log_to_file_var is True:
         if len(task_pages_dict) == 1:
             task_pages_dict_temp = task_pages_dict.copy()
             log_title, log_platform = task_pages_dict_temp.popitem()
@@ -108,7 +108,7 @@ Logger.info('Initialization finished, job started at ' + str(GlobalStartTime))
 TaskStartTime = datetime.now()
 
 
-def re_info_for_bug_page(page_content: str, page_title: str):
+def re_info_for_bug_page(page_content_func: str, page_title: str):
     bug_id_func = None
     product_func = None
     tbfi_func = None
@@ -116,31 +116,31 @@ def re_info_for_bug_page(page_content: str, page_title: str):
     style = None
     # determination of page syntax
     regex = r"\*\*Components:\*\* (.*)"
-    matches = re.search(regex, page_content)
+    matches = re.search(regex, page_content_func)
     if matches:
         style = 'xwiki'
     else:
         regex = r"'''Components: '''(.*)"
-        matches = re.search(regex, page_content)
+        matches = re.search(regex, page_content_func)
         if matches:
             style = 'mwiki'
     if style is None:
         return False
     elif style == 'xwiki':
         regex = r"\*\*Bug ID:\*\* (.*)"
-        matches = re.search(regex, page_content)
+        matches = re.search(regex, page_content_func)
         if matches:
             bug_id_func = matches.group(1).replace('\r', '')
         regex = r"\*\*Product:\*\* (.*)"
-        matches = re.search(regex, page_content)
+        matches = re.search(regex, page_content_func)
         if matches:
             product_func = matches.group(1).replace('\r', '')
         regex = r"\*\*To be fixed in:\*\* (.*)"
-        matches = re.search(regex, page_content)
+        matches = re.search(regex, page_content_func)
         if matches:
             tbfi_func = matches.group(1).replace('\r', '')
         regex = r"\*\*Components:\*\* (.*)"
-        matches = re.search(regex, page_content)
+        matches = re.search(regex, page_content_func)
         if matches:
             components_func = matches.group(1).replace('\r', '')
     elif style == 'mwiki':
@@ -152,18 +152,18 @@ def re_info_for_bug_page(page_content: str, page_title: str):
             bug_id_func = 'Undefined'
         product_func = 'Undefined'
         regex = r"'''To be fixed in: '''(.*)"
-        matches = re.search(regex, page_content)
+        matches = re.search(regex, page_content_func)
         if matches:
             tbfi_func = matches.group(1).replace('\r', '')
         else:
             regex = r"'''Fixed in: '''(.*)"
-            matches = re.search(regex, page_content)
+            matches = re.search(regex, page_content_func)
             if matches:
                 tbfi_func = matches.group(1).replace('\r', '')
             else:
                 tbfi_func = 'Undefined'
         regex = r"'''Components: '''(.*)"
-        matches = re.search(regex, page_content)
+        matches = re.search(regex, page_content_func)
         if matches:
             components_func = matches.group(1).replace('\r', '')
     return bug_id_func, product_func, tbfi_func, components_func
@@ -205,21 +205,23 @@ for title, platform in task_pages_dict.items():
 
     # Now we check if this page has "no_karma" tag. This check works only for xWiki pages
     if isinstance(CurrentPage, PageXWiki):
-        def check_if_system_page(current_page: PageXWiki) -> bool:
-            tags = current_page.xWikiClient_inst.get_tags_of_page(space=current_page.space, page=current_page.page,
-                                                                  nested_space=current_page.nested_spaces,
-                                                                  is_terminal_page=current_page.is_terminal_page)
+
+        def check_if_system_page(page_object: PageXWiki) -> bool:
+            tags = page_object.xWikiClient_inst.get_tags_of_page(space=page_object.space, page=page_object.page,
+                                                                 nested_space=page_object.nested_spaces,
+                                                                 is_terminal_page=page_object.is_terminal_page)
             for tag in tags['tags']:
                 if tag['name'] == 'no_karma':
                     return True
             return False
+
         result = check_if_system_page(CurrentPage)
         if result is True:
             Logger.info('System page, indexing is not needed')
             CurrentPage.dbVersion = SQL_Connector_inst.select_version_from_dbo_knownpages(page_id=CurrentPage.page_id)
             if CurrentPage.dbVersion is not None:
                 Logger.info('System page was indexed before, removing from DB')
-                result = SQL_Connector_inst.DeletePageByPageID(CurrentPage.page_id)
+                result = SQL_Connector_inst.exec_delete_page_by_page_id(CurrentPage.page_id)
                 if result is True:
                     Logger.info('Page deleted from DB')
                 else:
@@ -291,7 +293,7 @@ for title, platform in task_pages_dict.items():
                 CurrentPage.page_versions) + ' versions were found')
         Logger.debug('Sources are loaded, calculating difference... ')
         # loading old datagram
-        CurrentPage.SQL_id = SQL_Connector_inst.select_id_from_dbo_knownpages(object_type=type(CurrentPage), page_id=CurrentPage.page_id)
+        CurrentPage.SQL_id = SQL_Connector_inst.select_id_from_dbo_knownpages(page_object=CurrentPage, page_id=CurrentPage.page_id)
         TempArray = SQL_Connector_inst.select_datagram_contributors_datagram_from_dbo_knownpages_datagrams(sql_id=CurrentPage.SQL_id)
         CurrentPage.VersionsGlobalArray = pickle.loads(TempArray[0])
         TempContributors = pickle.loads(TempArray[1])
@@ -331,7 +333,7 @@ for title, platform in task_pages_dict.items():
         SQL_Connector_inst.insert_into_dbo_knownpages_userscontribution(page_object=CurrentPage)
         SQL_Connector_inst.update_dbo_knownpages_is_uptodate(page_id=CurrentPage.page_id, up_to_date=True)
     elif CurrentPage.dbVersion == CurrentPage.page_versions:
-        CurrentPage.SQL_id = SQL_Connector_inst.select_id_from_dbo_knownpages(object_type=type(CurrentPage),
+        CurrentPage.SQL_id = SQL_Connector_inst.select_id_from_dbo_knownpages(page_object=CurrentPage,
                                                                               page_id=CurrentPage.page_id)
         Logger.info('Page "' + CurrentPage.page_title + '" is up-to-date')
         PageAnalysisEndTime = datetime.now()
@@ -342,7 +344,7 @@ for title, platform in task_pages_dict.items():
         Logger.info('Starting bug analyze sequence')
         # ---it's a bug, need to find it's product and other fields (migrated bugs have invalid paths)
         if len(CurrentPage.VersionsGlobalArray) == 0:
-            CurrentPage.SQL_id = SQL_Connector_inst.select_id_from_dbo_knownpages(object_type=type(CurrentPage),
+            CurrentPage.SQL_id = SQL_Connector_inst.select_id_from_dbo_knownpages(page_object=CurrentPage,
                                                                                   page_id=CurrentPage.page_id)
             TempArray = SQL_Connector_inst.select_datagram_contributors_datagram_from_dbo_knownpages_datagrams(sql_id=CurrentPage.SQL_id)
             if TempArray is None:
@@ -352,7 +354,7 @@ for title, platform in task_pages_dict.items():
                 CurrentPage.VersionsGlobalArray = pickle.loads(TempArray[0])
         content_as_list = [x[0] for x in CurrentPage.VersionsGlobalArray]
         page_content = ''.join(content_as_list)
-        result = re_info_for_bug_page(page_content=page_content, page_title=CurrentPage.page_title)
+        result = re_info_for_bug_page(page_content_func=page_content, page_title=CurrentPage.page_title)
         if result is not False:
             bug_id, product, tbfi, components = result
             if bug_id is not None and product is not None and tbfi is not None and components is not None:
@@ -367,8 +369,8 @@ for title, platform in task_pages_dict.items():
                 xml += '</components>'
                 byte_xml = bytearray()
                 byte_xml.extend(map(ord, xml))
-                result = SQL_Connector_inst.Update_or_Add_bug_page(known_pages_id=CurrentPage.SQL_id, bug_id=bug_id,
-                                                                   product=product, tbfi=tbfi, xml=byte_xml)
+                result = SQL_Connector_inst.exec_update_or_add_bug_page(known_pages_id=CurrentPage.SQL_id, bug_id=bug_id,
+                                                                        product=product, tbfi=tbfi, xml=byte_xml)
                 if result is True:
                     Logger.info('Bug info updated')
                 else:
@@ -379,10 +381,10 @@ for title, platform in task_pages_dict.items():
         else:
             Logger.error('Unable to parse bug info style, aborting bug analyze')
     # ----------------CHECK, IF PAGE_TITLE WAS CHANGED AFTER LAST RUN------------------------
-    current_sql_title = SQL_Connector_inst.GetPageTitle(native_sql_id=CurrentPage.SQL_id)
+    current_sql_title = SQL_Connector_inst.select_page_title_from_dbo_knownpages(native_sql_id=CurrentPage.SQL_id)
     if current_sql_title is not None:
         if CurrentPage.page_title != current_sql_title:
-            result = SQL_Connector_inst.UpdatePageTitle(native_sql_id=CurrentPage.SQL_id, new_title=CurrentPage.page_title)
+            result = SQL_Connector_inst.update_dbo_knownpages(native_sql_id=CurrentPage.SQL_id, new_title=CurrentPage.page_title)
             if result is True:
                 Logger.info('Page title was updated')
             elif result is False:

@@ -37,7 +37,7 @@ MediaWIKIConfig = MediaWIKIConfig()
 Migrator = Migrator(ConfluenceConfig=ConfluenceConfig_instance, MediaWIKIConfig=MediaWIKIConfig, xWikiConfig=xWikiConfig)
 UserList = Users()
 SQLConnector_instance = CustomModules.SQL_Connector.SQLConnector(SQLConfig)
-TaskPages_list = SQLConnector_instance.GetPagesByTitle(page_title=title_like, query=migrate_statement)
+TaskPages_list = SQLConnector_instance.select_page_titles_platforms_by_filter(page_title=title_like, query=migrate_statement)
 Total_pages_to_process = str(len(TaskPages_list))
 task_pages_dict = {}
 

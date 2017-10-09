@@ -3,6 +3,7 @@ import pyodbc
 import traceback
 from datetime import datetime
 from CustomModules import PageMechanics
+import CustomModules
 import Configuration
 
 
@@ -22,17 +23,18 @@ class SQLConnector:
             return raw.page_id
         return None
 
-    def select_id_from_dbo_knownpages(self, object_type: str=None, platform: str=None, page_id: str=None, page_title: str=None):
-        if object_type == PageMechanics.PageXWiki and platform is None:
-            platform = 'xwiki'
-        elif object_type == PageMechanics.PageConfluence and platform is None:
-            platform = 'confluence'
-        elif object_type == PageMechanics.PageMediaWiki and platform is None:
-            platform = 'mediawiki'
-        else:
-            return None
+    def select_id_from_dbo_knownpages(self, page_object: CustomModules.PageMechanics.PageGlobal=None, platform: str=None, page_id: str=None, page_title: str=None):
+        if platform is None:
+            if isinstance(page_object, CustomModules.PageMechanics.PageXWiki):
+                platform = 'xwiki'
+            elif isinstance(page_object, CustomModules.PageMechanics.PageConfluence):
+                platform = 'confluence'
+            elif isinstance(page_object, CustomModules.PageMechanics.PageMediaWiki):
+                platform = 'mediawiki'
+            else:
+                return None
         if page_id is not None and page_title is None:
-            if platform.lower() == 'xwiki':
+            if platform.lower() == 'xwiki' and not page_id.startswith('xwiki:'):
                 page_id = 'xwiki:' + page_id
             self.cursor.execute("select [id] from [dbo].[KnownPages] where [page_id] = ? and [platform] LIKE LOWER(?)", page_id, platform)
             raw = self.cursor.fetchone()
@@ -76,52 +78,6 @@ class SQLConnector:
             return raw.id
         return None
 
-    def exec_get_user_karma_raw_score(self, user_id: str):
-        self.cursor.execute(
-            "EXEC get_user_karma_raw_score @id = ?", user_id)
-        raw = self.cursor.fetchone()
-        if raw:
-            return raw.karma
-        return None
-
-    def exec_get_page_karma_and_votes(self, page_id: str):
-        self.cursor.execute(
-            "EXEC dbo.[get_page_karma_and_votes] @page_id = ?", page_id)
-        raw = self.cursor.fetchone()
-        if raw:
-            return raw.up, raw.down, raw.karma_total_score
-        return None
-
-    def exec_get_user_karma_current_score_detailed(self, user_id: str):
-        self.cursor.execute(
-            "EXEC [dbo].[get_user_karma_current_score_detailed] @user_id = ?", user_id)
-        while self.cursor.nextset():  # NB: This always skips the first result-set
-            try:
-                raw = self.cursor.fetchall()
-                break
-            except pyodbc.ProgrammingError:
-                continue
-        if raw:
-            return raw
-        return None
-
-    def exec_get_user_karma_current_score(self, user_id: str):
-        self.cursor.execute(
-            "EXEC [dbo].[get_user_karma_current_score] @user_id = ?", user_id)
-        raw = self.cursor.fetchone()
-        if raw:
-            return raw.karma
-        return None
-
-    def exec_make_new_karma_slice(self, user_id: str):
-        self.cursor.execute(
-            "EXEC [dbo].[make_new_karma_slice] @user_id = ?", user_id)
-        raw = self.cursor.fetchone()
-        if raw:
-            self.cursor.connection.commit()
-            return raw.result
-        return None
-
     def select_karma_score_from_userkarma_slice(self, user_id: str, date_start: datetime, date_end: datetime):
         date_end_year = '%02d' % date_end.year
         date_end_month = '%02d' % date_end.month
@@ -144,12 +100,46 @@ class SQLConnector:
                     date_start.year) + str(date_start.month) + str(date_start.day) + ") and CONVERT(datetime, " + str(
                     date_end.year) + str(date_end.month) + str(date_end.day) + ")")
 
-    def exec_get_user_karma_raw(self, user_id):
-        self.cursor.execute(
-            "EXEC [dbo].[get_user_karma_raw] @id = ?", user_id)
+    def select_from_known_bugs_by_filter(self, components_filer: list, product_filter: list, tbfi_filter: list, start: str, end: str) -> list:
+
+        query = "WITH OrderedRecords AS" \
+                "(" \
+                "SELECT [dbo].[KnownPages].[page_title], [dbo].[KnownBugs].[bug_id], [dbo].[KnownBugs].[product], [dbo].[KnownBugs].[tbfi], [dbo].[KnownBugs].[components]," \
+                "ROW_NUMBER() OVER (ORDER BY [dbo].[KnownPages].id) AS 'RowNumber' " \
+                "FROM [dbo].[KnownBugs] " \
+                "left join [dbo].[KnownPages] on [dbo].[KnownBugs].KnownPages_id = [dbo].[KnownPages].id " \
+                "WHERE "
+        for idx, component in enumerate(components_filer):
+            query += "(Charindex('" + component + "',CAST(components AS VARCHAR(MAX)))>0 )"
+            if idx != len(components_filer) - 1:
+                query += " AND "
+        if len(components_filer) != 0 and len(product_filter) > 0:
+            query += " AND "
+        for idx, product in enumerate(product_filter):
+            query += "([product]='" + product + "')"
+            if idx != len(product_filter) - 1:
+                query += " AND "
+        if len(product_filter) != 0 and len(tbfi_filter) > 0:
+            query += " AND "
+        for idx, tbfi in enumerate(tbfi_filter):
+            query += "([tbfi]='" + tbfi + "')"
+            if idx != len(tbfi_filter) - 1:
+                query += " AND "
+        query += ")"
+        query += "SELECT [page_title], [bug_id], [product], [tbfi], [components], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
+        print(query)
+        self.cursor.execute(query)
         raw = self.cursor.fetchall()
+        if raw is None:
+            return []
+        return raw
+
+    def select_page_title_from_dbo_knownpages(self, native_sql_id: str):
+        self.cursor.execute(
+            "SELECT [page_title] FROM [dbo].[KnownPages] where [ID] = ?", native_sql_id)
+        raw = self.cursor.fetchone()
         if raw:
-            return raw
+            return raw.page_title
         return None
 
     def select_datagram_contribution_from_dbo_knownpages_contribution(self, sql_id: str):
@@ -161,12 +151,54 @@ class SQLConnector:
         return None
 
     def select_datagram_contributors_datagram_from_dbo_knownpages_datagrams(self, sql_id: str):
+        if sql_id is None:
+            raise KeyError('sql_id cannot be NONE')
         self.cursor.execute(
             "select [datagram], [contributors_datagram] from [dbo].[KnownPages_datagrams] where [KnownPageID] = ?",
             sql_id)
         raw = self.cursor.fetchone()
         if raw:
             return raw.datagram, raw.contributors_datagram
+        return None
+
+    def select_datagrams_from_dbo_knownpages_datagrams(self, page_title: str, platform: str):
+        # Used only for migration and export, that's why it's enough to use page_title
+        page_id = self.select_id_from_dbo_knownpages(platform=platform, page_title=page_title)
+        self.cursor.execute(
+            "select [datagram], [contributors_datagram] from [dbo].[KnownPages_datagrams] where [KnownPageID] = ?",
+            page_id)
+        raw = self.cursor.fetchone()
+        if raw:
+            datagram = pickle.loads(raw.datagram)
+            contributors_datagram = pickle.loads(raw.contributors_datagram)
+            return datagram, contributors_datagram
+        return None
+
+    def select_page_titles_platforms_by_filter(self, page_title: str = None, query: str = None):
+        if page_title is None and query is None:
+            return None
+        if page_title is not None and query is not None:
+            return None
+        if query is not None:
+            self.cursor.execute(query)
+            raw = self.cursor.fetchall()
+            if raw:
+                return raw
+            return None
+        elif page_title is not None:
+            self.cursor.execute(
+                "SELECT page_title, platform FROM [dbo].[KnownPages] where page_title like LOWER('%" + page_title + "%')")
+            raw = self.cursor.fetchall()
+            if raw:
+                return raw
+            return None
+
+    def select_version_from_dbo_knownpages(self, page_id: str):
+        self.cursor.execute(
+            "select [version] from [dbo].[KnownPages] where [page_id] = '" + page_id + "'")
+        row = self.cursor.fetchone()
+        if row:
+            return int(row.version)
         return None
 
     def insert_into_dbo_knownpages(self, page_object: PageMechanics.PageGlobal):
@@ -253,7 +285,7 @@ class SQLConnector:
                 user_id = raw.ID
             # check, if user contribute was already added for this page
             self.cursor.execute(
-                "select count(UserID) from [dbo].[KnownPages_UsersContribution] where [UserID] = ? and [KnownPageID] = ?",
+                "select count(UserID) as count from [dbo].[KnownPages_UsersContribution] where [UserID] = ? and [KnownPageID] = ?",
                 user_id, page_object.SQL_id)
             raw = self.cursor.fetchone()
             if int(raw.count) == 1:
@@ -274,13 +306,28 @@ class SQLConnector:
                     user_id, page_object.SQL_id)
                 self.connection.commit()
 
-    def select_version_from_dbo_knownpages(self, page_id: str):
+    def insert_into_dbo_page_karma_votes(self, sql_id: str, user_id: str, direction: str):
+        # checking if this user has already voted for this page
+        direction = bool(int(direction))
         self.cursor.execute(
-            "select [version] from [dbo].[KnownPages] where [page_id] = '" + page_id + "'")
-        row = self.cursor.fetchone()
-        if row:
-            return int(row.version)
-        return None
+            "select id, [direction] from [dbo].[Page_Karma_votes] where page_id=? and user_id =?",
+            sql_id, user_id)
+        raw = self.cursor.fetchone()
+        if raw:
+            current_direction = raw[1]
+            if current_direction is True and direction is True or current_direction is False and direction is False:
+                return 'Error: Already voted'
+            if current_direction is False and direction is True or current_direction is True and direction is False:
+                self.cursor.execute(
+                    "delete from [dbo].[Page_Karma_votes] where id =?", raw.id)
+                self.connection.commit()
+                return 'Vote deleted'
+        else:
+            self.cursor.execute(
+                "insert into [dbo].[Page_Karma_votes] values(NEWID(), ?, ?, ?, GETDATE())",
+                sql_id, user_id, direction)
+            self.connection.commit()
+            return 'Vote committed'
 
     def update_dbo_knownpages_is_uptodate(self, page_id: str, up_to_date: bool):
         if up_to_date is True:
@@ -308,64 +355,16 @@ class SQLConnector:
             binary_global_array, binary_contributors, page_object.SQL_id)
         self.connection.commit()
 
-    def insert_into_dbo_page_karma_votes(self, sql_id: str, user_id: str, direction: str):
-        # checking if this user has already voted for this page
-        direction = bool(int(direction))
-        self.cursor.execute(
-            "select id, [direction] from [dbo].[Page_Karma_votes] where page_id=? and user_id =?",
-            sql_id, user_id)
-        raw = self.cursor.fetchone()
-        if raw:
-            current_direction = raw[1]
-            if current_direction is True and direction is True or current_direction is False and direction is False:
-                return 'Error: Already voted'
-            if current_direction is False and direction is True or current_direction is True and direction is False:
-                self.cursor.execute(
-                    "delete from [dbo].[Page_Karma_votes] where id =?", raw.id)
-                self.connection.commit()
-                return 'Vote deleted'
-        else:
-            self.cursor.execute(
-                "insert into [dbo].[Page_Karma_votes] values(NEWID(), ?, ?, ?, GETDATE())",
-                sql_id, user_id, direction)
+    def update_dbo_knownpages(self, native_sql_id: str, new_title: str) -> bool:
+        try:
+            self.cursor.execute("update [dbo].[KnownPages] set [page_title] = ? where [ID] = ?", new_title, native_sql_id)
             self.connection.commit()
-            return 'Vote committed'
+            return True
+        except:
+            self.connection.rollback()
+            return False
 
-    def select_datagrams_from_dbo_knownpages_datagrams(self, page_title: str, platform: str):
-        # Used only for migration and export, that's why it's enough to use page_title
-        page_id = self.select_id_from_dbo_knownpages(platform=platform, page_title=page_title)
-        self.cursor.execute(
-            "select [datagram], [contributors_datagram] from [dbo].[KnownPages_datagrams] where [KnownPageID] = ?",
-            page_id)
-        raw = self.cursor.fetchone()
-        if raw:
-            datagram = pickle.loads(raw.datagram)
-            contributors_datagram = pickle.loads(raw.contributors_datagram)
-            return datagram, contributors_datagram
-        return None
-
-    def GetPagesByTitle(self, page_title: str = None, query: str = None):
-        if page_title is None and query is None:
-            return None
-        if page_title is not None and query is not None:
-            return None
-        if query is not None:
-            self.cursor.execute(query)
-            raw = self.cursor.fetchall()
-            if raw:
-                return raw
-            else:
-                return None
-        elif page_title is not None:
-            self.cursor.execute(
-                "SELECT page_title, platform FROM [dbo].[KnownPages] where page_title like LOWER('%" + page_title + "%')")
-            raw = self.cursor.fetchall()
-            if raw:
-                return raw
-            else:
-                return None
-
-    def DeletePageByPageID(self, page_id):
+    def exec_delete_page_by_page_id(self, page_id: str)->bool:
         try:
             self.cursor.execute(
                 "EXEC [dbo].[delete_page_by_page_id] ?",
@@ -376,7 +375,7 @@ class SQLConnector:
             self.connection.rollback()
             return False
 
-    def MakeNewGlobalKarmaSlice(self):
+    def exec_make_new_global_karma_slice(self)->bool:
         try:
             self.cursor.execute(
                 "EXEC [dbo].[make_new_global_karma_slice]")
@@ -386,16 +385,61 @@ class SQLConnector:
             self.connection.rollback()
             return False
 
-    def GetGlobalCurrentKarma(self):
+    def exec_get_user_karma_current_score_global(self):
         self.cursor.execute(
             "EXEC [dbo].[get_user_karma_current_score_global]")
         raw = self.cursor.fetchall()
-        if raw is not None:
+        if raw:
             return raw
-        else:
-            return None
+        return None
 
-    def Update_or_Add_bug_page(self, known_pages_id: str, bug_id: str, product: str, tbfi: str, xml: bytearray) -> bool:
+    def exec_get_user_karma_raw_score(self, user_id: str):
+        self.cursor.execute(
+            "EXEC get_user_karma_raw_score @id = ?", user_id)
+        raw = self.cursor.fetchone()
+        if raw:
+            return raw.karma
+        return None
+
+    def exec_get_page_karma_and_votes(self, page_id: str):
+        self.cursor.execute(
+            "EXEC dbo.[get_page_karma_and_votes] @page_id = ?", page_id)
+        raw = self.cursor.fetchone()
+        if raw:
+            return raw.up, raw.down, raw.karma_total_score
+        return None
+
+    def exec_get_user_karma_current_score_detailed(self, user_id: str):
+        self.cursor.execute(
+            "EXEC [dbo].[get_user_karma_current_score_detailed] @user_id = ?", user_id)
+        while self.cursor.nextset():  # NB: This always skips the first result-set
+            try:
+                raw = self.cursor.fetchall()
+                break
+            except pyodbc.ProgrammingError:
+                continue
+        if raw:
+            return raw
+        return None
+
+    def exec_get_user_karma_current_score(self, user_id: str):
+        self.cursor.execute(
+            "EXEC [dbo].[get_user_karma_current_score] @user_id = ?", user_id)
+        raw = self.cursor.fetchone()
+        if raw:
+            return raw.karma
+        return None
+
+    def exec_make_new_karma_slice(self, user_id: str):
+        self.cursor.execute(
+            "EXEC [dbo].[make_new_karma_slice] @user_id = ?", user_id)
+        raw = self.cursor.fetchone()
+        if raw:
+            self.cursor.connection.commit()
+            return raw.result
+        return None
+
+    def exec_update_or_add_bug_page(self, known_pages_id: str, bug_id: str, product: str, tbfi: str, xml: bytearray) -> bool:
         try:
             self.cursor.execute(
                 "EXEC [dbo].[update_or_Add_bug_page] ?, ?, ?, ?, ?", known_pages_id, bug_id, product, tbfi, xml)
@@ -405,54 +449,10 @@ class SQLConnector:
             self.connection.rollback()
             return False
 
-    def GetBugs(self, components_filer: list, product_filter: list, tbfi_filter: list, start: str, end: str) -> list:
-
-        query = "WITH OrderedRecords AS" \
-                "(" \
-                "SELECT [dbo].[KnownPages].[page_title], [dbo].[KnownBugs].[bug_id], [dbo].[KnownBugs].[product], [dbo].[KnownBugs].[tbfi], [dbo].[KnownBugs].[components]," \
-                "ROW_NUMBER() OVER (ORDER BY [dbo].[KnownPages].id) AS 'RowNumber' " \
-                "FROM [dbo].[KnownBugs] " \
-                "left join [dbo].[KnownPages] on [dbo].[KnownBugs].KnownPages_id = [dbo].[KnownPages].id " \
-                "WHERE "
-        for idx, component in enumerate(components_filer):
-            query += "(Charindex('" + component + "',CAST(components AS VARCHAR(MAX)))>0 )"
-            if idx != len(components_filer) - 1:
-                query += " AND "
-        if len(components_filer) != 0 and len(product_filter) > 0:
-            query += " AND "
-        for idx, product in enumerate(product_filter):
-            query += "([product]='" + product + "')"
-            if idx != len(product_filter) - 1:
-                query += " AND "
-        if len(product_filter) != 0 and len(tbfi_filter) > 0:
-            query += " AND "
-        for idx, tbfi in enumerate(tbfi_filter):
-            query += "([tbfi]='" + tbfi + "')"
-            if idx != len(tbfi_filter) - 1:
-                query += " AND "
-        query += ")"
-        query += "SELECT [page_title], [bug_id], [product], [tbfi], [components], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
-        print(query)
-        self.cursor.execute(query)
-        raw = self.cursor.fetchall()
-        if raw is None:
-            return []
-        return raw
-
-    def GetPageTitle(self, native_sql_id: str):
+    def exec_get_user_karma_raw(self, user_id):
         self.cursor.execute(
-            "SELECT [page_title] FROM [dbo].[KnownPages] where [ID] = ?", native_sql_id)
-        raw = self.cursor.fetchone()
-        if raw is not None:
-            return raw[0]
-        else:
-            return None
-
-    def UpdatePageTitle(self, native_sql_id: str, new_title: str) -> bool:
-        try:
-            self.cursor.execute("update [dbo].[KnownPages] set [page_title] = ? where [ID] = ?", new_title, native_sql_id)
-            self.connection.commit()
-            return True
-        except:
-            self.connection.rollback()
-            return False
+            "EXEC [dbo].[get_user_karma_raw] @id = ?", user_id)
+        raw = self.cursor.fetchall()
+        if raw:
+            return raw
+        return None

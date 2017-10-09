@@ -2,14 +2,12 @@ import pickle
 import os
 import subprocess
 import uuid
-import base64
 os.supports_bytes_environ = True
 
-dict_to_pickle = {'StagingWiki.Pending for community approval.d0d919912c80cc88ba3c7f36ac29be98.WebHome': 'xwiki'}
+dict_to_pickle = {'Main.Team.Support Official Procedures.Case Handling.85a1d076c26ba01e58d2e828595e402e': 'xwiki'}
 
-
-def start_core_as_subprocess(dict_to_pickle: dict):
-    pickled_data = pickle.dumps(dict_to_pickle, 0)
+def start_core_as_subprocess(dict_to_pickle_func: dict):
+    pickled_data = pickle.dumps(dict_to_pickle_func, 0)
     pickled_and_decoded_dict = pickled_data.decode('latin1')
     temp_id = str(uuid.uuid4())
     os.environ[temp_id] = pickled_and_decoded_dict

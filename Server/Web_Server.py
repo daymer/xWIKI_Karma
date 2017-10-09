@@ -13,8 +13,9 @@ from gevent import monkey
 from gevent import pywsgi
 
 import Configuration
-from CustomModules.Mechanics import Page, CustomLogging, MysqlConnector
+from CustomModules.Mechanics import MysqlConnector
 from CustomModules.SQL_Connector import SQLConnector
+import Server.PostExeptions as WebExceptions
 
 is_admin = ctypes.windll.shell32.IsUserAnAdmin()
 if is_admin != 1:
@@ -24,7 +25,6 @@ if is_admin != 1:
 monkey.patch_all()  # makes many blocking calls asynchronous
 SQLConfig = Configuration.SQLConfig()
 SQLConnector = SQLConnector(SQLConfig)
-CustomLogging = CustomLogging('NOT_silent')
 
 
 def start_core_as_subprocess(dict_to_pickle: dict):
@@ -44,12 +44,12 @@ def start_core_as_subprocess(dict_to_pickle: dict):
 def post_request_analyse(request_body):
     request_body = request_body.decode("utf-8")
     request = parse_qs(request_body)
-    print(request)
     try:
         method = request['method'][0]
-    except:
+    except KeyError:
         return json.dumps({'Error': 'Bad request - no method specified'}, separators=(',', ':'))
     try:
+        #result = getattr(foo, 'bar')()
         if method == 'get_stat_by_title':
             page_id = None
             try:  # zero title exception
@@ -215,7 +215,7 @@ def post_request_analyse(request_body):
                 'result': {},
                 'len' : 0
             }
-            result = SQLConnector.GetGlobalCurrentKarma()
+            result = SQLConnector.exec_get_user_karma_current_score_global()
             if result is None:
                 return json.dumps({'Error': 'Unable to get statistics'}, separators=(',', ':'))
             for user, score in result:
@@ -338,7 +338,8 @@ def post_request_analyse(request_body):
                     print(answer)
                     return json.dumps(answer, separators=(',', ':'))
                 dict_to_pickle = {XWD_FULLNAME: platform}
-                if last_page[0] == XWD_FULLNAME and (datetime.now()-last_page[1]) < allowed_tdelta:  # TODO: fix xWiki, for unclear the platform doubles page-update events
+                if last_page[0] == XWD_FULLNAME and (datetime.now()-last_page[1]) < allowed_tdelta:
+                    # TODO: fix xWiki, for unknown reason the platform itself doubles page-update events
                     answer = {'Error': 'Doubled request from indexing of the same page before ' + str(timeout) + ' timeout'}
                     print('Doubled request from indexing of the same page, denied')
                     return json.dumps(answer, separators=(',', ':'))
@@ -363,7 +364,7 @@ def post_request_analyse(request_body):
                 print('ERROR: XWD_FULLNAME = [\'null\']')
                 return json.dumps(answer, separators=(',', ':'))
             if XWD_FULLNAME is not None:
-                result = SQLConnector.DeletePageByPageID('xwiki:'+XWD_FULLNAME)
+                result = SQLConnector.exec_delete_page_by_page_id('xwiki:' + XWD_FULLNAME)
                 if result is True:
                     answer = {'Success': 'Deleted'}
                 else:
@@ -373,7 +374,7 @@ def post_request_analyse(request_body):
         if method == 'make_new_global_karma_slice':
             print('Attempting to make a new global Karma slice')
             try:
-                result = SQLConnector.MakeNewGlobalKarmaSlice()
+                result = SQLConnector.exec_make_new_global_karma_slice()
                 if result is True:
                     return json.dumps({'Success': 'New global slice was created'}, separators=(',', ':'))
                 else:
@@ -401,7 +402,7 @@ def post_request_analyse(request_body):
             if int(start) > int(end):
                 return json.dumps({'Error': 'Bad request - start > end'},
                                   separators=(',', ':'))
-            result = SQLConnector.GetBugs(components_filer, product_filter, tbfi_filter, start, end)
+            result = SQLConnector.select_from_known_bugs_by_filter(components_filer, product_filter, tbfi_filter, start, end)
             if len(result) != 0:
                 answer = {
                     'error': 0,
@@ -420,11 +421,8 @@ def post_request_analyse(request_body):
             else:
                 return json.dumps({'error': 'Nothing was found'}, separators=(',', ':'))
 
-    except Exception as exception:
-        print(exception)
-        raise AssertionError(component="post_request_analyse",
-                             message="Some error occurred, please, be nice and write some proper error handler :)".format(
-                                 exception.message))
+    except Exception as error:
+        raise WebExceptions.WebPostRequestException({'error': error})
 
 
 def server_logic(environ, start_response):

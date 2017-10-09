@@ -1,6 +1,10 @@
-import inspect
+import Server.ServerLogic as ServerLogic
+from Configuration import MySQLConfig
+import json
 
-from CustomModules import Mechanics as Module
+request = {'platform': 'shit',
+            'id': 'shit'}
 
-functions = inspect.getmembers(Module, inspect.isfunction)
-print(functions)
+mysql_conf_inst = MySQLConfig()
+WebPostRequest_inst = ServerLogic.WebPostRequest(mysql_conf_inst)
+

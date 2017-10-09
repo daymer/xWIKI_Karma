@@ -90,7 +90,7 @@
                 console.log(data);
                 $.ajax({
                     type: 'POST',
-                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8081',
                     data: data,
                     dataType: 'json',
                     success: function (data) {
@@ -110,7 +110,7 @@
                     };
                 $.ajax({
                     type: 'POST',
-                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8081',
                     data: data,
                     dataType: 'json',
                     success: function (data) {
@@ -132,7 +132,7 @@
                     };
                 $.ajax({
                     type: 'POST',
-                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8081',
                     data: data,
                     dataType: 'json',
                     success: function (data) {
@@ -164,7 +164,7 @@
 
                 $.ajax({
                     type: 'POST',
-                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8081',
                     data: data,
                     dataType: 'json',
                     success: function (data) {
@@ -185,7 +185,7 @@
                 var platform = $('#get_stat_by_title_platform').val();
                 $.ajax({ 
                     type: 'POST', 
-                    url: 'http://SUP-A1631.AMUST.LOCAL:8080', 
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8081', 
                     data: {
                         method: "get_stat_by_title",
                         id: text,
@@ -212,7 +212,7 @@
                 var text = $('#get_stat_by_user').val();
                 $.ajax({
                     type: 'POST',
-                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8081',
                     data: {
                         method: "get_stat_by_user",
                         user: text
@@ -237,7 +237,7 @@
                 var text = $('#get_stat_by_user').val();
                 $.ajax({
                     type: 'POST',
-                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8081',
                     data: {
                         method: "get_karma_score_by_user",
                         user: text
@@ -258,7 +258,7 @@
                 var text = $('#get_stat_by_user').val();
                 $.ajax({
                     type: 'POST',
-                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8081',
                     data: {
                         method: "get_user_karma_current_score_detailed_by_user",
                         user: text
@@ -282,7 +282,7 @@
                 var text = $('#get_stat_by_user').val();
                 $.ajax({
                     type: 'POST',
-                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8081',
                     data: {
                         method: "make_new_karma_slice_by_user",
                         user: text
@@ -305,7 +305,7 @@
                 var direction = $('#vote_direction').val();
                 $.ajax({
                     type: 'POST',
-                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8081',
                     data: {
                         method: "vote_for_page_as_user",
                         page_title: page_name,
