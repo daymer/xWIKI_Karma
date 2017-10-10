@@ -46,7 +46,7 @@ sql_config = Configuration.SQLConfig()
 WebPostRequest_instance = WebPostRequest(mysql_config=mysql_config, sql_config=sql_config)
 
 
-def post_request_analyse(request_body):
+def post_request_analyse(request_body: bytes, logger_handle: logging.RootLogger)->str:
     request_body = request_body.decode("utf-8")
     request = parse_qs(request_body)
     try:
@@ -57,12 +57,15 @@ def post_request_analyse(request_body):
         answer = WebPostRequest_instance.invoke(method=method, request=request)
         return answer
     except WebExceptions.MethodNotSupported as error:
+        logger_handle.error(error)
         return WebPostRequest_instance.error_answer(str(error))
 
     except WebExceptions.BadRequestException as error:
+        logger_handle.error(error)
         return WebPostRequest_instance.error_answer(str(error))
 
     except (WebExceptions.EmptyPage, WebExceptions.DeprecatedPage, WebExceptions.IndexingTimeOut, WebExceptions.IndexingFailure, WebExceptions.KarmaInvokeFailure, WebExceptions.NothingFound) as error:
+        logger_handle.error(error)
         return WebPostRequest_instance.error_answer(str(error))
 
     except WebExceptions.PageDeleteFailure as error:
@@ -79,7 +82,7 @@ def server_logic(environ, start_response):
     if environ["REQUEST_METHOD"] == "POST":
         start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
         request_body = environ["wsgi.input"].read()
-        answer_body = post_request_analyse(request_body)
+        answer_body = post_request_analyse(request_body, logger_handle=Logger)
         try:
             request_body_decoded = request_body.decode("utf-8")
             request = parse_qs(request_body_decoded)
