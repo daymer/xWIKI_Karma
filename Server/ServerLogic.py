@@ -42,10 +42,10 @@ class WebPostRequest:
         elif method == 'make_new_karma_slice_by_user':
             return self.make_new_karma_slice_by_user(request=request)
 
-        elif method == 'reindex_page_by_xwd_fullname':
+        elif method == 'reindex_page_by_XWD_FULLNAME':
             return self.reindex_page_by_xwd_fullname(request=request)
 
-        elif method == 'delete_page_by_xwd_fullname':
+        elif method == 'delete_page_by_XWD_FULLNAME':
             return self.delete_page_by_xwd_fullname(request=request)
 
         elif method == 'make_new_global_karma_slice':
@@ -63,12 +63,12 @@ class WebPostRequest:
         except KeyError as error:
             raise Exceptions.BadRequestException('BadRequest', {'Missing 1 required positional argument': str(error)})
         xwd_fullname = self.mysql_connector_instance.get_XWD_FULLNAME(XWD_ID=page_id)
-        if not xwd_fullname:
+        if xwd_fullname is None:
             raise Exceptions.BadRequestException('BadRequest',
-                                                 {'Cannot find xwd_fullname of by the requested XWD_ID:': page_id})
+                                                 {'Cannot find xwd_fullname of page by the requested XWD_ID:': page_id})
         temp_array = self.sql_connector_instance.select_id_characters_total_from_dbo_knownpages(
             page_id=xwd_fullname, platform=platform)
-        if not temp_array:
+        if temp_array is None:
             raise Exceptions.BadRequestException('BadRequest',
                                                  {'Cannot find page in database with the requested page_id:': page_id})
         sql_id_of_requested_page = temp_array[0]
@@ -110,7 +110,7 @@ class WebPostRequest:
         except KeyError as error:
             raise Exceptions.BadRequestException('BadRequest', {'Missing 1 required positional argument': str(error)})
         user_id = self.sql_connector_instance.select_id_from_dbo_knownpages_users(username=user_name)
-        if not user_id:
+        if user_id is None:
             raise Exceptions.BadRequestException('BadRequest', {'Cannot find id of user': user_name})
         karma_score = round(self.sql_connector_instance.exec_get_user_karma_raw_score(user_id=user_id), 2)
         table = self.sql_connector_instance.exec_get_user_karma_raw(user_id=user_id)
@@ -134,14 +134,14 @@ class WebPostRequest:
             except KeyError as error:
                 raise Exceptions.BadRequestException('BadRequest', {'Missing 1 required positional argument': str(error)})
             user_id = self.sql_connector_instance.select_id_from_dbo_knownpages_users(username=user_name)
-            if not user_id:
+            if user_id is None:
                 raise Exceptions.BadRequestException('BadRequest', {'Cannot find id of user': user_name})
             xwd_fullname = self.mysql_connector_instance.get_XWD_FULLNAME(XWD_ID=page_id)
-            if not xwd_fullname:
-                raise Exceptions.BadRequestException('BadRequest', {'Cannot find xwd_fullname of by the requested XWD_ID:': page_id})
+            if xwd_fullname is None:
+                raise Exceptions.BadRequestException('BadRequest', {'Cannot find xwd_fullname of page by the requested XWD_ID:': page_id})
             temp_array = self.sql_connector_instance.select_id_characters_total_from_dbo_knownpages(
                 page_id=xwd_fullname, platform=platform)
-            if not temp_array:  # page is unknown exception
+            if temp_array is None:  # page is unknown exception
                 raise Exceptions.BadRequestException('BadRequest',
                                                      {'Cannot find page in database with the requested page_id:': page_id})
             result = self.sql_connector_instance.insert_into_dbo_page_karma_votes(sql_id=temp_array[0], user_id=user_id, direction=direction)
@@ -162,7 +162,7 @@ class WebPostRequest:
             except KeyError as error:
                 raise Exceptions.BadRequestException('BadRequest', {'Missing 1 required positional argument': str(error)})
             user_id = self.sql_connector_instance.select_id_from_dbo_knownpages_users(username=user_name)
-            if not user_id:
+            if user_id is None:
                 raise Exceptions.BadRequestException('BadRequest', {'Cannot find id of user': user_name})
             karma_score = round(self.sql_connector_instance.exec_get_user_karma_current_score(user_id), 2)
             answer = {
@@ -180,7 +180,7 @@ class WebPostRequest:
             'len': 0
         }
         result = self.sql_connector_instance.exec_get_user_karma_current_score_global()
-        if not result:
+        if result is None:
             raise Exceptions.KarmaInvokeFailure('InvokeFailed', {'exec_get_user_karma_current_score_global': 'with no arguments'})
         for user, score in result:
             karma_score = round(score, 2)
@@ -195,7 +195,7 @@ class WebPostRequest:
                 raise Exceptions.BadRequestException('BadRequest',
                                                      {'Missing 1 required positional argument': str(error)})
             user_id = self.sql_connector_instance.select_id_from_dbo_knownpages_users(username=user_name)
-            if not user_id:
+            if user_id is None:
                 raise Exceptions.BadRequestException('BadRequest', {'Cannot find id of user': user_name})
             karma_score = round(self.sql_connector_instance.exec_get_user_karma_current_score(user_id=user_id), 2)
             table = self.sql_connector_instance.exec_get_user_karma_current_score_detailed(user_id=user_id)
@@ -224,7 +224,7 @@ class WebPostRequest:
                 raise Exceptions.BadRequestException('BadRequest',
                                                      {'Missing 1 required positional argument': str(error)})
             user_id = self.sql_connector_instance.select_id_from_dbo_knownpages_users(username=user_name)
-            if not user_id:
+            if user_id is None:
                 raise Exceptions.BadRequestException('BadRequest', {'Cannot find id of user': user_name})
             result = self.sql_connector_instance.exec_make_new_karma_slice(user_id=user_id)
             if result == 'Karma wasn\'t changed':

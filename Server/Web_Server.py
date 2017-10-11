@@ -61,7 +61,7 @@ def post_request_analyse(request_body: bytes, logger_handle: logging.RootLogger)
         return WebPostRequest_instance.error_answer(str(error))
 
     except WebExceptions.BadRequestException as error:
-        logger_handle.error(error)
+        # logger_handle.error(error
         return WebPostRequest_instance.error_answer(str(error))
 
     except (WebExceptions.EmptyPage, WebExceptions.DeprecatedPage, WebExceptions.IndexingTimeOut, WebExceptions.IndexingFailure, WebExceptions.KarmaInvokeFailure, WebExceptions.NothingFound) as error:
@@ -69,11 +69,12 @@ def post_request_analyse(request_body: bytes, logger_handle: logging.RootLogger)
         return WebPostRequest_instance.error_answer(str(error))
 
     except WebExceptions.PageDeleteFailure as error:
-        print('Critical Exception:')
-        print(error)
+        logger_handle.error('Critical Exception:')
+        logger_handle.error(error)
         return WebPostRequest_instance.error_answer(str(error))
 
     except Exception as error:
+        logger_handle.error(error)
         return WebPostRequest_instance.error_answer(str(error))
         pass
 
