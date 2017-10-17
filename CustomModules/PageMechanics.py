@@ -22,6 +22,8 @@ class PageGlobal(object):
         self.SQL_id = None
         self.ID = None
         self.page_versions = 0
+        self.page_id = ''
+        self.page_title = ''
 
     def get_version_content_by_version(self, version_number: str) -> tuple:
         """Used to collect a content of some particular page version. Returns tuple in form: version_number, page_version, contributor"""
@@ -29,7 +31,9 @@ class PageGlobal(object):
 
     def add_new_page_version(self, num_content_contributor: tuple) -> bool:
         """Used to add a content of version to the page data_handler"""
-        return
+        self.PageVersionsDict.append([num_content_contributor[0], num_content_contributor[1]])
+        self.contributors[num_content_contributor[0]] = num_content_contributor[2]
+        return True
 
     def test(self):
         if type(self) is PageXWiki:
@@ -39,16 +43,32 @@ class PageGlobal(object):
 class PageConfluence(PageGlobal):
     def __init__(self, page_title: str,  client_instance: PythonConfluenceAPI.ConfluenceAPI):
         PageGlobal.__init__(self)
-        self.title = page_title
+        self.page_title = page_title
         self.ConfluenceClient_inst = client_instance
+        page_content = self.ConfluenceClient_inst.get_content(content_type='page', title=self.page_title)
+        self.page_id = page_content['results'][0]['id']
+        page_history = self.ConfluenceClient_inst.get_content_history_by_id(self.page_id)
+        self.page_versions = page_history['lastUpdated']['number']
+        self.page_author = page_history['createdBy']['displayName']
 
+    def get_version_content_by_version(self, version_number: str) -> tuple:
+        try:
+            page_version = self.ConfluenceClient_inst.get_content_by_id(self.page_id, 'historical', version=version_number)
+            contributor = page_version['version']['by']['displayName']
+            page_version = self.ConfluenceClient_inst.get_content_by_id(self.page_id, 'historical', version=version_number, expand='body.storage')
+            version_content = page_version['body']['storage']['value']
+        except Exception as exception:
+            print('Unable to get version: ' + str(version_number) + 'of page ID' + str(self.page_id))
+            print(exception)
+            return None
+        return version_number, version_content, contributor
 
 class PageMediaWiki(PageGlobal):
     def __init__(self, page_title: str, client_instance: mwclient.Site):
         PageGlobal.__init__(self)
         self.mWikiClient_inst = client_instance
-        self.title = page_title
-        test_page = self.mWikiClient_inst.Pages[self.title]
+        self.page_title = page_title
+        test_page = self.mWikiClient_inst.Pages[self.page_title]
         if test_page.redirect:
             # testing, if the page is question is only a redirect
             del test_page
@@ -60,11 +80,11 @@ class PageMediaWiki(PageGlobal):
                 del test_page
                 del test_page_text
                 raise ValueError('Page has no text')
-        self.page_id = self.get_page_id(self.title)
+        self.page_id = self.get_page_id(self.page_title)
 
     def get_page_id(self, title):
         test_page = self.mWikiClient_inst.Pages[title]
-        if test_page is None :
+        if test_page is None:
             return None
         return test_page.pageid
 
@@ -109,8 +129,3 @@ class PageXWiki(PageGlobal):
             page_version = response[0]
             contributor = response[1]
             return version_number, page_version, contributor
-
-    def add_new_page_version(self, num_content_contributor: tuple)-> bool:
-            self.PageVersionsDict.append([num_content_contributor[0], num_content_contributor[1]])
-            self.contributors[num_content_contributor[0]] = num_content_contributor[2]
-            return True

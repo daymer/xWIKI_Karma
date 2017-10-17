@@ -1,10 +1,4 @@
-import Server.ServerLogic as ServerLogic
-from Configuration import MySQLConfig
-import json
-
-request = {'platform': 'shit',
-            'id': 'shit'}
-
-mysql_conf_inst = MySQLConfig()
-WebPostRequest_inst = ServerLogic.WebPostRequest(mysql_conf_inst)
-
+a = ''
+for i in range(149, 256):
+    a += '||172.17.12.' + str(i) + '|\\n'
+print(a)

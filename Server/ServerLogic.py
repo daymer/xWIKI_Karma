@@ -1,9 +1,10 @@
+import logging
 import re
 import json
 import Configuration
 import CustomModules.Mechanics as Mechanics
 import CustomModules.SQL_Connector as SQL_Connector
-import Server.PostExeptions as Exceptions
+import Server.PostExceptions as Exceptions
 import pickle
 import operator
 from datetime import datetime, timedelta
@@ -62,7 +63,10 @@ class WebPostRequest:
             page_id = request['id'][0]
         except KeyError as error:
             raise Exceptions.BadRequestException('BadRequest', {'Missing 1 required positional argument': str(error)})
+        logger = logging.getLogger()
+        logger.debug('page_id:' + str(page_id))
         xwd_fullname = self.mysql_connector_instance.get_XWD_FULLNAME(XWD_ID=page_id)
+        logger.debug('xwd_fullname: ' + str(xwd_fullname))
         if xwd_fullname is None:
             raise Exceptions.BadRequestException('BadRequest',
                                                  {'Cannot find xwd_fullname of page by the requested XWD_ID:': page_id})
@@ -70,7 +74,7 @@ class WebPostRequest:
             page_id=xwd_fullname, platform=platform)
         if temp_array is None:
             raise Exceptions.BadRequestException('BadRequest',
-                                                 {'Cannot find page in database with the requested page_id:': page_id})
+                                                 {'Cannot find page in database with the requested page_id:': xwd_fullname})
         sql_id_of_requested_page = temp_array[0]
         total_characters_of_requested_page = int(temp_array[1])
         total_contribute_of_requested_page = pickle.loads(
@@ -352,7 +356,7 @@ def start_core_as_subprocess(dict_to_pickle: dict):
         temp_id = str(uuid.uuid4())
         os.environ[temp_id] = pickled_and_decoded_dict
         print('---------sub process started-------------')
-        subprocess.call("python C:/Projects/xWIKI_Karma/Comparer_core_v2_0.py INFO False -b" + temp_id, shell=True)
+        subprocess.call("python C:/Projects/xWIKI_Karma/Comparer_core_v2_0.py INFO True -b" + temp_id, shell=True)
         return True
     except:
         return False

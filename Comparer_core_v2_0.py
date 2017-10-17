@@ -55,17 +55,11 @@ if log_level is None or task_pages_dict is None or log_to_file is None:
 
 def initialize(task_pages_dict: dict, logging_mode: str = 'INFO', log_to_file_var: bool = False):
     ###################################################################################################################
-    # Contrib_Compare_inst                                                                                            #
-    # Main instance, used to analyze pages and create page contribution maps based on the content,                    #
+    # Contrib_Compare_inst - used to analyze pages and create page contribution maps based on the content,            #
     # collected from one of supported platforms                                                                       #
-    # Mysql_Connector_inst                                                                                            #
-    # Here used to connect to xWIKI DB to get a list of pages from a requested space                                  #
-    # ConfluenceAPI_inst                                                                                              #
-    # ConfluenceAPI_inst - same for Confluence                                                                        #
-    # SQL_Connector_inst                                                                                              #
-    # Used to store\load page contribution maps in\from SQL                                                           #
-    # Page_Creator_inst                                                                                               #
-    # Creates PAGE objects - data handlers for currently analyzed page                                                #
+    # mysql_connector_inst, sql_connector_inst - used to store\load page contribution maps in\from SQL\mySQL          #
+    # xWikiAPI_inst, mWikiAPI_instance, ConfluenceAPI_inst - used to get data from the supported sources              #
+    #                                                                                                                 #
     ###################################################################################################################
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     logger_inst = logging.getLogger()
@@ -194,6 +188,7 @@ for title, platform in task_pages_dict.items():
             CurrentPage = PageMediaWiki(page_title=title, client_instance=mWikiAPI_instance)
         except ValueError:
             Logger.warning(title + ' is redirect or unable to find ID, skipping')
+            continue
         if CurrentPage.page_id is None:
             Logger.warning(title + ' is redirect or unable to find ID, skipping')
             continue
@@ -202,6 +197,7 @@ for title, platform in task_pages_dict.items():
             CurrentPage = PageConfluence(page_title=title, client_instance=ConfluenceAPI_inst)
         except ValueError:
             Logger.warning(title + ' is redirect or unable to find ID, skipping')
+            continue
 
     # Now we check if this page has "no_karma" tag. This check works only for xWiki pages
     if isinstance(CurrentPage, PageXWiki):
@@ -304,9 +300,9 @@ for title, platform in task_pages_dict.items():
             CurrentPage.contributors.update({version: user})
         # recalculating contribution for all versions
         for VersionNum in range(1, CurrentPage.page_versions + 1):
-            # print(CurrentPage.contributors[VersionNum] +' has contributed ' + str(len(UserXContribute)) + ' in version ' + str(VersionNum))
             UserXContribute = [x for x in CurrentPage.VersionsGlobalArray if x[1] == VersionNum]
-            if CurrentPage.TotalContribute.get(CurrentPage.contributors[VersionNum]) == None:
+            Logger.debug(CurrentPage.contributors[VersionNum] + ' has contributed ' + str(len(UserXContribute)) + ' in version ' + str(VersionNum))
+            if CurrentPage.TotalContribute.get(CurrentPage.contributors[VersionNum]) is None:
                 CurrentPage.TotalContribute.update({CurrentPage.contributors[VersionNum]: len(UserXContribute)})
             else:
                 NowInDict = CurrentPage.TotalContribute[CurrentPage.contributors[VersionNum]]
@@ -380,7 +376,7 @@ for title, platform in task_pages_dict.items():
                 Logger.error('Failed to parse some of fields, aborting bug analyze')
         else:
             Logger.error('Unable to parse bug info style, aborting bug analyze')
-    # ----------------CHECK, IF PAGE_TITLE WAS CHANGED AFTER LAST RUN------------------------
+    # ----------------CHECK, IF PAGE_TITLE WAS CHANGED AFTER THE LAST RUN------------------------
     current_sql_title = SQL_Connector_inst.select_page_title_from_dbo_knownpages(native_sql_id=CurrentPage.SQL_id)
     if current_sql_title is not None:
         if CurrentPage.page_title != current_sql_title:
@@ -389,7 +385,6 @@ for title, platform in task_pages_dict.items():
                 Logger.info('Page title was updated')
             elif result is False:
                 Logger.error('Failed to update page title')
-
 
 
 TaskEndTime = datetime.now()

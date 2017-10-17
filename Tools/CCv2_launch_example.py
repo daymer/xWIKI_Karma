@@ -4,7 +4,7 @@ import subprocess
 import uuid
 os.supports_bytes_environ = True
 
-dict_to_pickle = {'Main.Team.Support Official Procedures.Case Handling.85a1d076c26ba01e58d2e828595e402e': 'xwiki'}
+dict_to_pickle = {'StagingWiki.Article writing how-to.How to convert a page from TERMINAL into a normal one.WebHome': 'xwiki'}
 
 def start_core_as_subprocess(dict_to_pickle_func: dict):
     pickled_data = pickle.dumps(dict_to_pickle_func, 0)

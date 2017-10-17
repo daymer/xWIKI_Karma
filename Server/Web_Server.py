@@ -5,23 +5,24 @@ from urllib.parse import parse_qs
 from gevent import monkey
 from gevent import pywsgi
 
-import Server.PostExeptions as WebExceptions
+import Server.PostExceptions as WebExceptions
 from Server.ServerLogic import WebPostRequest
 import logging
 from datetime import datetime
 import Configuration
 
 
-def logging_config(logging_mode: str= 'INFO') -> object:
+def logging_config(logging_mode: str= 'INFO', log_to_file: bool=False) -> object:
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     logger_inst = logging.getLogger()
     logger_inst.setLevel(logging_mode)
     integration_config = Configuration.Integration()
-    log_name = integration_config.log_location + "Web_Server_v2.0_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S")) + '.log'
-    fh = logging.FileHandler(log_name)
-    fh.setLevel(logging_mode)
-    fh.setFormatter(formatter)
-    logger_inst.addHandler(fh)
+    if log_to_file is True:
+        log_name = integration_config.log_location + "Web_Server_v2.0_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S")) + '.log'
+        fh = logging.FileHandler(log_name)
+        fh.setLevel(logging_mode)
+        fh.setFormatter(formatter)
+        logger_inst.addHandler(fh)
     ch = logging.StreamHandler()
     ch.setLevel(logging_mode)
     ch.setFormatter(formatter)
@@ -29,7 +30,7 @@ def logging_config(logging_mode: str= 'INFO') -> object:
     return logger_inst
 
 global Logger # TODO: find a better way to pass logger object into server_logic (WSGIServer docs: self.result = self.application(self.environ, self.start_response))
-Logger = logging_config(logging_mode='DEBUG')
+Logger = logging_config(logging_mode='DEBUG', log_to_file=True)
 
 GlobalStartTime = datetime.now()
 
@@ -55,13 +56,14 @@ def post_request_analyse(request_body: bytes, logger_handle: logging.RootLogger)
         return json.dumps({'Error': 'Bad request - no method specified'}, separators=(',', ':'))
     try:
         answer = WebPostRequest_instance.invoke(method=method, request=request)
+        logger_handle.debug(answer)
         return answer
     except WebExceptions.MethodNotSupported as error:
         logger_handle.error(error)
         return WebPostRequest_instance.error_answer(str(error))
 
     except WebExceptions.BadRequestException as error:
-        # logger_handle.error(error
+        logger_handle.error(error)
         return WebPostRequest_instance.error_answer(str(error))
 
     except (WebExceptions.EmptyPage, WebExceptions.DeprecatedPage, WebExceptions.IndexingTimeOut, WebExceptions.IndexingFailure, WebExceptions.KarmaInvokeFailure, WebExceptions.NothingFound) as error:

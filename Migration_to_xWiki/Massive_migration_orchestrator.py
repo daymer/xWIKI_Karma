@@ -16,7 +16,7 @@ log_name = "Migration_log_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S", )
 target_pool = 'Delta migration'
 parent = 'Delta migration'
 migrate_statement = None
-migrate_statement = "select page_title, platform from [dbo].[KnownPages] where page_title = 'VMware vSphere Basics' and platform = 'confluence'"
+migrate_statement = "select page_title, platform from [dbo].[KnownPages] where page_title = 'SNMP tutorial and troubleshooting' and platform = 'confluence'"
 title_like = None
 #title_like = 'bug%'
 
@@ -43,13 +43,11 @@ task_pages_dict = {}
 
 log_statement = 'Found pages:', Total_pages_to_process
 print(*log_statement, sep=' ')
-print(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S",))+ str(log_statement))
+print(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S",)) + str(log_statement))
 for entry in TaskPages_list:
     task_pages_dict.update({entry[0]: entry[1]})
 counter = 0
 for title, platform in task_pages_dict.items():
-        if title == 'Veeam B&R releases':
-            continue
         try:
             result = Mechanics.Migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE, MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig, MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList)
             if result[0] is True:
@@ -64,8 +62,9 @@ for title, platform in task_pages_dict.items():
                 print(*log_statement, sep=' ')
                 with codecs.open(log_name, "a", "utf-8") as stream:  # or utf-8
                     stream.write(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S", )) + str(log_statement) + u"\n")
-        except:
+        except Exception as exception:
             log_statement = 'ERROR: Failed on page:', title, 'from', platform, 'with error:'
+            print(exception)
             print(*log_statement, sep=' ')
             with codecs.open(log_name, "a", "utf-8") as stream:  # or utf-8
                 stream.write(str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S", )) + str(log_statement) + u"\n")

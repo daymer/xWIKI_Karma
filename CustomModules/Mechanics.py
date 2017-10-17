@@ -1,3 +1,4 @@
+import logging
 import copy
 import difflib
 import hashlib
@@ -427,18 +428,27 @@ class MysqlConnector(object):
         else:
             return None
 
-    def get_XWD_FULLNAME(self, XWD_ID):
+    def get_XWD_FULLNAME(self, XWD_ID: str):
+        logger = logging.getLogger()
         query = ("select XWD_FULLNAME from xwikidoc where XWD_ID = %(XWD_ID)s")
+        logger.debug('XWD_ID:' + str(XWD_ID))
         data = {
             'XWD_ID': XWD_ID
         }
         self.cursor.execute(query, data)
+        logger.debug('rowcount:' + str(self.cursor.rowcount))
+        XWD_FULLNAME = None
         if self.cursor.rowcount != 0:
             for row in self.cursor:
+                logger.debug('row:' + str(row))
                 XWD_FULLNAME = row[0].decode("utf-8")
             return XWD_FULLNAME
+        elif self.cursor.rowcount == 0:
+            for row in self.cursor:
+                logger.debug('row:' + str(row))
+                return XWD_FULLNAME
         else:
-            return None
+            return XWD_FULLNAME
 
     def add_new_tag(self, space, parent, title, page, tag, test=False):
         result = self.xWikiClient_instance.add_tag_to_page(space=space, page=page, title=title, parent=parent, tag=tag)
@@ -467,10 +477,6 @@ class MysqlConnector(object):
         else:
             print('============================================================Sequence', version,
                   'started=============================================================')
-
-        # print(title)
-        # title = title.replace('\\', '&#92;')
-        # print('title after replace', title)
         if only_update is not True:
             if version == 1:
                 try:
@@ -947,7 +953,7 @@ class Migrator(object):
     def get_files(self, platform: str, id: str = None, test_str: str = None):
         self.file_list = []
         if test_str is None and id is None: return False
-        if platform == 'Confluence':
+        if platform.lower() == 'confluence':
             self.current_page_id = id
             regex = r"\<ri\:attachment ri\:filename=\"(.[^\"]*)\" \/\>"
             matches = re.finditer(regex, test_str)
@@ -956,8 +962,9 @@ class Migrator(object):
                 match = match.group(1)
                 self.file_list.append(match)
             self.file_list = list(set(self.file_list))
+            print(self.file_list)
             return self.file_list
-        elif platform == 'MediaWIKI':
+        elif platform.lower() == 'mediawiki':
             regex = r"\[\[File:((\w|\d|-| |\.[^\|])*).*"
             matches = re.finditer(regex, test_str, re.IGNORECASE)  # added ignore case option
             # print('test_str', test_str)
@@ -969,7 +976,7 @@ class Migrator(object):
 
     def make_and_attach(self, platform: str, file_name: str, page: str, space):
         source_url = None
-        if platform == 'Confluence':
+        if platform.lower() == 'confluence':
             if self.current_page_id is None:
                 print('current_page_id is still None')
                 return False
@@ -977,13 +984,9 @@ class Migrator(object):
                                                                     limit=None, filename=file_name, media_type=None,
                                                                     callback=None)
             source_url = self.ConfluenceConfig.ULR + attachment['results'][0]['_links']['download']
-        elif platform == 'MediaWIKI':
+        elif platform.lower() == 'mediawiki':
             # so, now we need to locate the attachment
-            # http://wiki.support.veeam.local/api.php?action=query&titles=File:Case01759022%20normal%20repo.png&prop=imageinfo&iiprop=url&format=json
-            try:
-                request_url = self.MediaWIKIConfig_instance.APIPath_long + 'action=query&titles=File:' + file_name + '&prop=imageinfo&iiprop=url&format=json'
-            except AttributeError:  # TODO: fix this dirty hack
-                request_url = 'http://wiki.support.veeam.local/api.php?action=query&titles=File:' + file_name + '&prop=imageinfo&iiprop=url&format=json'
+            request_url = self.MediaWIKIConfig_instance.APIPath_long + 'action=query&titles=File:' + file_name + '&prop=imageinfo&iiprop=url&format=json'
             r = requests.get(request_url, stream=True)
             if r.status_code == 200:
                 respond = r.json()
@@ -1005,6 +1008,7 @@ class Migrator(object):
         if r.status_code == 200:
             file_content = r.content
         if file_content is not None:
+            print(file_content)
             result = self.xWikiClient.add_new_attach_application(space=space, page=page, attach_name=file_name,
                                                                  attach_content=file_content)
             return result
@@ -1062,9 +1066,9 @@ def Migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE, Mys
             author = None
         if author is None:
             author = "XWiki.bot"
-        if platform == 'Confluence':
+        if platform.lower() == 'confluence':
             syntax = 'confluence+xhtml/1.0'
-        elif platform == 'MediaWIKI':
+        elif platform.lower() == 'mediawiki':
             syntax = 'mediawiki/1.6'
         else:
             syntax = 'xwiki/2.1'
@@ -1104,13 +1108,14 @@ def Migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE, Mys
             ('last_run', True),
         )
         MysqlConnector_INSTANCE.add_new_version(*DataTuple)
-        tags = False
-        files = False
-        if platform == 'Confluence':
+        tags = None
+        files = None
+        if platform.lower() == 'confluence':
             page_id = SQLConnector.select_page_id_from_dbo_knownpages(title, platform)
             tags = Migrator.get_tags(platform=platform, id=page_id, test_str=None)
             files = Migrator.get_files(platform=platform, id=page_id, test_str=latest_text)
-        elif platform == 'MediaWIKI':
+            print('files', files, 'tags', tags)
+        elif platform.lower() == 'mediawiki':
             tags = Migrator.get_tags(platform=platform, id=None, test_str=latest_text)
             files = Migrator.get_files(platform=platform, id=None, test_str=latest_text)
             # print(files)
@@ -1123,7 +1128,7 @@ def Migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE, Mys
                 tags.append('bug')
         # print('files:', files)
         # Doing tags
-        if tags is not False:
+        if tags is not None:
             result = xWikiClient.add_tag_to_page(space=target_pool, page=page_hash, tags=tags, title=title,
                                                  parent=parent)
             print(result, len(tags), 'tags:', tags)
@@ -1131,7 +1136,8 @@ def Migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE, Mys
             a = 1
             print('No tags were found')
         # Doing attachments
-        if files is not False and len(files) != 0:
+        if files is not None and len(files) != 0:
+            print('Following files will be attached', files)
             for file in files:
                 try:
                     result = Migrator.make_and_attach(platform, file_name=file, page=page_hash,

@@ -134,7 +134,8 @@ class Users():
                 'Ibely' : 'XWiki.ibelyaev',
                 'Pmakarov' : None,
                 'Kavramenko' : 'XWiki.kavramenko',
-                'Vsevolod Zubarev' : 'XWiki.vzubarev'
+                'Vsevolod Zubarev' : 'XWiki.vzubarev',
+                'Sergey Makarets' : 'XWiki.smakarets'
                     }
 '''
 for user, status in Users.items():
