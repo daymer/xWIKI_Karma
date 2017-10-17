@@ -207,7 +207,7 @@ class SQLConnector:
         elif isinstance(page_object, PageMechanics.PageConfluence):
             page_platform = 'confluence'
         elif isinstance(page_object, PageMechanics.PageMediaWiki):
-            page_platform = 'confluence'
+            page_platform = 'mediawiki'
         else:
             page_platform = 'unsupported'
         try:
@@ -300,7 +300,7 @@ class SQLConnector:
                     "insert into [dbo].[KnownPages_UsersContribution] ([UserID],[KnownPageID],[contribution]) values (?,?,?)",
                     user_id, page_object.SQL_id, value)
                 self.connection.commit()
-            if user == page_object.fist_author: # TODO: move this update to page initialize or somewhere else
+            if user == page_object.page_author: # TODO: move this update to page initialize or somewhere else
                 self.cursor.execute(
                     "update [dbo].[KnownPages] set author_ID = ? where ID = ?",
                     user_id, page_object.SQL_id)

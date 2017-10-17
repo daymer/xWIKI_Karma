@@ -1,7 +1,7 @@
 
 import requests
 
-from Configuration import MySQLConfig, ConfluenceConfig, MediaWIKIConfig, xWikiConfig
+from Configuration import MySQLConfig, ConfluenceConfig, MediaWIKIConfig, XWikiConfig
 from CustomModules.Mechanics import XWikiClient, MysqlConnector, PageCreator
 
 target_pool = 'Migrated bugs'
@@ -15,7 +15,7 @@ title = 'Bug 49790 - "Next run" field in EM doesn\'t match corresponding field i
 m = hashlib.md5()
 page = m.hexdigest()
 '''
-xWikiConfig = xWikiConfig(target_pool)
+xWikiConfig = XWikiConfig(target_pool)
 xWikiClient_instance = XWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
 MySQLconfig_INSTANCE = MySQLConfig()
 MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)

@@ -9,7 +9,7 @@ import CustomModules.SQL_Connector
 from Configuration import MySQLConfig, ConfluenceConfig, MediaWIKIConfig
 from Migration_to_xWiki.Users_association import Users
 from CustomModules import Mechanics
-from CustomModules.Mechanics import XWikiClient, MysqlConnector, Migrator
+from CustomModules.Mechanics import XWikiClient, MysqlConnector, MigrationAssistant
 
 log_name = "Migration_log_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S", )) + '.txt'
 
@@ -29,12 +29,12 @@ print(*log_statement, sep=' ')
 MySQLconfig_INSTANCE = MySQLConfig()
 MysqlConnector_INSTANCE = MysqlConnector(MySQLconfig_INSTANCE)
 SQLConfig = Configuration.SQLConfig()
-xWikiConfig = Configuration.xWikiConfig(target_pool)
+xWikiConfig = Configuration.XWikiConfig(target_pool)
 xWikiClient = XWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
 ConfluenceConfig_instance = Configuration.ConfluenceConfig()
 confluenceAPI_instance = ConfluenceAPI(username=ConfluenceConfig_instance.USER, password=ConfluenceConfig_instance.PASS, uri_base=ConfluenceConfig_instance.ULR)
 MediaWIKIConfig = MediaWIKIConfig()
-Migrator = Migrator(ConfluenceConfig=ConfluenceConfig_instance, MediaWIKIConfig=MediaWIKIConfig, xWikiConfig=xWikiConfig)
+Migrator = MigrationAssistant(ConfluenceConfig=ConfluenceConfig_instance, MediaWIKIConfig=MediaWIKIConfig, xWikiConfig=xWikiConfig)
 UserList = Users()
 SQLConnector_instance = CustomModules.SQL_Connector.SQLConnector(SQLConfig)
 TaskPages_list = SQLConnector_instance.select_page_titles_platforms_by_filter(page_title=title_like, query=migrate_statement)
@@ -49,7 +49,7 @@ for entry in TaskPages_list:
 counter = 0
 for title, platform in task_pages_dict.items():
         try:
-            result = Mechanics.Migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE, MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig, MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList)
+            result = Mechanics.migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE, MysqlConnector_INSTANCE, SQLConfig, SQLConnector_instance, ConfluenceConfig, MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList)
             if result[0] is True:
                 counter += 1
                 log_statement = result[1], 'migrated in total:', str(counter) + '/' + Total_pages_to_process

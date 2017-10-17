@@ -12,7 +12,7 @@ class PageGlobal(object):
     def __init__(self):
         self.creation_date = None
         self.latest_version = None
-        self.fist_author = None
+        self.page_author = None
         self.contributors = {}
         self.PageVersionsDict = []
         self.VersionsGlobalArray = []
@@ -68,26 +68,59 @@ class PageMediaWiki(PageGlobal):
         PageGlobal.__init__(self)
         self.mWikiClient_inst = client_instance
         self.page_title = page_title
-        test_page = self.mWikiClient_inst.Pages[self.page_title]
-        if test_page.redirect:
+        self.test_page = self.mWikiClient_inst.Pages[self.page_title]
+        if self.test_page.redirect:
             # testing, if the page is question is only a redirect
-            del test_page
+            del self.test_page
             raise ValueError('Page was not found on the mWiki side')
         else:
-            test_page_text = test_page.text()
+            test_page_text = self.test_page.text()
             if not test_page_text:
                 # testing, if the page has any text
-                del test_page
+                del self.test_page
                 del test_page_text
                 raise ValueError('Page has no text')
         self.page_id = self.get_page_id(self.page_title)
+        self.current_version_to_versionID = []
+        # dirty hack, but mwclient.listings.List has no methods to calc versions
+        # also here we compare version number with version ID
+        for revision in self.test_page.revisions():
+            self.current_version_to_versionID.append([revision['revid'], revision['parentid']])
+        self.current_version_to_versionID = sorted(self.current_version_to_versionID)
+        self.page_versions = len(self.current_version_to_versionID)
+        current_media_wiki_revisions = self.test_page.revisions(prop='ids|user|content')
+        for revision in current_media_wiki_revisions:
+            if revision['parentid'] == 0:
+                self.page_author = revision['user']
 
     def get_page_id(self, title):
         test_page = self.mWikiClient_inst.Pages[title]
         if test_page is None:
             return None
-        return test_page.pageid
+        return str(test_page.pageid)
 
+    def get_version_content_by_version(self, version_number: str) -> tuple:
+        try:
+            version_content = None
+            contributor = None
+            # get version ID
+            version_i_d = self.current_version_to_versionID[int(version_number) - 1]
+            current_media_wiki_revisions = self.test_page.revisions(prop='ids|user|content')
+            for revision in current_media_wiki_revisions:
+                if revision['revid'] == version_i_d[0]:
+                    contributor = revision['user']
+                    version_content = revision['*']
+            if version_content is None or contributor is None:
+                for revision in current_media_wiki_revisions:
+                    print('In search:', version_i_d[0])
+                    print(revision)
+                    print(revision['revid'])
+                    exit()
+        except Exception as exception:
+            print('Unable to get version: ' + str(version_number) + 'of page ID' + str(self.page_id))
+            print(exception)
+            return None
+        return version_number, version_content, contributor
 
 class PageXWiki(PageGlobal):
     def __init__(self, page: str, page_title: str, client_instance: Mechanics.XWikiClient):

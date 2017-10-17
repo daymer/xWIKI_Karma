@@ -47,7 +47,7 @@ def initialize(logging_mode: str = 'INFO', log_to_file: bool = True):
     SQL_config_inst = Configuration.SQLConfig()
     confluence_config_inst = Configuration.ConfluenceConfig()
     MediaWIKI_Config_inst = Configuration.MediaWIKIConfig()
-    xWiki_Config_inst = Configuration.xWikiConfig(['Migration pool', 'Sandbox', 'Main', 'StagingWiki'])
+    xWiki_Config_inst = Configuration.XWikiConfig(['Migration pool', 'Sandbox', 'Main', 'StagingWiki'])
     MySQL_Config_inst = Configuration.MySQLConfig()
     Mysql_connector_inst = MysqlConnector(MySQL_Config_inst)
     Page_creator_inst = PageCreator(confluence_config_inst, MediaWIKI_Config_inst, xWiki_Config_inst)
@@ -156,7 +156,7 @@ def start_core_as_subprocess(dict_to_pickle: dict):
     temp_id = str(uuid.uuid4())
     os.environ[temp_id] = pickled_and_decoded_dict
     # print('---------sub process started-------------')
-    subprocess.call("python C:/Projects/xWIKI_Karma/Comparer_core_v2_0.py INFO True -b" + temp_id, shell=True)
+    subprocess.call("python C:/Projects/xWIKI_Karma/CCv2.1.py INFO True -b" + temp_id, shell=True)
 
 task_pages_dict, TaskStartTime = build_task_array(task_dict=Task, task_exclusions_dict=TaskExclusions, Logger=Logger)
 

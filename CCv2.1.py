@@ -84,7 +84,7 @@ def initialize(task_pages_dict: dict, logging_mode: str = 'INFO', log_to_file_va
     sql__config_inst = Configuration.SQLConfig()
     confluence__config_inst = Configuration.ConfluenceConfig()
     m_wiki__config_inst = Configuration.MediaWIKIConfig()
-    x_wiki__config_inst = Configuration.xWikiConfig(['Migration pool', 'Sandbox', 'Main', 'StagingWiki'])
+    x_wiki__config_inst = Configuration.XWikiConfig(['Migration pool', 'Sandbox', 'Main', 'StagingWiki'])
     mysql__config_inst = Configuration.MySQLConfig()
     mysql_connector_inst = MysqlConnector(mysql__config_inst)
     sql_connector_inst = SQLConnector(sql__config_inst)
@@ -183,7 +183,7 @@ for title, platform in task_pages_dict.items():
         if CurrentPage.page_id is None:
             Logger.warning(title + ' is redirect or unable to find ID, skipping')
             continue
-    elif platform.lower() == 'mwiki':
+    elif platform.lower() == 'mediawiki':
         try:
             CurrentPage = PageMediaWiki(page_title=title, client_instance=mWikiAPI_instance)
         except ValueError:
@@ -198,7 +198,9 @@ for title, platform in task_pages_dict.items():
         except ValueError:
             Logger.warning(title + ' is redirect or unable to find ID, skipping')
             continue
-
+    else:
+        Logger.warning('platform ' + platform + ' is not supported, skipping')
+        continue
     # Now we check if this page has "no_karma" tag. This check works only for xWiki pages
     if isinstance(CurrentPage, PageXWiki):
 

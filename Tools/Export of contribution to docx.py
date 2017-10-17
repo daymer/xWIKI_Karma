@@ -7,7 +7,7 @@ from CustomModules.SQL_Connector import SQLConnector
 
 SQLConfig = Configuration.SQLConfig()
 SQLConnector = SQLConnector(SQLConfig)
-xWikiConfig = Configuration.xWikiConfig('Migration pool')
+xWikiConfig = Configuration.XWikiConfig('Migration pool')
 xWikiClient = XWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
 
 PageTitle = 'Using WMI to query Veeam BnR information'

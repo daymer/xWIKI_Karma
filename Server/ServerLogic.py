@@ -356,7 +356,7 @@ def start_core_as_subprocess(dict_to_pickle: dict):
         temp_id = str(uuid.uuid4())
         os.environ[temp_id] = pickled_and_decoded_dict
         print('---------sub process started-------------')
-        subprocess.call("python C:/Projects/xWIKI_Karma/Comparer_core_v2_0.py INFO True -b" + temp_id, shell=True)
+        subprocess.call("python C:/Projects/xWIKI_Karma/CCv2.1.py INFO True -b" + temp_id, shell=True)
         return True
     except:
         return False

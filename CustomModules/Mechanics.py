@@ -5,237 +5,13 @@ import hashlib
 import re
 import sys
 import traceback
-from datetime import datetime
-
 import mysql.connector
 import requests
-from PythonConfluenceAPI import \
-    ConfluenceAPI  # http://htmlpreview.github.io/?https://github.com/pushrodtechnology/PythonConfluenceAPI/blob/master/doc/html/index.html
-from mwclient import Site
-
+from PythonConfluenceAPI import ConfluenceAPI
+# http://htmlpreview.github.io/?https://github.com/pushrodtechnology/PythonConfluenceAPI/blob/master/doc/html/index.html
 import Configuration
 
-
 sys.setrecursionlimit(10 ** 6)
-
-
-class PageCreator:
-    def __init__(self, ConfluenceConfig, MediaWIKIConfig, xWikiConfig):
-        self.confluenceAPI = ConfluenceAPI(ConfluenceConfig.USER, ConfluenceConfig.PASS, ConfluenceConfig.ULR)
-        self.MediaWikiAPI_instance = Site((MediaWIKIConfig.Protocol, MediaWIKIConfig.URL), path=MediaWIKIConfig.APIPath,
-                                          clients_useragent=MediaWIKIConfig.UserAgent)
-        self.xWikiSpaces = xWikiConfig.spaces
-        self.xWikiAPI = XWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
-        self.current_mediaWiki_page = None
-        self.current_version_to_versionID = []
-        self.current_xWiki_page = None
-        self.current_version_to_xWikiVersion = {}
-        self.TotalExcluded = 0
-
-    def create_new_page_by_title_and_platform(self, title, platform):
-        if platform == 'Confluence':
-            new_created_page = Page(title, platform)
-            return new_created_page
-        elif platform == 'MediaWIKI':
-            current_page = self.MediaWikiAPI_instance.Pages[title]
-            if current_page.redirect:
-                # print('redirect, skipping...')
-                return None
-            else:
-                all_page_text = current_page.text()
-                if not all_page_text:
-                    # print('ERROR: Page has no text or not exists, skipping.')
-                    return None
-                else:
-                    new_created_page = Page(title, platform)
-                    return new_created_page
-        elif platform.lower() == 'xwiki':
-            if title.endswith('.WebHome'):
-                replaced_title = title.replace('.WebHome', '')
-                replaced_title = replaced_title.replace('\\.', '<dirtyhack>')
-            else:
-                replaced_title = title.replace('\\.', '<dirtyhack>')
-            array = replaced_title.split('.')
-            path_array = []
-            for each in array:
-                path_array.append(each.replace('<dirtyhack>', '\\.'))
-            page = path_array.pop(-1)
-            space = path_array.pop(0)
-            current_page = self.xWikiAPI.page(space=space, page=page, nested_space=path_array)
-            if current_page is not None:
-                self.current_xWiki_page = current_page
-                try:
-                    title = self.current_xWiki_page['title']
-                except:
-                    title = self.current_xWiki_page['pageSummaries'][0]['title']
-                try:
-                    self.current_xWiki_page['content']
-                except:
-                    print('no content was found')
-                    return None
-                new_created_page = Page(title, platform, page_xWIKI_nested_space=path_array, page_xWIKI_page=page,
-                                        page_xWIKI_space=space)
-                return new_created_page
-            elif current_page is None:
-                return None
-
-    def collect_page_id(self, page):
-        # print(page.page_platform)
-        if page.page_platform == 'Confluence':
-            page_content = self.confluenceAPI.get_content(content_type='page', title=page.page_title)
-            try:
-                page_id = page_content['results'][0]['id']
-                return page_id
-            except IndexError:
-                print('404 - page with such name wasn\'t found')
-                return None
-        elif page.page_platform == 'MediaWIKI':
-            self.current_mediaWiki_page = self.MediaWikiAPI_instance.Pages[page.page_title]
-            return self.current_mediaWiki_page.pageid
-        elif page.page_platform.lower() == 'xwiki':
-            # print(self.current_xWiki_page)
-            return self.current_xWiki_page['id']
-
-    def collect_page_history(self, page):
-        if page.page_platform == 'Confluence':
-            page_history = self.confluenceAPI.get_content_history_by_id(page.page_id)
-            page_versions = page_history['lastUpdated']['number']
-            return page_versions
-        elif page.page_platform == 'MediaWIKI':
-            # dirty hack, but mwclient.listings.List has no methods to calc versions
-            # also here we compare version number with version ID
-            self.current_version_to_versionID[:] = []
-            for revision in self.current_mediaWiki_page.revisions():
-                self.current_version_to_versionID.append([revision['revid'], revision['parentid']])
-            self.current_version_to_versionID = sorted(self.current_version_to_versionID)
-            return len(self.current_version_to_versionID)
-        elif page.page_platform == 'xWIKI':
-            # response = self.xWikiAPI.get_page_history(self.current_xWiki_page['space'], self.current_xWiki_page['name'])
-            # print(response)
-            # self.current_version_to_versionID
-            return self.current_xWiki_page['majorVersion']
-
-    def collect_page_author(self, page):
-        if page.page_platform == 'Confluence':
-            page_history = self.confluenceAPI.get_content_history_by_id(page.page_id)
-            page_creator = page_history['createdBy']['displayName']
-            return page_creator
-        elif page.page_platform == 'MediaWIKI':
-            current_mediaWiki_revisions = self.current_mediaWiki_page.revisions(prop='ids|user|content')
-            for revision in current_mediaWiki_revisions:
-                if revision['parentid'] == 0:
-                    PageCreator = revision['user']
-                    return PageCreator
-        elif page.page_platform == 'xWIKI':
-            return self.current_xWiki_page['creator']
-
-    def get_version_content_by_version(self, VersionNumber, page):
-        if page.page_platform == 'Confluence':
-            try:
-                PageVersion = self.confluenceAPI.get_content_by_id(page.page_id, 'historical', VersionNumber)
-                Contributor = PageVersion['version']['by']['displayName']
-                PageVersion = self.confluenceAPI.get_content_by_id(page.page_id, 'historical', VersionNumber,
-                                                                   'body.storage')
-            except:
-                print('Unable to get version: ' + str(VersionNumber) + 'of page ID' + str(page.page_id))
-                return None
-            return VersionNumber, PageVersion, Contributor
-        elif page.page_platform == 'MediaWIKI':  # needs improvement, too slow
-            PageVersion = None
-            Contributor = None
-            # get version ID
-            versionID = self.current_version_to_versionID[VersionNumber - 1]
-            current_mediaWiki_revisions = self.current_mediaWiki_page.revisions(prop='ids|user|content')
-            for revision in current_mediaWiki_revisions:
-                if revision['revid'] == versionID[0]:
-                    Contributor = revision['user']
-                    PageVersion = revision['*']
-            if PageVersion is None or Contributor is None:
-                for revision in current_mediaWiki_revisions:
-                    print('In search:', versionID[0])
-                    print(revision)
-                    print(revision['revid'])
-                    exit()
-            return VersionNumber, PageVersion, Contributor
-        elif page.page_platform == 'xWIKI':
-            nested_space = None
-            nested_space = page.page_xWIKI_nested_space
-            # first, we need to find the latest minor version for the major version which were provided to method
-            # +str(self.current_xWiki_page['wiki'])+ is temporally removed, since it looks more logical to use only 1 wiki
-            response = self.xWikiAPI.get_page_version_content_and_author(page.page_xWIKI_space,
-                                                                         page.page_xWIKI_page,
-                                                                         str(VersionNumber) + '.1', nested_space)
-            PageVersion = response[0]
-            Contributor = response[1]
-            return VersionNumber, PageVersion, Contributor
-
-    def check_exclusions(self, page, platform, TaskExclusions):
-        excluded = True
-        try:
-            TaskExclusions[platform].index(page)
-        except ValueError:
-            excluded = False
-
-        for exclusion in TaskExclusions[platform]:
-            if exclusion is not None:
-                if exclusion.endswith('%'):
-                    if page.startswith(exclusion[:-1]):
-                        excluded = True
-        if excluded == True:
-            self.TotalExcluded += 1
-            return False
-        else:
-            return True
-
-
-class Page:
-    def __init__(self, page_title, current_platform, page_xWIKI_nested_space=None, page_xWIKI_page=None,
-                 page_xWIKI_space=None):
-        if current_platform == 'xWIKI':
-            self.page_title = page_title
-            self.page_xWIKI_page = page_xWIKI_page
-            self.page_xWIKI_nested_space = page_xWIKI_nested_space
-            self.page_xWIKI_space = page_xWIKI_space
-        else:
-            self.page_title = page_title
-        self.page_id = ''
-        self.page_versions = ''
-        self.page_author = ''
-        self.contributors = {}
-        self.page_creation_date = ''
-        self.PageVersionsDict = []
-        self.VersionsGlobalArray = []
-        self.TotalContribute = {}
-        self.TotalCharacters = 0
-        self.page_platform = current_platform
-        self.dbVersion = ''
-        self.pageSQL_id = ''
-
-    def add_new_page_version(self, VersionNumberContentContributor):
-        if VersionNumberContentContributor is None:
-            print('Kernel panic!')
-            exit()
-        if self.page_platform == 'Confluence':
-            try:
-                self.PageVersionsDict.append([VersionNumberContentContributor[0],
-                                              VersionNumberContentContributor[1]['body']['storage']['value']])
-                self.contributors[VersionNumberContentContributor[0]] = VersionNumberContentContributor[2]
-            except:
-                print('Unable to add new Version into PageVersionsDict', VersionNumberContentContributor)
-        elif self.page_platform == 'MediaWIKI':
-            try:
-                self.PageVersionsDict.append([VersionNumberContentContributor[0], VersionNumberContentContributor[1]])
-                self.contributors[VersionNumberContentContributor[0]] = VersionNumberContentContributor[2]
-            except:
-                print('Unable to add new Version into PageVersionsDict', VersionNumberContentContributor)
-                exit()
-        elif self.page_platform == 'xWIKI':
-            try:
-                self.PageVersionsDict.append([VersionNumberContentContributor[0], VersionNumberContentContributor[1]])
-                self.contributors[VersionNumberContentContributor[0]] = VersionNumberContentContributor[2]
-            except:
-                print('Unable to add new Version into PageVersionsDict', VersionNumberContentContributor)
-                exit()
 
 
 class ContributionComparator:
@@ -319,77 +95,6 @@ class ContributionComparator:
                 exit()
 
 
-class CustomLogging:
-    def __init__(self, log_level='silent'):
-        self.GlobalStartTime = datetime.now()
-        self.LogLevel = log_level
-        self.GlobalStartTime = None
-        self.TaskStartTime = None
-        self.TaskEndTime = None
-        self.PageAnalysisStartTime = None
-        self.PageAnalysisEndTime = None
-        self.PageCountingEndTime = None
-
-    def log_task_start(self, pages_found, excluded):
-        self.TaskStartTime = datetime.now()
-        if self.LogLevel != 'silent':
-            print(self.TaskStartTime, pages_found, 'pages were found in all spaces, excluded:', excluded)
-        else:
-            print(self.TaskStartTime, pages_found, 'pages were found in all spaces, excluded:', excluded)
-
-    def page_analysis_started(self, title):
-        self.PageAnalysisStartTime = datetime.now()
-        if self.LogLevel != 'silent':
-            print(self.PageAnalysisStartTime, title + ': Task initialized, getting sources...')
-
-    def page_processing_started(self, CurrentPage):
-        if CurrentPage.dbVersion == None:
-            if self.LogLevel != 'silent':
-                print('"' + CurrentPage.page_title + '" will be processed in FULL mode')
-        elif CurrentPage.dbVersion < CurrentPage.page_versions:
-            if self.LogLevel != 'silent':
-                print('"' + CurrentPage.page_title + '" will be processed in INCREMENTAL mode')
-        elif CurrentPage.dbVersion == CurrentPage.page_versions:
-            if self.LogLevel != 'silent':
-                print('"' + CurrentPage.page_title + '" is up-to-date')
-
-    def page_processing_target(self, CurrentPage):
-        self.PageAnalysisEndTime = datetime.now()
-        if self.LogLevel != 'silent':
-            print(self.PageAnalysisEndTime, 'Page "' + CurrentPage.page_title + '" with ID ' + str(
-                CurrentPage.page_id) + ', created by ' + CurrentPage.page_author + ' was parsed, ' + str(
-                CurrentPage.page_versions) + ' versions were found', '\n',
-                  'Sources are collected, calculating difference... ')
-
-    def page_counting_finished(self, CurrentPage):
-        self.PageCountingEndTime = datetime.now()
-        if self.LogLevel != 'silent':
-            print(self.PageCountingEndTime, '... Done')
-
-    def page_summary(self, CurrentPage):
-        if self.LogLevel != 'silent':
-            print('Characters in TOTAL: ', CurrentPage.TOTALCharacters)
-            if CurrentPage.TOTALCharacters != 0:
-                for Contributor, Value in CurrentPage.TotalContribute.items():
-                    Percent = (Value / CurrentPage.TOTALCharacters) * 100
-                    print('Contribution of ' + Contributor + ' = ' + str(Percent) + '%' + ' (' + str(
-                        Value) + ') characters')
-            print('Time elapsed: Analysis:', self.PageAnalysisEndTime - self.PageAnalysisStartTime, '+ Diff calc:',
-                  self.PageCountingEndTime - self.PageAnalysisEndTime, '=',
-                  self.PageCountingEndTime - self.PageAnalysisStartTime)
-        self.PageAnalysisStartTime = None
-        self.PageAnalysisEndTime = None
-        self.PageCountingEndTime = None
-
-    def log_task_ended(self):
-        self.TaskEndTime = datetime.now()
-        TotalElapsed = self.TaskEndTime - self.TaskStartTime
-        print(self.TaskEndTime, 'Total time wasted', TotalElapsed)
-
-    def skip_some_page(self, title):
-        print(datetime.now(), title, 'is redirect or unable to find ID, skipping')
-
-
 class MysqlConnector(object):
     def __init__(self, config: Configuration.MySQLConfig):
         self.cnx = mysql.connector.connect(user=config.user, password=config.password,
@@ -397,7 +102,7 @@ class MysqlConnector(object):
                                            port=config.port,
                                            database=config.database)
         self.cursor = self.cnx.cursor(buffered=True)
-        self.xWikiConfig_instance = Configuration.xWikiConfig('Sandbox')
+        self.xWikiConfig_instance = Configuration.XWikiConfig('Sandbox')
         self.xWikiClient_instance = XWikiClient(self.xWikiConfig_instance.api_root, self.xWikiConfig_instance.auth_user,
                                                 self.xWikiConfig_instance.auth_pass)
 
@@ -920,9 +625,9 @@ class ExclusionsDict(dict):
         self[key].append(value)
 
 
-class Migrator(object):
+class MigrationAssistant(object):
     def __init__(self, ConfluenceConfig: Configuration.ConfluenceConfig, MediaWIKIConfig: Configuration.MediaWIKIConfig,
-                 xWikiConfig: Configuration.xWikiConfig):
+                 xWikiConfig: Configuration.XWikiConfig):
         self.confluenceAPI = ConfluenceAPI(ConfluenceConfig.USER, ConfluenceConfig.PASS, ConfluenceConfig.ULR)
         self.ConfluenceConfig = ConfluenceConfig
         self.MediaWIKIConfig_instance = MediaWIKIConfig
@@ -1014,7 +719,7 @@ class Migrator(object):
             return result
 
 
-def Migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE, MysqlConnector_INSTANCE, SQLConfig,
+def migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE, MysqlConnector_INSTANCE, SQLConfig,
                  SQLConnector, ConfluenceConfig, MediaWIKIConfig, xWikiConfig, xWikiClient, Migrator, UserList):
     # Initializing agent
     # Starting migration process
