@@ -7,9 +7,12 @@ from gevent import pywsgi
 
 import Server.PostExceptions as WebExceptions
 from Server.ServerLogic import WebPostRequest
+import Server.ServerLogic as ServerFunctions
 import logging
 from datetime import datetime
 import Configuration
+import socket
+from ldap3 import Server, Connection, ALL, NTLM, ObjectDef, Reader
 
 
 def logging_config(logging_mode: str= 'INFO', log_to_file: bool=False) -> object:
@@ -29,8 +32,7 @@ def logging_config(logging_mode: str= 'INFO', log_to_file: bool=False) -> object
     logger_inst.addHandler(ch)
     return logger_inst
 
-global Logger # TODO: find a better way to pass logger object into server_logic (WSGIServer docs: self.result = self.application(self.environ, self.start_response))
-Logger = logging_config(logging_mode='DEBUG', log_to_file=True)
+Logger = logging_config(logging_mode='INFO', log_to_file=True)
 
 GlobalStartTime = datetime.now()
 
@@ -43,6 +45,10 @@ monkey.patch_all()  # makes many blocking calls asynchronous
 
 mysql_config = Configuration.MySQLConfig()
 sql_config = Configuration.SQLConfig()
+ldap_conf = Configuration.LdapConfig()
+ldap_server = Server(ldap_conf.ad_server, get_info=ALL)
+CONN_TO_LDAP = Connection(ldap_server, user=ldap_conf.username, password=ldap_conf.password, authentication=NTLM,
+                  auto_bind=True)
 
 WebPostRequest_instance = WebPostRequest(mysql_config=mysql_config, sql_config=sql_config)
 
@@ -85,11 +91,14 @@ def server_logic(environ, start_response):
     if environ["REQUEST_METHOD"] == "POST":
         start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
         request_body = environ["wsgi.input"].read()
-        answer_body = post_request_analyse(request_body, logger_handle=Logger)
+        logger = logging.getLogger('root')
+        answer_body = post_request_analyse(request_body, logger_handle=logger)
         try:
             request_body_decoded = request_body.decode("utf-8")
             request = parse_qs(request_body_decoded)
-            Logger.debug('Requested by page: ' + environ['HTTP_REFERER'] + ', method: ' + str(request))
+            requested_hostname = str(environ['HTTP_HOST']).replace('.amust.local:8080', '')
+            user = ServerFunctions.get_ad_host_description(connection_to_ldap=CONN_TO_LDAP, requested_hostname=requested_hostname)
+            logger.info('Requested by page: ' + environ['HTTP_REFERER'] + ' , user: ' + user + ', method: ' + str(request))
         except KeyError:
             try:
                 if request['REMOTE_ADDR'][0] == '172.17.17.183': # xWiki ip addr

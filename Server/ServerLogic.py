@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 import os
 import subprocess
 import uuid
+from ldap3 import Server, Connection, ALL, NTLM, ObjectDef, Reader
+import ldap3.core.exceptions as ldap3exceptions
 
 
 class WebPostRequest:
@@ -360,3 +362,19 @@ def start_core_as_subprocess(dict_to_pickle: dict):
         return True
     except:
         return False
+
+
+def get_ad_host_description(connection_to_ldap,  requested_hostname: str) -> str:
+    logger = logging.getLogger('root')
+    try:
+        # print('Connected to', connection_to_ldap, 'as', connection_to_ldap.extend.standard.who_am_i())
+        obj_computer = ObjectDef('computer', connection_to_ldap)
+        r = Reader(connection_to_ldap, obj_computer, 'OU=User Computers,DC=amust,DC=local',
+                   '(&(objectCategory=computer)(name=' + requested_hostname + '))')
+        r.search()
+        comp_description = r[0].Description
+        return str(comp_description)
+    except Exception as error:
+        logger.error(error)
+        return 'unknown'
+
