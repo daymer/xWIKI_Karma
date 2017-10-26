@@ -4,7 +4,7 @@ import subprocess
 import uuid
 os.supports_bytes_environ = True
 
-dict_to_pickle = {'StagingWiki.Article writing how-to.How to convert a page from TERMINAL into a normal one.WebHome': 'xwiki'}
+dict_to_pickle = {'StagingWiki.Pending for community approval.test page.WebHome': 'xwiki'}
 # dict_to_pickle = {'Patch 1 cannot be installed with "This Veeam Backup & Replication installation cannot be updated automatically"': 'mediawiki'}
 # dict_to_pickle = {'Resolving "Unable to delete host... is used by the following jobs..." in Veeam v9.0 and v9.5': 'confluence'}
 

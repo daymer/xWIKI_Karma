@@ -13,6 +13,7 @@ from datetime import datetime
 import Configuration
 import socket
 from ldap3 import Server, Connection, ALL, NTLM, ObjectDef, Reader
+import os
 
 
 def logging_config(logging_mode: str= 'INFO', log_to_file: bool=False) -> object:
@@ -35,11 +36,11 @@ def logging_config(logging_mode: str= 'INFO', log_to_file: bool=False) -> object
 Logger = logging_config(logging_mode='INFO', log_to_file=True)
 
 GlobalStartTime = datetime.now()
-
-is_admin = ctypes.windll.shell32.IsUserAnAdmin()
-if is_admin != 1:
-    print('You\'r no admin here!')
-    exit()
+if os.name == 'nt':
+    is_admin = ctypes.windll.shell32.IsUserAnAdmin()
+    if is_admin != 1:
+        print('You\'r no admin here!')
+        exit()
 
 monkey.patch_all()  # makes many blocking calls asynchronous
 

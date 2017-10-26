@@ -149,9 +149,19 @@ class MysqlConnector(object):
                 XWD_FULLNAME = row[0].decode("utf-8")
             return XWD_FULLNAME
         elif self.cursor.rowcount == 0:
+            # dummy fix for issue 11
+            reconfig = Configuration.MySQLConfig()
+            self.__init__(reconfig)
+            self.cursor.execute(query, data)
+            for row in self.cursor:
+                logger.debug('row:' + str(row))
+                XWD_FULLNAME = row[0].decode("utf-8")
+                return XWD_FULLNAME
+            '''
             for row in self.cursor:
                 logger.debug('row:' + str(row))
                 return XWD_FULLNAME
+            '''
         else:
             return XWD_FULLNAME
 
@@ -858,3 +868,21 @@ def migrate_page(title, platform, target_pool, parent, MySQLconfig_INSTANCE, Mys
             print('No files were found')
         result = 'SUCCESS: Page', '"' + title + '" from platform', platform, 'is migrated'
         return True, result
+
+
+def check_exclusions(page: str, platform: str, task_exclusions_dict: ExclusionsDict)->bool:
+        excluded = True
+        try:
+            task_exclusions_dict[platform].index(page)
+        except ValueError:
+            excluded = False
+
+        for exclusion in task_exclusions_dict[platform]:
+            if exclusion is not None:
+                if exclusion.endswith('%'):
+                    if page.startswith(exclusion[:-1]):
+                        excluded = True
+        if excluded is True:
+            return False
+        else:
+            return True

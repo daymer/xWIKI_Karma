@@ -5,12 +5,13 @@ import subprocess
 import sys
 import uuid
 from datetime import datetime
-
+from mwclient import Site
 from PythonConfluenceAPI import ConfluenceAPI
 
 import Configuration
-from CustomModules.Mechanics import PageCreator, ContributionComparator, ExclusionsDict, MysqlConnector
+from CustomModules.Mechanics import ContributionComparator, ExclusionsDict, MysqlConnector
 from CustomModules.SQL_Connector import SQLConnector
+import CustomModules.Mechanics as Mechanics
 
 GlobalStartTime = datetime.now()
 
@@ -46,18 +47,18 @@ def initialize(logging_mode: str = 'INFO', log_to_file: bool = True):
     contrib_compare_inst = ContributionComparator()
     SQL_config_inst = Configuration.SQLConfig()
     confluence_config_inst = Configuration.ConfluenceConfig()
-    MediaWIKI_Config_inst = Configuration.MediaWIKIConfig()
+    media_w_i_k_i__config_inst = Configuration.MediaWIKIConfig()
+    media_wiki_api_inst = Site((media_w_i_k_i__config_inst.Protocol, media_w_i_k_i__config_inst.URL), path=media_w_i_k_i__config_inst.APIPath, clients_useragent=media_w_i_k_i__config_inst.UserAgent)
     xWiki_Config_inst = Configuration.XWikiConfig(['Migration pool', 'Sandbox', 'Main', 'StagingWiki'])
     MySQL_Config_inst = Configuration.MySQLConfig()
     Mysql_connector_inst = MysqlConnector(MySQL_Config_inst)
-    Page_creator_inst = PageCreator(confluence_config_inst, MediaWIKI_Config_inst, xWiki_Config_inst)
     SQL_connector_inst = SQLConnector(SQL_config_inst)
     # getting all pages in Confluence:
     confluenceAPI_inst = ConfluenceAPI(confluence_config_inst.USER, confluence_config_inst.PASS,
                                        confluence_config_inst.ULR)
-    return contrib_compare_inst, Mysql_connector_inst, confluenceAPI_inst, SQL_connector_inst, Page_creator_inst, logger_inst
+    return contrib_compare_inst, Mysql_connector_inst, confluenceAPI_inst, SQL_connector_inst, logger_inst, media_wiki_api_inst
 
-Contrib_Compare_inst, Mysql_Connector_inst, ConfluenceAPI_inst, SQL_Connector_inst, Page_Creator_inst, Logger = initialize('INFO')
+Contrib_Compare_inst, Mysql_Connector_inst, ConfluenceAPI_inst, SQL_Connector_inst, Logger, MediaWIKI_api_inst = initialize('INFO')
 Logger.info('Initialization finished, job started at ' + str(GlobalStartTime))
 # Task:
 #    Confluence: VB (Veeam B&R Basic knowledge), WB (Veeam Support Hints and Tricks), GZ (Ground Zero)
@@ -90,24 +91,24 @@ TaskExclusions['xWIKI'] = 'StagingWiki.WebHome'
 TaskExclusions['xWIKI'] = 'StagingWiki.Personal Spaces%'
 
 
-def build_task_array(task_dict: dict, task_exclusions_dict: dict, Logger):
+def build_task_array(task_dict: dict, task_exclusions_dict: Mechanics.ExclusionsDict, logger):
     global task_pages_dict, platform
     task_pages_dict = {}
     total_size = 0
     for space, platform in task_dict.items():
-        if platform == 'Confluence':
+        if platform.lower() == 'confluence':
             respond = ConfluenceAPI_inst.get_content('page', space, None, 'current', None, None, 0, 500)
             size = respond['size']
             total_size += size
-            Logger.info(str(size) + ' Confluence pages were found in space ' + space)
+            logger.info(str(size) + ' Confluence pages were found in space ' + space)
             try:
                 confluence_pages_from_api = respond['results']
-            except:
-                Logger.error('Unable to get Confluence pages from API, aborting this space')
+            except Exception:
+                logger.error('Unable to get Confluence pages from API, aborting this space')
                 continue
             for page in confluence_pages_from_api:
                 if task_exclusions_dict[platform] is not None:
-                    if not Page_Creator_inst.check_exclusions(page['title'], platform, task_exclusions_dict):
+                    if not Mechanics.check_exclusions(page['title'], platform, task_exclusions_dict):
                         continue
                     else:
                         task_pages_dict.update({page['title']: platform})
@@ -115,12 +116,12 @@ def build_task_array(task_dict: dict, task_exclusions_dict: dict, Logger):
                 else:
                     task_pages_dict.update({page['title']: platform})
                     size += 1
-        if platform == 'MediaWIKI':
+        if platform.lower() == 'mediawiki':
             size = 0
-            for page in Page_Creator_inst.MediaWikiAPI_instance.allpages():
+            for page in MediaWIKI_api_inst.allpages():
                 if task_exclusions_dict[platform] is not None:
-                    if not Page_Creator_inst.check_exclusions(page.name, platform, task_exclusions_dict):
-                        Logger.debug(page.name + ' was excluded, total excluded: ' + str(Page_Creator_inst.TotalExcluded))
+                    if not Mechanics.check_exclusions(page.name, platform, task_exclusions_dict):
+                        logger.debug(page.name + ' was excluded')
                         continue
                     else:
                         task_pages_dict.update({page.name: platform})
@@ -128,15 +129,15 @@ def build_task_array(task_dict: dict, task_exclusions_dict: dict, Logger):
                 else:
                     task_pages_dict.update({page.name: platform})
                     size += 1
-            Logger.info(str(size) + ' MediaWIKI pages were found in space "' + space + '"')
+            logger.info(str(size) + ' MediaWIKI pages were found in space "' + space + '"')
             total_size += size
-        if platform == 'xWIKI':
+        if platform.lower() == 'xwiki':
             size = 0
-            Logger.debug('Looking for pages in the following xWIKI space: "' + space + '"')
+            logger.debug('Looking for pages in the following xWIKI space: "' + space + '"')
             for page in Mysql_Connector_inst.get_XWD_FULLNAMEs(space):
                 if task_exclusions_dict[platform] is not None:
-                    if not Page_Creator_inst.check_exclusions(page, platform, task_exclusions_dict):
-                        Logger.debug(page + ' was excluded, total excluded: ' + str(Page_Creator_inst.TotalExcluded))
+                    if not Mechanics.check_exclusions(page, platform, task_exclusions_dict):
+                        logger.debug(page + ' was excluded')
                         continue
                     else:
                         task_pages_dict.update({page: platform})
@@ -144,11 +145,12 @@ def build_task_array(task_dict: dict, task_exclusions_dict: dict, Logger):
                 else:
                     task_pages_dict.update({page: platform})
                     size += 1
-            Logger.info(str(size) + ' xWIKI pages were found in space "' + space + '"')
+            logger.info(str(size) + ' xWIKI pages were found in space "' + space + '"')
             total_size += size
     TaskStartTime = datetime.now()
-    Logger.info(str(total_size) + ' pages were found in all spaces, excluded: ' + str(Page_Creator_inst.TotalExcluded))
+    logger.info(str(total_size) + ' pages were found in all spaces')
     return task_pages_dict, TaskStartTime
+
 
 def start_core_as_subprocess(dict_to_pickle: dict):
     pickled_data = pickle.dumps(dict_to_pickle, 0)
@@ -158,7 +160,7 @@ def start_core_as_subprocess(dict_to_pickle: dict):
     # print('---------sub process started-------------')
     subprocess.call("python C:/Projects/xWIKI_Karma/CCv2.1.py INFO True -b" + temp_id, shell=True)
 
-task_pages_dict, TaskStartTime = build_task_array(task_dict=Task, task_exclusions_dict=TaskExclusions, Logger=Logger)
+task_pages_dict, TaskStartTime = build_task_array(task_dict=Task, task_exclusions_dict=TaskExclusions, logger=Logger)
 
 # starting main process
 Logger.info('Re-indexing started')
