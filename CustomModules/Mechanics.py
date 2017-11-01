@@ -298,16 +298,16 @@ class XWikiClient(object):
 
     def _build_url(self, path)->str:
         logger = logging.getLogger()
-        logger.debug('Path before _build_url: ' + str(path))
+        # logger.debug('Path before _build_url: ' + str(path))
         path_copy = copy.deepcopy(path)
         for idx, val in enumerate(path_copy):
             val = path[idx]
             if '\\.' in val:
-                logger.debug('"\\." was found, state before: ' + str(path[idx]) + ' fixing...')
+                # logger.debug('"\\." was found, state before: ' + str(path[idx]) + ' fixing...')
                 new_val = val.replace('\\.', '.')
                 path.remove(val)
                 path.insert(idx, new_val)
-                logger.debug('new path[idx]: ' + str(path[idx]) + ' path: ' + str(path))
+                # logger.debug('new path[idx]: ' + str(path[idx]) + ' path: ' + str(path))
             val = path[idx]
             if '/' in val:
                 path[idx] = val.replace('/', '%2F')
@@ -315,11 +315,13 @@ class XWikiClient(object):
             if '[' in val or ']' in val:
                 path[idx] = val.replace('[', '%5B').replace(']', '%5D')
             val = path[idx]
-        logger.debug('Path after _build_url:  ' + str(path))
+            if '\\:' in val:
+                path[idx] = val.replace('\\:', ':')
+        # logger.debug('Path after _build_url:  ' + str(path))
         url = self.api_root + "/".join(path)
         if url.endswith('.'):
             url = url[:-1]
-        logger.debug('Created url: ' + url)
+        # logger.debug('Created url: ' + url)
         return url
 
     def _make_request(self, path, data):
