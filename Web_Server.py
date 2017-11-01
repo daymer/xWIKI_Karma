@@ -46,11 +46,14 @@ monkey.patch_all()  # makes many blocking calls asynchronous
 
 mysql_config = Configuration.MySQLConfig()
 sql_config = Configuration.SQLConfig()
+'''
+# It was an idea to resolve user nave by LDAP, but xWIki lacks DNS to make it real. 
+So, we have an ip of page requester's pc, but nobody want's to spent 1-3 secs waiting for an answer from DNS. 
 ldap_conf = Configuration.LdapConfig()
 ldap_server = Server(ldap_conf.ad_server, get_info=ALL)
 CONN_TO_LDAP = Connection(ldap_server, user=ldap_conf.username, password=ldap_conf.password, authentication=NTLM,
                   auto_bind=True)
-
+'''
 WebPostRequest_instance = WebPostRequest(mysql_config=mysql_config, sql_config=sql_config)
 
 
@@ -98,7 +101,8 @@ def server_logic(environ, start_response):
             request_body_decoded = request_body.decode("utf-8")
             request = parse_qs(request_body_decoded)
             requested_hostname = str(environ['HTTP_HOST']).replace('.amust.local:8080', '')
-            user = ServerFunctions.get_ad_host_description(connection_to_ldap=CONN_TO_LDAP, requested_hostname=requested_hostname)
+            # user = ServerFunctions.get_ad_host_description(connection_to_ldap=CONN_TO_LDAP, requested_hostname=requested_hostname)
+            user = 'Unknown'
             logger.info('Requested by page: ' + environ['HTTP_REFERER'] + ' , user: ' + user + ', method: ' + str(request))
         except KeyError:
             try:

@@ -177,8 +177,9 @@ for title, platform in task_pages_dict.items():
             continue
         try:
             CurrentPage = PageXWiki(page=title, page_title=real_title, client_instance=xWikiAPI_inst)
-        except ValueError:
+        except ValueError as error:
             Logger.error('Unable to initialize PageXWiki instance "' + title + '". Skipping.')
+            Logger.error(error)
             continue
         if CurrentPage.page_id is None:
             Logger.warning(title + ' is redirect or unable to find ID, skipping')

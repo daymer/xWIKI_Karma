@@ -296,14 +296,30 @@ class XWikiClient(object):
         self.auth_user = auth_user
         self.auth_pass = auth_pass
 
-    def _build_url(self, path):
-        # print(path)
-        for idx, val in enumerate(path):
-            path[idx] = val.replace('/', '%2F').replace('\\.', '.')
+    def _build_url(self, path)->str:
+        logger = logging.getLogger()
+        logger.debug('Path before _build_url: ' + str(path))
+        path_copy = copy.deepcopy(path)
+        for idx, val in enumerate(path_copy):
+            val = path[idx]
+            if '\\.' in val:
+                logger.debug('"\\." was found, state before: ' + str(path[idx]) + ' fixing...')
+                new_val = val.replace('\\.', '.')
+                path.remove(val)
+                path.insert(idx, new_val)
+                logger.debug('new path[idx]: ' + str(path[idx]) + ' path: ' + str(path))
+            val = path[idx]
+            if '/' in val:
+                path[idx] = val.replace('/', '%2F')
+            val = path[idx]
+            if '[' in val or ']' in val:
+                path[idx] = val.replace('[', '%5B').replace(']', '%5D')
+            val = path[idx]
+        logger.debug('Path after _build_url:  ' + str(path))
         url = self.api_root + "/".join(path)
         if url.endswith('.'):
             url = url[:-1]
-        # print(url)
+        logger.debug('Created url: ' + url)
         return url
 
     def _make_request(self, path, data):

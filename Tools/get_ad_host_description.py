@@ -3,7 +3,7 @@ import ldap3.core.exceptions as exceptions
 import Configuration
 import logging
 
-requested_hostname = 'sup-a1631'
+requested_hostname = 'vibmpc0ej3mc'
 ldap_conf = Configuration.LdapConfig()
 ldap_server = Server(ldap_conf.ad_server, get_info=ALL)
 CONN_TO_LDAP = Connection(ldap_server, user=ldap_conf.username, password=ldap_conf.password, authentication=NTLM,
