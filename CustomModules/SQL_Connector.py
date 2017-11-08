@@ -201,6 +201,39 @@ class SQLConnector:
             return int(row.version)
         return None
 
+    def select_distinct_product_from_dbo_known_bugs(self)->list:
+        self.cursor.execute(
+            "SELECT distinct [product] FROM [dbo].[KnownBugs] order by [product]")
+        row = self.cursor.fetchall()
+        if row:
+            result = []
+            for line in row:
+                result.append(line[0])
+            return result
+        return None
+
+    def select_distinct_tbfi_from_dbo_known_bugs(self)->list:
+        self.cursor.execute(
+            "SELECT distinct [tbfi] FROM [dbo].[KnownBugs] order by [tbfi]")
+        row = self.cursor.fetchall()
+        if row:
+            result = []
+            for line in row:
+                result.append(line[0])
+            return result
+        return None
+
+    def select_distinct_components_from_dbo_known_bugs(self)->list:
+        self.cursor.execute(
+            "  SELECT distinct [components].value('(./components/component/name)[1]', 'VARCHAR(300)') as nodeName FROM [dbo].[KnownBugs] order by nodeName")
+        row = self.cursor.fetchall()
+        if row:
+            result = []
+            for line in row:
+                result.append(line[0])
+            return result
+        return None
+
     def insert_into_dbo_knownpages(self, page_object: PageMechanics.PageGlobal):
         if isinstance(page_object, PageMechanics.PageXWiki):
             page_platform = 'xwiki'

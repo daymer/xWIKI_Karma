@@ -174,7 +174,6 @@ for title, platform in task_pages_dict.items():
         real_title = Mysql_Connector_inst.get_XWD_TITLE(title)
         if real_title is None or len(real_title) == 0:
             Logger.error('Unable to find title of page "' + title + '". Skipping.')
-            Logger.debug('Real title found: ' + real_title)
             continue
         try:
             CurrentPage = PageXWiki(page=title, page_title=real_title, client_instance=xWikiAPI_inst)

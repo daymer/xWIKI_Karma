@@ -64,6 +64,9 @@
         <input type="button" id="btn10" value="get_bugs">
         <br>
         <br>
+        <input type="button" id="btn11" value="get_bugs_form_content">
+        <br>
+        <br>
         <div id="servermsg"><h1>Message log:</h1></div>
         <script>
         function EpochToDate(epoch) {
@@ -72,6 +75,27 @@
             var epoch = epoch + (new Date().getTimezoneOffset() * -1); //for timeZone
             return new Date(epoch);
         }
+        $('#btn11').click(function(e) {
+                var data = {
+                        "method": "get_bugs_form_content",
+                    };
+                console.log(data);
+                $.ajax({
+                    type: 'POST',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8081',
+                    data: data,
+                    dataType: 'json',
+                    success: function (data) {
+                        console.log(data);
+                        servermsg.innerHTML = servermsg.innerHTML + "<br>Requested: <b>get_bugs_form_content</b><br>"
+                        if (data.error == 0) {
+                           servermsg.innerHTML = servermsg.innerHTML  + "data.products: <br>"+data.products;
+                           servermsg.innerHTML = servermsg.innerHTML  + "<br>data.tbfi: <br>"+data.tbfi;
+                           servermsg.innerHTML = servermsg.innerHTML  + "<br>data.components: <br>"+data.components;
+                        }
+                    }
+                });
+            });
         $('#btn10').click(function(e) {
                 var product_filter_var = $('#get_bugs_product_filter').val();
                 var component_filter_var = $('#get_bugs_component_filter').val();
