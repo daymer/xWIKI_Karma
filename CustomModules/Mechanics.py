@@ -141,7 +141,7 @@ class MysqlConnector(object):
             'XWD_ID': XWD_ID
         }
         self.cursor.execute(query, data)
-        logger.debug('rowcount:' + str(self.cursor.rowcount))
+        # logger.debug('rowcount:' + str(self.cursor.rowcount))
         XWD_FULLNAME = None
         if self.cursor.rowcount != 0:
             for row in self.cursor:
@@ -154,7 +154,7 @@ class MysqlConnector(object):
             self.__init__(reconfig)
             self.cursor.execute(query, data)
             for row in self.cursor:
-                logger.debug('row:' + str(row))
+                # logger.debug('row:' + str(row))
                 XWD_FULLNAME = row[0].decode("utf-8")
                 return XWD_FULLNAME
             '''

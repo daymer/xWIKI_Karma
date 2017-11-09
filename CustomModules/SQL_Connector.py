@@ -5,6 +5,7 @@ from datetime import datetime
 from CustomModules import PageMechanics
 import CustomModules
 import Configuration
+import logging
 
 
 class SQLConnector:
@@ -361,6 +362,23 @@ class SQLConnector:
                 sql_id, user_id, direction)
             self.connection.commit()
             return 'Vote committed'
+
+    def insert_into_dbo_web_requests(self, known_page_id: str, user_id: str, source_platform_id: str, requested_url: str, result: str)->bool:
+        logger = logging.getLogger()
+        try:
+            if known_page_id != 'NULL':
+                self.cursor.execute(
+                    "insert into [dbo].[WebRequests] values (NEWID(), GETDATE(), ?, ?, ?, ?, ?)", known_page_id, requested_url, user_id, source_platform_id, result)
+            else:
+                self.cursor.execute(
+                    "insert into [dbo].[WebRequests] values (NEWID(), GETDATE(), NULL, ?, ?, ?, ?)", requested_url, user_id, source_platform_id, result)
+            self.connection.commit()
+            return True
+        except Exception as error:
+            self.connection.rollback()
+            logger = logging.getLogger()
+            logger.error('Unable to insert new WebRequests due to the following error: ' + error)
+            return False
 
     def update_dbo_knownpages_is_uptodate(self, page_id: str, up_to_date: bool):
         if up_to_date is True:

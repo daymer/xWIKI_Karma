@@ -82,7 +82,7 @@
                 console.log(data);
                 $.ajax({
                     type: 'POST',
-                    url: 'http://SUP-A1631.AMUST.LOCAL:8081',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8080',
                     data: data,
                     dataType: 'json',
                     success: function (data) {
@@ -209,11 +209,12 @@
                 var platform = $('#get_stat_by_title_platform').val();
                 $.ajax({ 
                     type: 'POST', 
-                    url: 'http://SUP-A1631.AMUST.LOCAL:8081', 
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8081',
                     data: {
                         method: "get_stat_by_title",
                         id: text,
-                        platform: platform
+                        platform: platform,
+                        user: 'test',
                     },
                     dataType: 'json',
                     success: function (data) {

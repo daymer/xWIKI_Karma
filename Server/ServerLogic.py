@@ -22,10 +22,10 @@ class WebPostRequest:
         self.last_indexed_page = None
         self.re_index_timeout = 3  # sec
 
-    def invoke(self, method: str, request: dict):
+    def invoke(self, method: str, request: dict, requested_by_url: str):
         """Invokes proper method depending on request"""
         if method == 'get_stat_by_title':
-            return self.get_stat_by_title(request=request)
+            return self.get_stat_by_title(request=request, requested_by_url=requested_by_url)
 
         elif method == 'get_stat_by_user':
             return self.get_stat_by_user(request=request)
@@ -62,24 +62,26 @@ class WebPostRequest:
         else:
             raise Exceptions.MethodNotSupported(message='WebPostRequest has no requested method', arguments={'requested method': method})
 
-    def get_stat_by_title(self, request: dict)->str:
+    def get_stat_by_title(self, request: dict, requested_by_url: str)->str:
+        logger = logging.getLogger()
         try:
             platform = request['platform'][0]
             page_id = request['id'][0]
+            user = request['user'][0]
         except KeyError as error:
             raise Exceptions.BadRequestException('BadRequest', {'Missing 1 required positional argument': str(error)})
-        logger = logging.getLogger()
-        logger.debug('page_id:' + str(page_id))
         xwd_fullname = self.mysql_connector_instance.get_XWD_FULLNAME(XWD_ID=page_id)
-        logger.debug('xwd_fullname: ' + str(xwd_fullname))
         if xwd_fullname is None:
+            self.register_web_request('NULL', user, page_id, requested_by_url, 'Cannot find xwd_fullname of page by the requested XWD_ID')
             raise Exceptions.BadRequestException('BadRequest',
                                                  {'Cannot find xwd_fullname of page by the requested XWD_ID:': page_id})
         temp_array = self.sql_connector_instance.select_id_characters_total_from_dbo_knownpages(
             page_id=xwd_fullname, platform=platform)
         if temp_array is None:
+            self.register_web_request('NULL', user, page_id, requested_by_url,
+                                      'Cannot find a page in database with the requested page_id')
             raise Exceptions.BadRequestException('BadRequest',
-                                                 {'Cannot find page in database with the requested page_id:': xwd_fullname})
+                                                 {'Cannot find a page in database with the requested page_id:': xwd_fullname})
         sql_id_of_requested_page = temp_array[0]
         total_characters_of_requested_page = int(temp_array[1])
         total_contribute_of_requested_page = pickle.loads(
@@ -108,9 +110,13 @@ class WebPostRequest:
             for unit in contributors_percents_sorted[:3]:
                 answer['contributors_percents'].update({unit[0]: unit[1]})
         else:
+            self.register_web_request(sql_id_of_requested_page, user, page_id, requested_by_url,
+                                      'Requested page has 0 length content')
             raise Exceptions.EmptyPage('EmptyPage',
                                                  {'Requested page has 0 length content': xwd_fullname})
         result = self.valid_answer(answer)
+        self.register_web_request(sql_id_of_requested_page, user, page_id, requested_by_url,
+                                  'OK')
         return result
 
     def get_stat_by_user(self, request: dict)->str:
@@ -358,7 +364,6 @@ class WebPostRequest:
             raise Exceptions.NothingFound('Unable to get distincts from SQL',
                                           {'error:': error})
 
-
     def error_answer(self, description: str)->str:
         content = {
             'error': 1,
@@ -369,6 +374,22 @@ class WebPostRequest:
     def valid_answer(self, content: dict)->str:
         return json.dumps(content)
 
+    def register_web_request(self, known_page_id: str, user_id: str, source_platform_id: str, requested_url: str, result: str):
+        # logging the request in sql
+        logger = logging.getLogger()
+        try:
+            register_web_request = self.sql_connector_instance.insert_into_dbo_web_requests(
+                known_page_id=known_page_id, user_id=user_id, source_platform_id=source_platform_id,
+                requested_url=requested_url, result=result)
+            if register_web_request is False:
+                logger.error(
+                    'Unable to register a request: ' + 'known_page_id=' + known_page_id + ' user_id=' + user_id + ' source_platform_id=' + source_platform_id + ' requested_url=' + requested_url + ' result=' + result)
+            else:
+                logger.debug('New web request was added into DB')
+        except Exception as error:
+            logger.error(
+                'Unable to register a request, insert failed with the following error:' + error)
+            pass
 
 def start_core_as_subprocess(dict_to_pickle: dict):
     try:
@@ -395,6 +416,6 @@ def get_ad_host_description(connection_to_ldap,  requested_hostname: str) -> str
         comp_description = r[0].Description
         return str(comp_description)
     except Exception as error:
-        logger.error(error)
+        logger.error('An error occurred:' + error)
         return 'unknown'
 

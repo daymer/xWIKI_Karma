@@ -57,7 +57,9 @@ CONN_TO_LDAP = Connection(ldap_server, user=ldap_conf.username, password=ldap_co
 WebPostRequest_instance = WebPostRequest(mysql_config=mysql_config, sql_config=sql_config)
 
 
-def post_request_analyse(request_body: bytes, logger_handle: logging.RootLogger)->str:
+def post_request_analyse(request_body: bytes, logger_handle: logging.RootLogger, environ: dict)->str:
+    # logger_handle.debug(str(environ))
+    requested_by_url = environ['HTTP_REFERER']
     request_body = request_body.decode("utf-8")
     request = parse_qs(request_body)
     try:
@@ -65,7 +67,7 @@ def post_request_analyse(request_body: bytes, logger_handle: logging.RootLogger)
     except KeyError:
         return json.dumps({'Error': 'Bad request - no method specified'}, separators=(',', ':'))
     try:
-        answer = WebPostRequest_instance.invoke(method=method, request=request)
+        answer = WebPostRequest_instance.invoke(method=method, request=request, requested_by_url=requested_by_url)
         logger_handle.debug(answer)
         return answer
     except WebExceptions.MethodNotSupported as error:
@@ -96,23 +98,17 @@ def server_logic(environ, start_response):
         start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
         request_body = environ["wsgi.input"].read()
         logger = logging.getLogger('root')
-        answer_body = post_request_analyse(request_body, logger_handle=logger)
+        answer_body = post_request_analyse(request_body, logger_handle=logger, environ=environ)
         try:
             request_body_decoded = request_body.decode("utf-8")
             request = parse_qs(request_body_decoded)
             requested_hostname = str(environ['HTTP_HOST']).replace('.amust.local:8080', '')
             # user = ServerFunctions.get_ad_host_description(connection_to_ldap=CONN_TO_LDAP, requested_hostname=requested_hostname)
-            user = 'Unknown'
-            logger.info('Requested by page: ' + environ['HTTP_REFERER'] + ' , user: ' + user + ', method: ' + str(request))
+            ADuser = 'Unknown'
+            logger.info('Requested by page: ' + environ['HTTP_REFERER'] + ' , AD_user: ' + ADuser + ', method: ' + str(request))
         except KeyError:
-            try:
-                if request['REMOTE_ADDR'][0] == '172.17.17.183': # xWiki ip addr
-                    Logger.debug('Requested by http://xwiki.support2.veeam.local/, method: ' + str(request))
-                else:
-                    Logger.debug('Unknown requester, method: ' + request['method'][0])
-                    Logger.debug('Environ: ' + str(environ))
-            except KeyError:
-                pass
+            Logger.debug('Unknown requester, method: ' + request['method'][0])
+            Logger.debug('Environ: ' + str(environ))
             pass
         yield answer_body.encode()
     elif environ["REQUEST_METHOD"] == 'GET':
@@ -122,8 +118,11 @@ def server_logic(environ, start_response):
         start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
         yield '<b>Such requests are not supported</b>\n'.encode()
 
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(('8.8.8.8', 1))  # connect() for UDP doesn't send packets
+local_ip_address = s.getsockname()[0]
 
-address = "SUP-A1631.AMUST.LOCAL", 8080
+address = local_ip_address, 8081
 server = pywsgi.WSGIServer(address, server_logic, log=Logger, error_log=Logger)
 server.backlog = 256
 Logger.info('Initialization finished, server started at ' + str(GlobalStartTime))
