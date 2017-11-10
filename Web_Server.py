@@ -59,7 +59,10 @@ WebPostRequest_instance = WebPostRequest(mysql_config=mysql_config, sql_config=s
 
 def post_request_analyse(request_body: bytes, logger_handle: logging.RootLogger, environ: dict)->str:
     # logger_handle.debug(str(environ))
-    requested_by_url = environ['HTTP_REFERER']
+    try:
+        requested_by_url = environ['HTTP_REFERER']
+    except Exception as error:
+        requested_by_url = 'Undefined'
     request_body = request_body.decode("utf-8")
     request = parse_qs(request_body)
     try:
