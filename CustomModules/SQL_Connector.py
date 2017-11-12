@@ -363,6 +363,29 @@ class SQLConnector:
             self.connection.commit()
             return 'Vote committed'
 
+    def simple_vote(self, seed: str, user_id: str, direction: str):
+        # checking if this user has already voted for this page
+        direction = bool(int(direction))
+        self.cursor.execute(
+            "select id, [direction] from [dbo].[Simple_votes] where seed=? and user_id =?",
+            seed, user_id)
+        raw = self.cursor.fetchone()
+        if raw:
+            current_direction = raw[1]
+            if current_direction is True and direction is True or current_direction is False and direction is False:
+                return 'Error: Already voted'
+            if current_direction is False and direction is True or current_direction is True and direction is False:
+                self.cursor.execute(
+                    "delete from [dbo].[Simple_votes] where id =?", raw.id)
+                self.connection.commit()
+                return 'Vote deleted'
+        else:
+            self.cursor.execute(
+                "insert into [dbo].[Simple_votes] values(NEWID(), ?, ?, ?, GETDATE())",
+                seed, user_id, direction)
+            self.connection.commit()
+            return 'Vote committed'
+
     def insert_into_dbo_web_requests(self, known_page_id: str, user_id: str, source_platform_id: str, requested_url: str, result: str)->bool:
         logger = logging.getLogger()
         try:
@@ -460,6 +483,14 @@ class SQLConnector:
             return raw.up, raw.down, raw.karma_total_score
         return None
 
+    def exec_get_simple_votes(self, seed: str):
+        self.cursor.execute(
+            "EXEC dbo.[get_simple_votes] @seed = ?", seed)
+        raw = self.cursor.fetchone()
+        if raw:
+            return raw.up, raw.down, raw.total
+        return None
+
     def exec_get_user_karma_current_score_detailed(self, user_id: str):
         self.cursor.execute(
             "EXEC [dbo].[get_user_karma_current_score_detailed] @user_id = ?", user_id)
@@ -493,7 +524,7 @@ class SQLConnector:
     def exec_update_or_add_bug_page(self, known_pages_id: str, bug_id: str, product: str, tbfi: str, xml: bytearray) -> bool:
         try:
             self.cursor.execute(
-                "EXEC [dbo].[update_or_Add_bug_page] ?, ?, ?, ?, ?", known_pages_id, bug_id, product, tbfi, xml)
+                "EXEC [dbo].[update_or_add_bug_page] ?, ?, ?, ?, ?", known_pages_id, bug_id, product, tbfi, xml)
             self.connection.commit()
             return True
         except:

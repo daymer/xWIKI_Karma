@@ -32,6 +32,12 @@ class WebPostRequest:
         elif method == 'vote_for_page_as_user':
             return self.vote_for_page_as_user(request=request)
 
+        elif method == 'get_simple_votes':
+            return self.get_simple_votes(request=request)
+
+        elif method == 'simple_vote':
+            return self.simple_vote(request=request)
+
         elif method == 'get_karma_score_global':
             return self.get_karma_score_global()
 
@@ -162,6 +168,45 @@ class WebPostRequest:
             if result.startswith('Error'):
                 error = result
                 result = 'Already voted'
+            else:
+                error = 0
+            answer = {
+                'Error': error,
+                'result': result,
+            }
+            return self.valid_answer(answer)
+
+    def simple_vote(self, request: dict)->str:
+            try:
+                user_name = request['user_name'][0]
+                direction = request['direction'][0]
+                seed = request['seed'][0]
+            except KeyError as error:
+                raise Exceptions.BadRequestException('BadRequest', {'Missing 1 required positional argument': str(error)})
+            user_id = self.sql_connector_instance.select_id_from_dbo_knownpages_users(username=user_name)
+            if user_id is None:
+                raise Exceptions.BadRequestException('BadRequest', {'Cannot find id of user': user_name})
+            result = self.sql_connector_instance.simple_vote(seed=seed, user_id=user_id, direction=direction)
+            if result.startswith('Error'):
+                error = result
+                result = 'Already voted'
+            else:
+                error = 0
+            answer = {
+                'Error': error,
+                'result': result,
+            }
+            return self.valid_answer(answer)
+
+    def get_simple_votes(self, request: dict)->str:
+            try:
+                seed = request['seed'][0]
+            except KeyError as error:
+                raise Exceptions.BadRequestException('BadRequest', {'Missing 1 required positional argument': str(error)})
+            result = self.sql_connector_instance.exec_get_simple_votes(seed=seed)
+            if result is None:
+                error = result
+                result = 'Please, contact xWiki admin.'
             else:
                 error = 0
             answer = {
@@ -389,6 +434,7 @@ class WebPostRequest:
             logger.error(
                 'Unable to register a request, insert failed with the following error:' + error)
             pass
+
 
 def start_core_as_subprocess(dict_to_pickle: dict):
     try:
