@@ -14,7 +14,6 @@ import uuid
 from ldap3 import Server, Connection, ALL, NTLM, ObjectDef, Reader
 import ldap3.core.exceptions as ldap3exceptions
 
-
 class WebPostRequest:
     def __init__(self, mysql_config: Configuration.MySQLConfig, sql_config: Configuration.SQLConfig):
         self.mysql_connector_instance = Mechanics.MysqlConnector(mysql_config)
@@ -393,13 +392,13 @@ class WebPostRequest:
 
 def start_core_as_subprocess(dict_to_pickle: dict):
     try:
-        #print(dict_to_pickle)
+        locality = Configuration.Integration()
         pickled_data = pickle.dumps(dict_to_pickle, 0)
         pickled_and_decoded_dict = pickled_data.decode('latin1')
         temp_id = str(uuid.uuid4())
         os.environ[temp_id] = pickled_and_decoded_dict
         print('---------sub process started-------------')
-        subprocess.call("python C:/Projects/xWIKI_Karma/CCv2.1.py INFO True -b" + temp_id, shell=True)
+        subprocess.call("python " + str(locality.cc_path)+"CCv2.1.py INFO True -b" + temp_id, shell=True)
         return True
     except:
         return False
