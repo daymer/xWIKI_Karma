@@ -5,7 +5,7 @@ import uuid
 import Configuration
 os.supports_bytes_environ = True
 
-dict_to_pickle = {'Main.Bugs and Fixes.Found Bugs.VBR.Bug 116511': 'xwiki'}
+dict_to_pickle = {'Main.Bugs and Fixes.Found Bugs.VBR.Bug 82346': 'xwiki'}
 # dict_to_pickle = {'Patch 1 cannot be installed with "This Veeam Backup & Replication installation cannot be updated automatically"': 'mediawiki'}
 # dict_to_pickle = {'Resolving "Unable to delete host... is used by the following jobs..." in Veeam v9.0 and v9.5': 'confluence'}
 

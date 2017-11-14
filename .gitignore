@@ -22,3 +22,5 @@ Logs/Core_v2.0_2017-11-14_16_27_14_xwiki
 Logs/Core_v2.0_2017-11-14_16_29_25_xwiki
 CustomModules/__pycache__/SQL_Connector.cpython-36.pyc
 CustomModules/__pycache__/SQL_Connector.cpython-36.pyc
+CustomModules/__pycache__/SQL_Connector.cpython-36.pyc
+*.pyc

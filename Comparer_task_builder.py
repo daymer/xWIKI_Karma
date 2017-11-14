@@ -69,11 +69,12 @@ Task = {
      # 'WB': 'Confluence',
      # 'GZ': 'Confluence',
      # 'ALL mWIKI': 'MediaWIKI'
-     'Main': 'xWIKI',
+    # 'Main': 'xWIKI',
     # 'Sandbox': 'xWIKI',
     # 'Migration pool': 'xWIKI',
     # 'Migrated bugs': 'xWIKI'
-     'StagingWiki': 'xWIKI'
+     #'StagingWiki': 'xWIKI'
+    'Main.Bugs and Fixes.Found Bugs.VBR': 'xWIKI'
 }
 TaskExclusions = ExclusionsDict()
 TaskExclusions['Confluence'] = 'List of all KBs'

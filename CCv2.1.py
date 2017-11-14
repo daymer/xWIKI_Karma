@@ -103,6 +103,8 @@ TaskStartTime = datetime.now()
 
 
 def re_info_for_bug_page(page_content_func: str, page_title: str):
+    logger = logging.getLogger()
+    logger.debug(page_content_func)
     bug_id_func = None
     product_func = None
     tbfi_func = None
@@ -123,8 +125,8 @@ def re_info_for_bug_page(page_content_func: str, page_title: str):
         return False
     elif style == 'xwiki':
         regex = r"\*\*Bug ID:\*\* (.*)"
-        logger = logging.getLogger()
         bug_title = page_content_func.split('\n')[1]
+        logger.debug('bug_title:' + bug_title)
         matches = re.search(regex, page_content_func)
         if matches:
             bug_id_func = matches.group(1).replace('\r', '')

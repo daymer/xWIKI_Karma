@@ -105,7 +105,7 @@ class SQLConnector:
 
         query = "WITH OrderedRecords AS" \
                 "(" \
-                "SELECT case when [dbo].[KnownBugs].[bug_title] is NULL then [dbo].[KnownPages].[page_title] when [dbo].[KnownBugs].[bug_title] is not NULL then [dbo].[KnownBugs].[bug_title] end as page_title, [dbo].[KnownBugs].[bug_id], [dbo].[KnownBugs].[product], [dbo].[KnownBugs].[tbfi], [dbo].[KnownBugs].[components]," \
+                "SELECT case when [dbo].[KnownBugs].[bug_title] is NULL then [dbo].[KnownPages].[page_title] when [dbo].[KnownBugs].[bug_title] is not NULL then [dbo].[KnownBugs].[bug_title] end as page_title, [dbo].[KnownBugs].[bug_id], [dbo].[KnownBugs].[product], [dbo].[KnownBugs].[tbfi], [dbo].[KnownBugs].[components], [dbo].[KnownPages].page_id" \
                 "ROW_NUMBER() OVER (ORDER BY [dbo].[KnownPages].id) AS 'RowNumber' " \
                 "FROM [dbo].[KnownBugs] " \
                 "left join [dbo].[KnownPages] on [dbo].[KnownBugs].KnownPages_id = [dbo].[KnownPages].id " \
@@ -127,7 +127,7 @@ class SQLConnector:
             if idx != len(tbfi_filter) - 1:
                 query += " AND "
         query += ")"
-        query += "SELECT [page_title], [bug_id], [product], [tbfi], [components], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
+        query += "SELECT [page_title], [bug_id], [product], [tbfi], [components], [page_id], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
         # print(query)
         self.cursor.execute(query)
         raw = self.cursor.fetchall()
