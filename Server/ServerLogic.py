@@ -387,7 +387,7 @@ class WebPostRequest:
                     if matches:
                         for match in matches:
                             components.append(match.group(1))
-                    answer['bugs'].update({row.RowNumber: {'bug_id': row.bug_id, 'title': row.page_title, 'product': row.product, 'tbfi': row.tbfi, 'components': components}})
+                    answer['bugs'].update({row.RowNumber: {'bug_id': row.bug_id, 'title': row.page_title, 'product': row.product, 'tbfi': row.tbfi, 'components': components, 'path': row.page_id}})
                 return self.valid_answer(answer)
             else:
                 raise Exceptions.NothingFound('NothingFound', {'Query:': [components_filer, product_filter, tbfi_filter, start, end]})
