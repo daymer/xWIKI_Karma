@@ -58,6 +58,7 @@
           <option value="Endpoint Backup">Endpoint Backup</option>
           <option value="WAN Accelerator">WAN Accelerator</option>
           <option value="Encryption">Encryption</option>
+            <option value="PowerShell">PowerShell</option>
         </select>
         <input type="text" placeholder='start' id="get_bugs_start">
         <input type="text" placeholder='end' id="get_bugs_end">
@@ -114,7 +115,7 @@
                 console.log(data);
                 $.ajax({
                     type: 'POST',
-                    url: 'http://SUP-A1631.AMUST.LOCAL:8081',
+                    url: 'http://sup-a1631:8081',
                     data: data,
                     dataType: 'json',
                     success: function (data) {

@@ -108,6 +108,7 @@ def re_info_for_bug_page(page_content_func: str, page_title: str):
     tbfi_func = None
     components_func = None
     style = None
+    bug_title = None
     # determination of page syntax
     regex = r"\*\*Components:\*\* (.*)"
     matches = re.search(regex, page_content_func)
@@ -122,6 +123,8 @@ def re_info_for_bug_page(page_content_func: str, page_title: str):
         return False
     elif style == 'xwiki':
         regex = r"\*\*Bug ID:\*\* (.*)"
+        logger = logging.getLogger()
+        bug_title = page_content_func.split('\n')[1]
         matches = re.search(regex, page_content_func)
         if matches:
             bug_id_func = matches.group(1).replace('\r', '')
@@ -160,7 +163,7 @@ def re_info_for_bug_page(page_content_func: str, page_title: str):
         matches = re.search(regex, page_content_func)
         if matches:
             components_func = matches.group(1).replace('\r', '')
-    return bug_id_func, product_func, tbfi_func, components_func
+    return bug_id_func, product_func, tbfi_func, components_func, bug_title
 
 
 for title, platform in task_pages_dict.items():
@@ -355,7 +358,7 @@ for title, platform in task_pages_dict.items():
         page_content = ''.join(content_as_list)
         result = re_info_for_bug_page(page_content_func=page_content, page_title=CurrentPage.page_title)
         if result is not False:
-            bug_id, product, tbfi, components = result
+            bug_id, product, tbfi, components, bug_title = result
             if bug_id is not None and product is not None and tbfi is not None and components is not None:
                 Logger.info('Bug info is parsed, pushing it to DB')
                 # here we push the data into [dbo].[KnownBugs]
@@ -369,7 +372,7 @@ for title, platform in task_pages_dict.items():
                 byte_xml = bytearray()
                 byte_xml.extend(map(ord, xml))
                 result = SQL_Connector_inst.exec_update_or_add_bug_page(known_pages_id=CurrentPage.SQL_id, bug_id=bug_id,
-                                                                        product=product, tbfi=tbfi, xml=byte_xml)
+                                                                        product=product, tbfi=tbfi, xml=byte_xml, bug_title=bug_title)
                 if result is True:
                     Logger.info('Bug info updated')
                 else:

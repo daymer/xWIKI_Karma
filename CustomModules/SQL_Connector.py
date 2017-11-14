@@ -105,7 +105,7 @@ class SQLConnector:
 
         query = "WITH OrderedRecords AS" \
                 "(" \
-                "SELECT [dbo].[KnownPages].[page_title], [dbo].[KnownBugs].[bug_id], [dbo].[KnownBugs].[product], [dbo].[KnownBugs].[tbfi], [dbo].[KnownBugs].[components]," \
+                "SELECT case when [dbo].[KnownBugs].[bug_title] is NULL then [dbo].[KnownPages].[page_title] when [dbo].[KnownBugs].[bug_title] is not NULL then [dbo].[KnownBugs].[bug_title] end as page_title, [dbo].[KnownBugs].[bug_id], [dbo].[KnownBugs].[product], [dbo].[KnownBugs].[tbfi], [dbo].[KnownBugs].[components]," \
                 "ROW_NUMBER() OVER (ORDER BY [dbo].[KnownPages].id) AS 'RowNumber' " \
                 "FROM [dbo].[KnownBugs] " \
                 "left join [dbo].[KnownPages] on [dbo].[KnownBugs].KnownPages_id = [dbo].[KnownPages].id " \
@@ -128,7 +128,7 @@ class SQLConnector:
                 query += " AND "
         query += ")"
         query += "SELECT [page_title], [bug_id], [product], [tbfi], [components], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
-        print(query)
+        # print(query)
         self.cursor.execute(query)
         raw = self.cursor.fetchall()
         if raw is None:
@@ -521,11 +521,18 @@ class SQLConnector:
             return raw.result
         return None
 
-    def exec_update_or_add_bug_page(self, known_pages_id: str, bug_id: str, product: str, tbfi: str, xml: bytearray) -> bool:
+    def exec_update_or_add_bug_page(self, known_pages_id: str, bug_id: str, product: str, tbfi: str, xml: bytearray, bug_title) -> bool:
+        if bug_title is None:
+            bug_title = 'NULL'
         try:
-            self.cursor.execute(
-                "EXEC [dbo].[update_or_add_bug_page] ?, ?, ?, ?, ?", known_pages_id, bug_id, product, tbfi, xml)
-            self.connection.commit()
+            if bug_title != 'NULL':
+                self.cursor.execute(
+                    "EXEC [dbo].[update_or_add_bug_page] ?, ?, ?, ?, ?, ?", known_pages_id, bug_id, product, tbfi, xml, bug_title)
+                self.connection.commit()
+            elif bug_title == 'NULL':
+                self.cursor.execute(
+                    "EXEC [dbo].[update_or_add_bug_page] ?, ?, ?, ?, ?, NULL", known_pages_id, bug_id, product, tbfi, xml)
+                self.connection.commit()
             return True
         except:
             self.connection.rollback()
