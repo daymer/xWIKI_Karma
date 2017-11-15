@@ -119,7 +119,7 @@ class SQLConnector:
         for idx, product in enumerate(product_filter):
             query += "([product]='" + product + "')"
             if idx != len(product_filter) - 1:
-                query += " AND "
+                query += " OR "
         if len(product_filter) != 0 and len(tbfi_filter) > 0:
             query += " AND "
         for idx, tbfi in enumerate(tbfi_filter):
@@ -128,7 +128,7 @@ class SQLConnector:
                 query += " AND "
         query += ")"
         query += "SELECT [page_title], [bug_id], [product], [tbfi], [components], [page_id], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
-        # print(query)
+        print(query)
         self.cursor.execute(query)
         raw = self.cursor.fetchall()
         if raw is None:
