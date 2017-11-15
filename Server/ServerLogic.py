@@ -177,12 +177,14 @@ class WebPostRequest:
             return self.valid_answer(answer)
 
     def simple_vote(self, request: dict)->str:
+            logger = logging.getLogger()
             try:
                 user_name = request['user_name'][0]
                 direction = request['direction'][0]
                 seed = request['seed'][0]
             except KeyError as error:
                 raise Exceptions.BadRequestException('BadRequest', {'Missing 1 required positional argument': str(error)})
+            logger.debug('seed: ' + seed)
             user_id = self.sql_connector_instance.select_id_from_dbo_knownpages_users(username=user_name)
             if user_id is None:
                 raise Exceptions.BadRequestException('BadRequest', {'Cannot find id of user': user_name})
