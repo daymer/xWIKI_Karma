@@ -206,6 +206,7 @@ class WebPostRequest:
                 seed = request['seed'][0]
             except KeyError as error:
                 raise Exceptions.BadRequestException('BadRequest', {'Missing 1 required positional argument': str(error)})
+            seed = seed.replace('%22', '"')
             result = self.sql_connector_instance.exec_get_simple_votes(seed=seed)
             if result is None:
                 error = result

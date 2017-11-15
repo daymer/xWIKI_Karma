@@ -119,7 +119,7 @@ class SQLConnector:
         for idx, product in enumerate(product_filter):
             query += "([product]='" + product + "')"
             if idx != len(product_filter) - 1:
-                query += " OR "
+                query += " AND "
         if len(product_filter) != 0 and len(tbfi_filter) > 0:
             query += " AND "
         for idx, tbfi in enumerate(tbfi_filter):
