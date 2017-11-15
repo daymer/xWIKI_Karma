@@ -185,6 +185,7 @@ class WebPostRequest:
             except KeyError as error:
                 raise Exceptions.BadRequestException('BadRequest', {'Missing 1 required positional argument': str(error)})
             logger.info('seed: ' + seed)
+            seed = seed.replace('%22', '"')
             user_id = self.sql_connector_instance.select_id_from_dbo_knownpages_users(username=user_name)
             if user_id is None:
                 raise Exceptions.BadRequestException('BadRequest', {'Cannot find id of user': user_name})
