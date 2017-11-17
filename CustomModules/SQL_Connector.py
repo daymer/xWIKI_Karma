@@ -131,7 +131,7 @@ class SQLConnector:
                 query += " and(Charindex('" + component + "',CAST(components AS VARCHAR(MAX)))>0)"
         query += ")"
         query += "SELECT [page_title], [bug_id], [product], [tbfi], [components], [page_id], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
-        # print(query)
+        print(query)
         self.cursor.execute(query)
         raw = self.cursor.fetchall()
         if raw is None:
