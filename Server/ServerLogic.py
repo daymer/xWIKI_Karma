@@ -400,6 +400,21 @@ class WebPostRequest:
                         page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.VBR.', 'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/VBR/')
                     elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.Migrated from mediaWIKI.'):
                         page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.Migrated from mediaWIKI.', 'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/Migrated%20from%20mediaWIKI/')
+                    elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam VBO.'):
+                        page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam VBO.',
+                                                      'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/Veeam%20VBO/')
+                    elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam ONE.'):
+                        page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam ONE.',
+                                                      'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/Veeam%20ONE/')
+                    elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Agent for Linux.'):
+                        page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Agent for Linux.',
+                                                      'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/Veeam%20Agent%20for%20Linux/')
+                    elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.VAW.'):
+                        page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.VAW.',
+                                                  'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/VAW/')
+                    elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.VMP.'):
+                        page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.VMP.',
+                                                  'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/VMP/')
                     answer['bugs'].update({row.RowNumber: {'bug_id': row.bug_id, 'title': row.page_title, 'product': row.product, 'tbfi': row.tbfi, 'components': components, 'path': page_path}})
                 return self.valid_answer(answer)
             else:
