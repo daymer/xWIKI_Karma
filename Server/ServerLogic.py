@@ -391,10 +391,16 @@ class WebPostRequest:
                     if matches:
                         for match in matches:
                             components.append(match.group(1))
-                    answer['bugs'].update({row.RowNumber: {'bug_id': row.bug_id, 'title': row.page_title, 'product': row.product, 'tbfi': row.tbfi, 'components': components, 'path': row.page_id}})
+                    page_path = str(row.page_id)
+                    if page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.VBR.'):
+                        page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.VBR.', 'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/VBR/')
+                    elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.Migrated from mediaWIKI.'):
+                        page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.Migrated from mediaWIKI.', 'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/Migrated%20from%20mediaWIKI/')
+                    answer['bugs'].update({row.RowNumber: {'bug_id': row.bug_id, 'title': row.page_title, 'product': row.product, 'tbfi': row.tbfi, 'components': components, 'path': page_path}})
                 return self.valid_answer(answer)
             else:
-                raise Exceptions.NothingFound('NothingFound', {'Query:': [components_filer, product_filter, tbfi_filter, start, end]})
+                # raise Exceptions.NothingFound('NothingFound', {'Query:': [components_filer, product_filter, tbfi_filter, start, end]})
+                raise Exceptions.NothingFound('NothingFound', {'Reason': 'please, simplify your request'})  # previous fine desc was removed by MC request
 
     def get_bugs_form_content(self) -> str:
         try:
