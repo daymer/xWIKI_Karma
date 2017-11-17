@@ -377,6 +377,10 @@ class WebPostRequest:
                 raise Exceptions.BadRequestException('BadRequest', {'Missing 1 required positional argument': str(error)})
             if int(start) > int(end):
                 raise Exceptions.BadRequestException('BadRequest', {'start > end': str(start) + '>' + str(end)})
+            if tbfi_filter == [] and components_filer == [] and product_filter == []:
+                raise Exceptions.BadRequestException('BadRequest',
+                                                     {'Please specify at least 1 value'})
+
             result = self.sql_connector_instance.select_from_known_bugs_by_filter(components_filer, product_filter, tbfi_filter, start, end)
             if len(result) != 0:
                 answer = {
