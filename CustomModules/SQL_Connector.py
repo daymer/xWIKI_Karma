@@ -110,22 +110,25 @@ class SQLConnector:
                 "FROM [dbo].[KnownBugs] " \
                 "left join [dbo].[KnownPages] on [dbo].[KnownBugs].KnownPages_id = [dbo].[KnownPages].id " \
                 "WHERE "
-        for idx, component in enumerate(components_filer):
-            query += "(Charindex('" + component + "',CAST(components AS VARCHAR(MAX)))>0 )"
-            if idx != len(components_filer) - 1:
-                query += " AND "
-        if len(components_filer) != 0 and len(product_filter) > 0:
-            query += " AND "
-        for idx, product in enumerate(product_filter):
-            query += "([product]='" + product + "')"
-            if idx != len(product_filter) - 1:
-                query += " AND "
-        if len(product_filter) != 0 and len(tbfi_filter) > 0:
-            query += " AND "
-        for idx, tbfi in enumerate(tbfi_filter):
-            query += "([tbfi]='" + tbfi + "')"
-            if idx != len(tbfi_filter) - 1:
-                query += " AND "
+        if len(product_filter) > 0:
+            query += "[product] in ("
+            for idx, product in enumerate(product_filter):
+                query += "'" + product + "'"
+                if idx != len(product_filter) - 1:
+                    query += ", "
+                else:
+                    query += ")"
+        if len(tbfi_filter) > 0:
+            query += "and [tbfi] in ("
+            for idx, tbfi in enumerate(tbfi_filter):
+                query += "'" + tbfi + "'"
+                if idx != len(tbfi_filter) - 1:
+                    query += ", "
+                else:
+                    query += ")"
+        if len(components_filer) > 0:
+            for idx, component in enumerate(components_filer):
+                query += " and(Charindex('" + component + "',CAST(components AS VARCHAR(MAX)))>0)"
         query += ")"
         query += "SELECT [page_title], [bug_id], [product], [tbfi], [components], [page_id], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
         print(query)

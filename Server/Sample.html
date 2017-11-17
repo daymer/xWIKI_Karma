@@ -46,7 +46,8 @@
         <br>
         <select name="product_filter" id="get_bugs_product_filter" multiple>
           <option value="BNR 9.5.0.1038">BNR 9.5.0.1038</option>
-          <option value="Undefined">Undefined</option>
+          <option value="EM 9.5.0.1038">EM 9.5.0.1038</option>
+            <option value="Undefined">Undefined</option>
         </select>
         <select name="tbfi_filter" id="get_bugs_tbfi_filter" multiple>
           <option value="9.X Next">9.X Next</option>
@@ -115,7 +116,7 @@
                 console.log(data);
                 $.ajax({
                     type: 'POST',
-                    url: 'http://xwiki.support2.veeam.local/karma',
+                    url: 'http://sup-a1631:8081',
                     data: data,
                     dataType: 'json',
                     success: function (data) {
