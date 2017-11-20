@@ -131,7 +131,11 @@ class SQLConnector:
                     query += ")"
         if len(components_filer) > 0:
             for idx, component in enumerate(components_filer):
-                query += " and (Charindex('" + component + "',CAST(components AS VARCHAR(MAX)))>0)"
+                if idx == 0 and len(product_filter) != 0 or idx == 0 and len(tbfi_filter) != 0:
+                    query += " and "
+                elif idx > 0:
+                    query += " and "
+                query += "(Charindex('" + component + "',CAST(components AS VARCHAR(MAX)))>0)"
         query += ")"
         query += "SELECT [page_title], [bug_id], [product], [tbfi], [components], [page_id], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
         logger = logging.getLogger()
