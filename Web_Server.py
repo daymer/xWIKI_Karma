@@ -14,7 +14,7 @@ import Configuration
 import socket
 from ldap3 import Server, Connection, ALL, NTLM, ObjectDef, Reader
 import os
-
+import copy
 
 def logging_config(logging_mode: str= 'INFO', log_to_file: bool=False) -> object:
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -70,6 +70,10 @@ def post_request_analyse(request_body: bytes, logger_handle: logging.RootLogger,
     except KeyError:
         return json.dumps({'Error': 'Bad request - no method specified'}, separators=(',', ':'))
     try:
+        test_dict = copy.deepcopy(request)
+        for key, value in test_dict.items():
+            if value.find('"') != -1:
+                request[key] = value.replace('"', '%22')
         answer = WebPostRequest_instance.invoke(method=method, request=request, requested_by_url=requested_by_url)
         logger_handle.debug(answer)
         return answer
@@ -101,7 +105,6 @@ def server_logic(environ, start_response):
         start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
         request_body = environ["wsgi.input"].read()
         logger = logging.getLogger('root')
-        answer_body = post_request_analyse(request_body, logger_handle=logger, environ=environ)
         try:
             request_body_decoded = request_body.decode("utf-8")
             request = parse_qs(request_body_decoded)
@@ -113,6 +116,7 @@ def server_logic(environ, start_response):
             Logger.debug('Unknown requester, method: ' + request['method'][0])
             Logger.debug('Environ: ' + str(environ))
             pass
+        answer_body = post_request_analyse(request_body, logger_handle=logger, environ=environ)
         yield answer_body.encode()
     elif environ["REQUEST_METHOD"] == 'GET':
         start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
