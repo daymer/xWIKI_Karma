@@ -277,6 +277,19 @@ class SQLConnector:
                   'Initial add of ' + page_object.page_title + ' rolled back due to the following error: page with this [page_id] already exists, need to make incremental run')
             raise Exception('Initial add of ' + page_object.page_title + ' rolled back due to the following error:\n' + traceback.format_exc())
 
+    def insert_into_dbo_knownpages_users(self, user_name: str):
+        try:
+            self.cursor.execute(
+                "insert into [dbo].[KnownPages_Users] ([ID],[user_name]) values (NEWID(),?)", user_name)
+            self.connection.commit()
+            self.cursor.execute(
+                "select [ID] from [dbo].[KnownPages_Users] where [user_name]= ?", user_name)
+            row = self.cursor.fetchone()
+            return row.ID
+        except pyodbc.DataError:
+            self.connection.rollback()
+            raise Exception('Initial add of user' + user_name + ' rolled back due to the following error:\n' + traceback.format_exc())
+
     def insert_into_dbo_knownpages_datagrams(self, page_object: PageMechanics.PageGlobal):
         binary_global_array = pickle.dumps(page_object.VersionsGlobalArray, 4)
         binary_contributors = pickle.dumps(page_object.contributors, 4)

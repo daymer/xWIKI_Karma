@@ -72,7 +72,6 @@ def post_request_analyse(request_body: bytes, logger_handle: logging.RootLogger,
     try:
         test_dict = copy.deepcopy(request)
         for key, value in test_dict.items():
-            print(value)
             if value[0].find('"') != -1:
                 request[key] = value.replace('"', '%22')
         answer = WebPostRequest_instance.invoke(method=method, request=request, requested_by_url=requested_by_url)

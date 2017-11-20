@@ -335,9 +335,11 @@
                     url: 'http://SUP-A1631.AMUST.LOCAL:8081',
                     data: {
                         method: "vote_for_page_as_user",
-                        page_title: page_name,
+                        id: page_name,
                         user_name: user_name,
-                        direction: direction
+                        direction: direction,
+                        platform: "xwiki"
+
                     },
                     dataType: 'json',
                     success: function (data) {

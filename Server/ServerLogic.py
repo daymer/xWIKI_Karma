@@ -155,7 +155,8 @@ class WebPostRequest:
                 raise Exceptions.BadRequestException('BadRequest', {'Missing 1 required positional argument': str(error)})
             user_id = self.sql_connector_instance.select_id_from_dbo_knownpages_users(username=user_name)
             if user_id is None:
-                raise Exceptions.BadRequestException('BadRequest', {'Cannot find id of user': user_name})
+                # raise Exceptions.BadRequestException('BadRequest', {'Cannot find id of user': user_name})
+                user_id = self.sql_connector_instance.insert_into_dbo_knownpages_users(user_name)
             xwd_fullname = self.mysql_connector_instance.get_XWD_FULLNAME(XWD_ID=page_id)
             if xwd_fullname is None:
                 raise Exceptions.BadRequestException('BadRequest', {'Cannot find xwd_fullname of page by the requested XWD_ID:': page_id})
