@@ -165,6 +165,10 @@ def re_info_for_bug_page(page_content_func: str, page_title: str):
         matches = re.search(regex, page_content_func)
         if matches:
             components_func = matches.group(1).replace('\r', '')
+    try:
+        bug_id_func = int(bug_id_func)
+    except ValueError as error:
+        bug_id_func = 0
     return bug_id_func, product_func, tbfi_func, components_func, bug_title
 
 
