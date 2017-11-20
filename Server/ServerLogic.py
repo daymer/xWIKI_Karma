@@ -189,7 +189,8 @@ class WebPostRequest:
             seed = seed.replace('%22', '"')
             user_id = self.sql_connector_instance.select_id_from_dbo_knownpages_users(username=user_name)
             if user_id is None:
-                raise Exceptions.BadRequestException('BadRequest', {'Cannot find id of user': user_name})
+                # raise Exceptions.BadRequestException('BadRequest', {'Cannot find id of user': user_name})
+                user_id = self.sql_connector_instance.insert_into_dbo_knownpages_users(user_name)
             result = self.sql_connector_instance.simple_vote(seed=seed, user_id=user_id, direction=direction)
             if result.startswith('Error'):
                 error = result
