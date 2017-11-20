@@ -15,6 +15,7 @@ import socket
 from ldap3 import Server, Connection, ALL, NTLM, ObjectDef, Reader
 import os
 import copy
+from sys import platform
 
 def logging_config(logging_mode: str= 'INFO', log_to_file: bool=False) -> object:
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -23,6 +24,18 @@ def logging_config(logging_mode: str= 'INFO', log_to_file: bool=False) -> object
     integration_config = Configuration.Integration()
     if log_to_file is True:
         log_name = integration_config.log_location + "Web_Server_v2.0_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S")) + '.log'
+        try:
+            previous_log_location = os.environ['karma_log'].encode('latin1')
+        except:
+            previous_log_location = 'none'
+        if platform == "linux" or platform == "linux2":
+            with open(os.path.expanduser("~/.bashrc"), "a") as outfile:
+                # 'a' stands for "append"
+                outfile.write("export karma_log_old="+previous_log_location)
+                outfile.write("export karma_log=" + log_name)
+        elif platform == "win32":
+            # do nothing :)
+            pass
         fh = logging.FileHandler(log_name)
         fh.setLevel(logging_mode)
         fh.setFormatter(formatter)
