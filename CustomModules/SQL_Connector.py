@@ -207,7 +207,7 @@ class SQLConnector:
 
     def select_version_from_dbo_knownpages(self, page_id: str):
         self.cursor.execute(
-            "select [version] from [dbo].[KnownPages] where [page_id] = '" + page_id + "'")
+            "select [version] from [dbo].[KnownPages] where [page_id] = ?", page_id)
         row = self.cursor.fetchone()
         if row:
             return int(row.version)

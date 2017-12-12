@@ -62,10 +62,55 @@ class WebPostRequest:
         elif method == 'get_bugs':
             return self.get_bugs(request=request)
 
+        elif method == 'get_karma_slices_by_user_and_dates':
+            return self.get_karma_slices_by_user_and_dates(request=request)
+
         elif method == 'get_bugs_form_content':
             return self.get_bugs_form_content()
         else:
             raise Exceptions.MethodNotSupported(message='WebPostRequest has no requested method', arguments={'requested method': method})
+
+    def get_karma_slices_by_user_and_dates(self, request: dict)->str:
+        try:
+            username = request['user'][0]
+            date_start = request['date_start'][0]
+            date_end = request['date_end'][0]
+        except KeyError as error:
+            raise Exceptions.BadRequestException('BadRequest', {'Missing 1 required positional argument': str(error)})
+        try:
+            reverse_array = request['reverse_array'][0]
+            d_i_r_t_y__h_a_c_k__f_o_r__eugene = True
+        except KeyError as error:
+            d_i_r_t_y__h_a_c_k__f_o_r__eugene = False
+        try:
+            date_start = datetime.strptime(date_start, '%d-%m-%Y')
+            date_end = datetime.strptime(date_end, '%d-%m-%Y')
+        except ValueError as error:
+            raise Exceptions.BadRequestException('BadRequest',
+                                                 {'Date cannot be recognised. Please, use day-month-year format, example: 31-01-1991'})
+        if date_start > date_end:
+            raise Exceptions.BadRequestException('BadRequest',
+                                                 {'date_start > date_end'})
+        elif date_start == date_end:
+            raise Exceptions.BadRequestException('BadRequest',
+                                                 {'date_start = date_end'})
+        user_id = self.sql_connector_instance.select_id_from_dbo_knownpages_users(username=username)
+        if user_id is None:
+            return json.dumps({'Error': 'bad request - username not found'}, separators=(',', ':'))
+        result = self.sql_connector_instance.select_karma_score_from_userkarma_slice(user_id, date_start, date_end)
+        answer = {
+            'Error': 0,
+            'user': username,
+            'user_id': user_id,
+            'result': {}
+        }
+        if d_i_r_t_y__h_a_c_k__f_o_r__eugene is False:
+            for score, change_time_epoch in result:
+                answer['result'].update({score: change_time_epoch})
+        else:
+            for score, change_time_epoch in result:
+                answer['result'].update({change_time_epoch: score})
+        return self.valid_answer(answer)
 
     def get_stat_by_title(self, request: dict, requested_by_url: str)->str:
         logger = logging.getLogger()

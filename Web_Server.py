@@ -17,6 +17,7 @@ import os
 import copy
 from sys import platform
 
+
 def logging_config(logging_mode: str= 'INFO', log_to_file: bool=False) -> object:
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     logger_inst = logging.getLogger()
