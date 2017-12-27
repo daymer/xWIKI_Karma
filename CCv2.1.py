@@ -104,7 +104,7 @@ TaskStartTime = datetime.now()
 
 def re_info_for_bug_page(page_content_func: str, page_title: str):
     logger = logging.getLogger()
-    logger.debug(page_content_func)
+    #logger.debug(page_content_func)
     bug_id_func = None
     product_func = None
     tbfi_func = None

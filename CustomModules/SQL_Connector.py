@@ -101,6 +101,26 @@ class SQLConnector:
                     date_start.year) + str(date_start.month) + str(date_start.day) + ") and CONVERT(datetime, " + str(
                     date_end.year) + str(date_end.month) + str(date_end.day) + ")")
 
+    def select_karma_diff_between_dates(self, user_id: str, date_start: datetime, date_end: datetime):
+        date_end_year = '%02d' % date_end.year
+        date_end_month = '%02d' % date_end.month
+        date_end_day = '%02d' % date_end.day
+        date_start_year = '%02d' % date_start.year
+        date_start_month = '%02d' % date_start.month
+        date_start_day = '%02d' % date_start.day
+        try:
+            self.cursor.execute(
+                "exec [dbo].[select_karma_diff_between_dates] ?,?,?",
+                user_id, str(date_start_year)+'-'+str(date_start_month)+'-'+str(date_start_day), str(date_end_year)+'-'+str(date_end_month)+'-'+str(date_end_day))
+            raw = self.cursor.fetchone()
+            if raw:
+                return raw.user_id, raw.delta
+            return None
+        except:
+            print("Sad story, but your query is a shit")
+            print(
+                '"exec [dbo].[select_karma_diff_between_dates] ?,?,?",user_id, str(date_start_year)+"-"+str(date_start_month)+"-"+str(date_start_day), str(date_end_year)+"-"+str(date_end_month)+"-"+str(date_end_day))')
+
     def select_from_known_bugs_by_filter(self, components_filer: list, product_filter: list, tbfi_filter: list, start: str, end: str) -> list:
 
         query = "WITH OrderedRecords AS" \
