@@ -140,6 +140,8 @@ class WebPostRequest:
         if user_id is None:
             return json.dumps({'Error': 'bad request - username not found'}, separators=(',', ':'))
         result = self.sql_connector_instance.select_karma_diff_between_dates(user_id, date_start, date_end)
+        if result is None:
+            return self.error_answer('Only 1 Karma slice was found for the requested user, which isn\'t enough to calculate a diff')
         answer = {
             'Error': 0,
             'user': username,
