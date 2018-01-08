@@ -71,6 +71,9 @@ class WebPostRequest:
         elif method == 'get_karma_diff_by_user_between_two_dates':
             return self.get_karma_diff_by_user_between_two_dates(request=request)
 
+        elif method == 'check_if_bug_exists':
+            return self.check_if_bug_exists(request=request)
+
         else:
             raise Exceptions.MethodNotSupported(message='WebPostRequest has no requested method', arguments={'requested method': method})
 
@@ -521,6 +524,28 @@ class WebPostRequest:
         except Exception as error:
             raise Exceptions.NothingFound('Unable to get distincts from SQL',
                                           {'error:': error})
+
+    def check_if_bug_exists(self, request: dict)-> str:
+        try:  # zero title exception
+            bug_id = request['bug_id']
+        except KeyError as error:
+            raise Exceptions.BadRequestException('BadRequest', {'Missing 1 required positional argument': str(error)})
+        result = self.sql_connector_instance.select_count_id_from_knownbugs(bug_id)
+        if result is True:
+            answer = {
+                'error': 0,
+                'exist': 1
+            }
+            return self.valid_answer(answer)
+        elif result is False:
+            answer = {
+                'error': 0,
+                'exist': 0
+            }
+            return self.valid_answer(answer)
+        else:
+            raise Exceptions.NothingFound('NothingFound', {
+                'Reason': 'Please, contact admin'})
 
     def error_answer(self, description: str)->str:
         content = {

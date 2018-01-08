@@ -266,6 +266,37 @@ class SQLConnector:
             return result
         return None
 
+    def select_top_x_requested_url_from_web_requests(self, user: str = 'global', count: str = '10'):
+        if user != 'global':
+            # personalized request
+            self.cursor.execute(
+                "select top ? [requested_url], COUNT([requested_url]) AS MOST_FREQUENT "
+                "from [WebRequests] where [requested_url] != 'http://xwiki.support2.veeam.local/bin/view/Main/' "
+                "user_name = ?"
+                "GROUP BY requested_url"
+                "ORDER BY COUNT(requested_url) DESC", count, user)
+        else:
+            self.cursor.execute(
+                "select top ? [requested_url], COUNT([requested_url]) AS MOST_FREQUENT "
+                "from [WebRequests] where [requested_url] != 'http://xwiki.support2.veeam.local/bin/view/Main/' "
+                "and [requested_url] not like '%Personal%20Spaces%'"
+                "GROUP BY requested_url"
+                "ORDER BY COUNT(requested_url) DESC", count)
+        row = self.cursor.fetchall()
+        if row:
+            return row.requested_url
+        return None
+
+    def select_count_id_from_knownbugs (self, bug_id: str):
+        self.cursor.execute(
+            "select count(id) as essentia from [dbo].[KnownBugs] where bug_id = ?", bug_id)
+        row = self.cursor.fetchone()
+        if row:
+            existence_check = bool(int(row.essentia))
+            print(existence_check)
+            return existence_check
+        return None
+
     def insert_into_dbo_knownpages(self, page_object: PageMechanics.PageGlobal):
         if isinstance(page_object, PageMechanics.PageXWiki):
             page_platform = 'xwiki'
