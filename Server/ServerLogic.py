@@ -589,8 +589,8 @@ def start_core_as_subprocess(dict_to_pickle: dict):
         temp_id = str(uuid.uuid4())
         os.environ[temp_id] = pickled_and_decoded_dict
         logger = logging.getLogger()
-        logger.info('---------sub process started,' + str(locality.cc_path)+'CCv2.1.py-------------')
-        subprocess.call("python " + str(locality.cc_path)+"CCv2.1.py INFO True -b" + temp_id, shell=True)
+        logger.info('---------sub process started,' + str(locality.cc_path)+'CCv2_1.py-------------')
+        subprocess.call("python " + str(locality.cc_path)+"CCv2_1.py INFO True -b" + temp_id, shell=True)
         return True
     except:
         return False

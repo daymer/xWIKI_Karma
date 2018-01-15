@@ -69,12 +69,12 @@ Task = {
      # 'WB': 'Confluence',
      # 'GZ': 'Confluence',
      # 'ALL mWIKI': 'MediaWIKI'
-    # 'Main': 'xWIKI',
-    # 'Sandbox': 'xWIKI',
+     #'Main': 'xWIKI',
+     'Main.Bugs and Fixes.Found Bugs': 'xWIKI',
     # 'Migration pool': 'xWIKI',
     # 'Migrated bugs': 'xWIKI'
-     #'StagingWiki': 'xWIKI'
-    'Main.Bugs and Fixes.Found Bugs.VBR': 'xWIKI'
+    #  'StagingWiki': 'xWIKI'
+    # 'StagingWiki': 'xWIKI'
 }
 TaskExclusions = ExclusionsDict()
 TaskExclusions['Confluence'] = 'List of all KBs'
@@ -159,7 +159,7 @@ def start_core_as_subprocess(dict_to_pickle: dict):
     temp_id = str(uuid.uuid4())
     os.environ[temp_id] = pickled_and_decoded_dict
     # print('---------sub process started-------------')
-    subprocess.call("python C:/Projects/xWIKI_Karma/CCv2.1.py INFO True -b" + temp_id, shell=True)
+    subprocess.call("python C:/Projects/xWIKI_Karma/CCv2_1.py INFO True -b" + temp_id, shell=True)
 
 task_pages_dict, TaskStartTime = build_task_array(task_dict=Task, task_exclusions_dict=TaskExclusions, logger=Logger)
 
