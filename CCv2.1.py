@@ -4,6 +4,9 @@ import os
 import pickle
 import re
 from datetime import datetime
+import requests
+import urllib3
+
 
 from PythonConfluenceAPI import ConfluenceAPI
 from mwclient import Site
@@ -94,9 +97,10 @@ def initialize(task_pages_dict: dict, logging_mode: str = 'INFO', log_to_file_va
                                   x_wiki__config_inst.auth_pass)
     m_wiki_api_instance = Site((m_wiki__config_inst.Protocol, m_wiki__config_inst.URL), path=m_wiki__config_inst.APIPath,
                                           clients_useragent=m_wiki__config_inst.UserAgent)
-    return contrib_compare_inst, mysql_connector_inst, confluence_api_inst, sql_connector_inst, logger_inst, x_wiki_api_inst, m_wiki_api_instance
+    search_config_inst = Configuration.SearchConfig()
+    return contrib_compare_inst, mysql_connector_inst, confluence_api_inst, sql_connector_inst, logger_inst, x_wiki_api_inst, m_wiki_api_instance, search_config_inst
 
-Contrib_Compare_inst, Mysql_Connector_inst, ConfluenceAPI_inst, SQL_Connector_inst, Logger, xWikiAPI_inst, mWikiAPI_instance = initialize(task_pages_dict, logging_mode=log_level, log_to_file_var=log_to_file)
+Contrib_Compare_inst, Mysql_Connector_inst, ConfluenceAPI_inst, SQL_Connector_inst, Logger, xWikiAPI_inst, mWikiAPI_instance, Search_Config = initialize(task_pages_dict, logging_mode=log_level, log_to_file_var=log_to_file)
 Logger.info('Initialization finished, job started at ' + str(GlobalStartTime))
 
 TaskStartTime = datetime.now()
@@ -104,7 +108,7 @@ TaskStartTime = datetime.now()
 
 def re_info_for_bug_page(page_content_func: str, page_title: str):
     logger = logging.getLogger()
-    #logger.debug(page_content_func)
+    logger.debug(page_content_func)
     bug_id_func = None
     product_func = None
     tbfi_func = None
@@ -384,6 +388,35 @@ for title, platform in task_pages_dict.items():
                 else:
                     Logger.error(
                         'Unable to update bug info in SQL, query params: known_pages_id:' + CurrentPage.SQL_id + ' bug_id: ' + bug_id + ' product: ' + product + ' tbfi: ' + tbfi + ' xml: ' + xml)
+                # TFS => KARMA sync
+                tfs_session = requests.session()
+                try:
+                    login_status = tfs_session.post(Search_Config.search_server_url + 'login', data=Search_Config.credentials)
+                    search_api_check = tfs_session.get(Search_Config.search_server_url + 'api_check')
+                    if search_api_check.status_code != 200 or login_status.status_code != 200:
+                        raise requests.exceptions.ConnectionError
+                    bug_info = tfs_session.get(Search_Config.search_server_url + 'api/bug_details/{0}'.format(bug_id))
+                    bug_info_json = bug_info.json()
+                    TFS_bug_created_date = bug_info_json['results']['Created Date']
+                    TFS_bug_changed_date = bug_info_json['results']['Changed Date']
+                    TFS_bug_state = bug_info_json['results']['State']
+                    TFS_bug_status = bug_info_json['results']['Status']
+                    TFS_bug_build = bug_info_json['results']['Build']
+                    known_bug_id = SQL_Connector_inst.select_id_from_knownbugs(bug_id)
+                    existence_check = SQL_Connector_inst.select_count_id_from_knownbugs_tfs_state(known_bug_id)
+                    if existence_check is True:
+                        SQL_Connector_inst.update_dbo_knownbugs_tfs_state(known_bug_id, TFS_bug_created_date, TFS_bug_changed_date, TFS_bug_state, TFS_bug_status, TFS_bug_build)
+                    elif existence_check is False:
+                        SQL_Connector_inst.insert_into_dbo_knownbugs_tfs_state(known_bug_id, TFS_bug_created_date, TFS_bug_changed_date, TFS_bug_state, TFS_bug_status, TFS_bug_build)
+                    else:
+                        Logger.error('known_bug_id is None, aborting TFS => KARMA sync')
+                except (urllib3.exceptions.NewConnectionError, ConnectionRefusedError, urllib3.exceptions.MaxRetryError,
+                        requests.exceptions.ConnectionError) as error:
+                    Logger.error('Search API unreachable due to the following error: \n' + str(error))
+                    Logger.error('Aborting TFS => KARMA sync')
+
+                except Exception as error:
+                    Logger.error('Aborting TFS => KARMA sync due to uknown error: \n' + str(error))
             else:
                 Logger.error('Failed to parse some of fields, aborting bug analyze')
         else:
