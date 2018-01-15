@@ -287,13 +287,38 @@ class SQLConnector:
             return row.requested_url
         return None
 
-    def select_count_id_from_knownbugs (self, bug_id: str):
+    def select_count_id_from_knownbugs(self, bug_id: str):
         self.cursor.execute(
-            "select count(id) as essentia from [dbo].[KnownBugs] where bug_id = ?", bug_id)
+            "select count(id) as essentia from [dbo].[KnownBugs] where [bug_id] = ?", bug_id)
         row = self.cursor.fetchone()
         if row:
             existence_check = bool(int(row.essentia))
-            print(existence_check)
+            return existence_check
+        return None
+
+    def select_id_from_knownbugs(self, bug_id: str):
+        self.cursor.execute(
+            "SELECT [ID] FROM [dbo].[KnownBugs] where [bug_id] = ?", bug_id)
+        row = self.cursor.fetchone()
+        if row:
+            known_bugs_id = row.ID
+            return known_bugs_id
+        return None
+
+    def select_tfs_info_from_knownbugs_tfs_state(self, known_bug_id: str):
+        self.cursor.execute(
+            "SELECT [created_date],[changed_date],[state],[status],[build],[check_date] FROM [dbo].[KnownBugs_TFS_state] where [id] = ?", known_bug_id)
+        row = self.cursor.fetchone()
+        if row:
+            return row
+        return None
+
+    def select_count_id_from_knownbugs_tfs_state(self, known_bug_id: str):
+        self.cursor.execute(
+            "SELECT count([KnownBug_ID]) as essentia FROM [dbo].[KnownBugs_TFS_state] where [KnownBug_ID] = ?", known_bug_id)
+        row = self.cursor.fetchone()
+        if row:
+            existence_check = bool(int(row.essentia))
             return existence_check
         return None
 
@@ -438,6 +463,15 @@ class SQLConnector:
             self.connection.commit()
             return 'Vote committed'
 
+    def insert_into_dbo_knownbugs_tfs_state(self, known_bug_id: str, created_date: str, changed_date: str, state: str, status: str, build: str):
+        try:
+            self.cursor.execute(
+                "insert into [dbo].[KnownBugs_TFS_state] values (?,?,?,?,?,?, GETDATE())", known_bug_id, created_date, changed_date, state, status, build)
+            self.connection.commit()
+        except pyodbc.DataError:
+            self.connection.rollback()
+            raise Exception('insert of TFS Bug info related to "' + known_bug_id + ' rolled back due to the following error:\n' + traceback.format_exc())
+
     def simple_vote(self, seed: str, user_id: str, direction: str):
         # checking if this user has already voted for this page
         direction = bool(int(direction))
@@ -512,6 +546,20 @@ class SQLConnector:
         except:
             self.connection.rollback()
             return False
+
+    def update_dbo_knownbugs_tfs_state(self, known_bug_id: str, created_date: str, changed_date: str, state: str, status: str, build: str):
+        try:
+            self.cursor.execute(
+                "update [dbo].[KnownBugs_TFS_state] set [created_date]=?,"
+                "[changed_date]=?,"
+                "[state]=?,"
+                "[status]=?,"
+                "[build]=?,"
+                "[check_date]=GETDATE() where [KnownBug_ID] = ?)", created_date, changed_date, state, status, build, known_bug_id)
+            self.connection.commit()
+        except pyodbc.DataError:
+            self.connection.rollback()
+            raise Exception('update of TFS Bug info related to "' + known_bug_id + ' rolled back due to the following error:\n' + traceback.format_exc())
 
     def exec_delete_page_by_page_id(self, page_id: str)->bool:
         try:
