@@ -116,7 +116,7 @@ def post_request_analyse(request_body: bytes, logger_handle: logging.RootLogger,
 
 def server_logic(environ, start_response):
     if environ["REQUEST_METHOD"] == "POST":
-        start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
+        start_response("200 OK", [("Content-Type", "application/json; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
         request_body = environ["wsgi.input"].read()
         logger = logging.getLogger('root')
         try:
@@ -133,10 +133,10 @@ def server_logic(environ, start_response):
         answer_body = post_request_analyse(request_body, logger_handle=logger, environ=environ)
         yield answer_body.encode()
     elif environ["REQUEST_METHOD"] == 'GET':
-        start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
+        start_response("200 OK", [("Content-Type", "application/json; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
         yield '<b>Server is operational</b>\n'.encode()
     else:
-        start_response("200 OK", [("Content-Type", "text/html; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
+        start_response("200 OK", [("Content-Type", "application/json; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
         yield '<b>Such requests are not supported</b>\n'.encode()
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
