@@ -503,6 +503,12 @@ class WebPostRequest:
                     elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.VMP.'):
                         page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.VMP.',
                                                   'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/VMP/')
+                    elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Backup for Office365.'):
+                        page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Backup for Office365.',
+                                                  'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/Veeam%20Backup%20for%20Office365/')
+                    elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.vac.'):
+                        page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.vac.',
+                                                  'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/vac/')
                     answer['bugs'].update({row.RowNumber: {'bug_id': row.bug_id, 'title': row.page_title, 'product': row.product, 'tbfi': row.tbfi, 'components': components, 'path': page_path}})
                 return self.valid_answer(answer)
             else:
