@@ -114,6 +114,52 @@ def post_request_analyse(request_body: bytes, logger_handle: logging.RootLogger,
         pass
 
 
+def get_request_analyse(logger_handle: logging.RootLogger, environ: dict)->str:
+    #logger_handle.debug(str(environ))
+    try:
+        requested_by_url = environ['HTTP_REFERER']
+    except Exception as error:
+        requested_by_url = 'Undefined'
+    request = parse_qs(environ['QUERY_STRING'])
+    try:
+        method = request['method'][0]
+    except KeyError:
+        return json.dumps({'Error': 'Bad request - no method specified'}, separators=(',', ':'))
+    try:
+        test_dict = copy.deepcopy(request)
+        for key, value in test_dict.items():
+            if value[0].find('"') != -1:
+                request[key] = value.replace('"', '%22')
+        if str(method).startswith('get'):
+            answer = WebPostRequest_instance.invoke(method=method, request=request, requested_by_url=requested_by_url)
+            logger_handle.debug(answer)
+            return answer
+        else:
+            logger_handle.error('Get instead of post, environ:' + str(environ))
+            return WebPostRequest_instance.error_answer('Are you Mikhail Shmakov?')
+    except WebExceptions.MethodNotSupported as error:
+        logger_handle.error(error)
+        return WebPostRequest_instance.error_answer(str(error))
+
+    except WebExceptions.BadRequestException as error:
+        logger_handle.error(error)
+        return WebPostRequest_instance.error_answer(str(error))
+
+    except (WebExceptions.EmptyPage, WebExceptions.DeprecatedPage, WebExceptions.IndexingTimeOut, WebExceptions.IndexingFailure, WebExceptions.KarmaInvokeFailure, WebExceptions.NothingFound) as error:
+        logger_handle.error(error)
+        return WebPostRequest_instance.error_answer(str(error))
+
+    except WebExceptions.PageDeleteFailure as error:
+        logger_handle.error('Critical Exception:')
+        logger_handle.error(error)
+        return WebPostRequest_instance.error_answer(str(error))
+
+    except Exception as error:
+        logger_handle.error(error)
+        return WebPostRequest_instance.error_answer(str(error))
+        pass
+
+
 def server_logic(environ, start_response):
     if environ["REQUEST_METHOD"] == "POST":
         start_response("200 OK", [("Content-Type", "application/json; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
@@ -134,7 +180,22 @@ def server_logic(environ, start_response):
         yield answer_body.encode()
     elif environ["REQUEST_METHOD"] == 'GET':
         start_response("200 OK", [("Content-Type", "application/json; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
-        yield '<b>Server is operational</b>\n'.encode()
+        request_body = environ["wsgi.input"].read()
+        logger = logging.getLogger('root')
+        try:
+            request_body_decoded = request_body.decode("utf-8")
+            request = parse_qs(request_body_decoded)
+            requested_hostname = str(environ['HTTP_HOST']).replace('.amust.local:8080', '')
+            # user = ServerFunctions.get_ad_host_description(connection_to_ldap=CONN_TO_LDAP, requested_hostname=requested_hostname)
+            #ADuser = 'Unknown'
+            #logger.info('Requested by page: ' + environ['HTTP_REFERER'] + ' , AD_user: ' + ADuser + ', method: ' + str(request))
+        except KeyError:
+            #Logger.debug('Unknown requester, method: ' + request['method'][0])
+            #Logger.debug('Environ: ' + str(environ))
+            pass
+        answer_body = get_request_analyse(logger_handle=logger, environ=environ)
+        yield answer_body.encode()
+        #yield '<b>Server is operational</b>\n'.encode()
     else:
         start_response("200 OK", [("Content-Type", "application/json; charset=utf-8"), ("Access-Control-Allow-Origin", "*")])
         yield '<b>Such requests are not supported</b>\n'.encode()
