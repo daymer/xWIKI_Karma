@@ -555,7 +555,7 @@ class SQLConnector:
                 "[state]=?,"
                 "[status]=?,"
                 "[build]=?,"
-                "[check_date]=GETDATE() where [KnownBug_ID] = ?)", created_date, changed_date, state, status, build, known_bug_id)
+                "[check_date]=GETDATE() where [KnownBug_ID] = ?", created_date, changed_date, state, status, build, known_bug_id)
             self.connection.commit()
         except pyodbc.DataError:
             self.connection.rollback()
