@@ -11,3 +11,4 @@ test.py
 /Tools/.cache/
 /CustomModules/__pycache__/Mechanics.cpython-36.pyc
 *.cpython-36.pyc
+Tools/ndif test.py
