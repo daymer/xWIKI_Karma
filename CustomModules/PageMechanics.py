@@ -159,6 +159,7 @@ class PageXWiki(PageGlobal):
     def get_version_content_by_version(self, version_number: int) -> tuple:
         if type(self) is PageXWiki:
             response = self.xWikiClient_inst.get_page_version_content_and_author(space=self.space, page=self.page, version=str(version_number) + '.1', nested_space=self.nested_spaces, is_terminal_page=self.is_terminal_page)
-            page_version = response[0]
+            #page_version = response[0]
+            page_version = str(response[0]).replace('\r\n', '\n')
             contributor = response[1]
             return version_number, page_version, contributor

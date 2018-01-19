@@ -10,10 +10,14 @@ SQLConnector = SQLConnector(SQLConfig)
 xWikiConfig = Configuration.XWikiConfig('Migration pool')
 xWikiClient = XWikiClient(xWikiConfig.api_root, xWikiConfig.auth_user, xWikiConfig.auth_pass)
 
-PageTitle = 'Using WMI to query Veeam BnR information'
+PageTitle = 'Bug 94139 - Encrypted backup copy can be failed with the following error message: "Invalid attempt to perform DB entities encryption while encryption is not enabled"'
 platform = 'xWIKI'
 SQLQuery = SQLConnector.select_datagrams_from_dbo_knownpages_datagrams(PageTitle, platform)
 datagram = SQLQuery[0]
+print(datagram)
+content_as_list = [x[0] for x in datagram]
+page_content = ''.join(content_as_list)
+print(page_content)
 contributors_datagram = SQLQuery[1]
 Colors = ['BRIGHT_GREEN','YELLOW','TEAL','VIOLET','PINK','RED','TURQUOISE','DARK_YELLOW','GRAY_50','GRAY_25','DARK_BLUE','DARK_RED','BLUE','GREEN']
 ColorsByUser = {}

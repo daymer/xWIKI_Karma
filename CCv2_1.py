@@ -26,9 +26,9 @@ log_to_file = None
 #                      Test variables                        #
 UseTestVarsSwitch = False
 TestVars = {
-    'log_level': 'INFO',
+    'log_level': 'DEBUG',
     'log_to_file': False,
-    'task_pages_dict': {'Sandbox.Pages.test.WebHome': 'xWIKI'}
+    'task_pages_dict': {'Main.Bugs and Fixes.Found Bugs.Migrated from mediaWIKI.939ab1d4f9f24331e952b7dccf0c7c1b': 'xWIKI'}
 }
 #                                                            #
 ##############################################################
@@ -56,7 +56,7 @@ if log_level is None or task_pages_dict is None or log_to_file is None:
     exit(1)
 
 
-def initialize(task_pages_dict: dict, logging_mode: str = 'INFO', log_to_file_var: bool = False):
+def initialize(task_pages_dict: dict, logging_mode: str = 'INFO', log_to_file_var: bool = False, contrib_log_mode: str = 'silent'):
     ###################################################################################################################
     # Contrib_Compare_inst - used to analyze pages and create page contribution maps based on the content,            #
     # collected from one of supported platforms                                                                       #
@@ -72,9 +72,9 @@ def initialize(task_pages_dict: dict, logging_mode: str = 'INFO', log_to_file_va
         if len(task_pages_dict) == 1:
             task_pages_dict_temp = task_pages_dict.copy()
             log_title, log_platform = task_pages_dict_temp.popitem()
-            log_name = integration_config.CC_log_location + "Core_v2.0_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S")) + '_' + str(log_title[:20]).replace('/', '').replace('\\', '') + '_' + log_platform + '.log'
+            log_name = integration_config.CC_log_location + "Core_v2.1_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S")) + '_' + str(log_title).replace('/', '').replace('\\', '') + '_' + log_platform + '.log'
         else:
-            log_name = integration_config.CC_log_location + "Core_v2.0_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S")) + '.log'
+            log_name = integration_config.CC_log_location + "Core_v2.1_" + str(datetime.now().strftime("%Y-%m-%d_%H_%M_%S")) + '.log'
         fh = logging.FileHandler(log_name)
         fh.setLevel(logging_mode)
         fh.setFormatter(formatter)
@@ -83,7 +83,7 @@ def initialize(task_pages_dict: dict, logging_mode: str = 'INFO', log_to_file_va
     ch.setLevel(logging_mode)
     ch.setFormatter(formatter)
     logger_inst.addHandler(ch)
-    contrib_compare_inst = ContributionComparator()
+    contrib_compare_inst = ContributionComparator(contrib_log_mode)
     sql__config_inst = Configuration.SQLConfig()
     confluence__config_inst = Configuration.ConfluenceConfig()
     m_wiki__config_inst = Configuration.MediaWIKIConfig()
@@ -309,6 +309,9 @@ for title, platform in task_pages_dict.items():
         TempArray = SQL_Connector_inst.select_datagram_contributors_datagram_from_dbo_knownpages_datagrams(sql_id=CurrentPage.SQL_id)
         CurrentPage.VersionsGlobalArray = pickle.loads(TempArray[0])
         TempContributors = pickle.loads(TempArray[1])
+        content_as_list = [x[0] for x in CurrentPage.VersionsGlobalArray]
+        page_content = ''.join(content_as_list)
+        Logger.debug(page_content)
         # comparing latest versions
         Contrib_Compare_inst.incremental_compare(CurrentPage)
         CurrentPage.TotalCharacters = len(CurrentPage.VersionsGlobalArray)
@@ -338,12 +341,16 @@ for title, platform in task_pages_dict.items():
         PageAnalysisStartTime = None
         PageAnalysisEndTime = None
         PageCountingEndTime = None
+        content_as_list = [x[0] for x in CurrentPage.VersionsGlobalArray]
+        page_content = ''.join(content_as_list)
+        Logger.debug(page_content)
         # pushing updates to SQL
         SQL_Connector_inst.update_dbo_knownpages_last_check_last_modified(CurrentPage.SQL_id, CurrentPage.page_versions, CurrentPage.TotalCharacters)
         SQL_Connector_inst.update_dbo_knownpages_datagrams(page_object=CurrentPage)
         SQL_Connector_inst.insert_into_dbo_knownpages_contribution(page_object=CurrentPage)
         SQL_Connector_inst.insert_into_dbo_knownpages_userscontribution(page_object=CurrentPage)
         SQL_Connector_inst.update_dbo_knownpages_is_uptodate(page_id=CurrentPage.page_id, up_to_date=True)
+    # IDLE MODE:
     elif CurrentPage.dbVersion == CurrentPage.page_versions:
         CurrentPage.SQL_id = SQL_Connector_inst.select_id_from_dbo_knownpages(page_object=CurrentPage,
                                                                               page_id=CurrentPage.page_id)
@@ -416,7 +423,25 @@ for title, platform in task_pages_dict.items():
                     Logger.error('Aborting TFS => KARMA sync')
 
                 except Exception as error:
-                    Logger.error('Aborting TFS => KARMA sync due to uknown error: \n' + str(error))
+                    Logger.error('Aborting TFS => KARMA sync due to unknown error: ' + str(error))
+                    try:
+                        Logger.error('Result of request: ' + str(bug_info))
+                        if bug_info.status_code == 403:
+                            Logger.error('Seems to be a xwiki bug add procedure violation, adding this info to DB')
+                            known_bug_id = SQL_Connector_inst.select_id_from_knownbugs(bug_id)
+                            existence_check = SQL_Connector_inst.select_count_id_from_knownbugs_tfs_state(known_bug_id)
+                            if existence_check is True:
+                                SQL_Connector_inst.update_dbo_knownbugs_tfs_state(known_bug_id, 'NONE',
+                                                                                  'NONE', 'NONE',
+                                                                                  'bug add procedure violation!', 'NONE')
+                            elif existence_check is False:
+                                SQL_Connector_inst.insert_into_dbo_knownbugs_tfs_state(known_bug_id, 'NONE',
+                                                                                  'NONE', 'NONE',
+                                                                                  'bug add procedure violation!', 'NONE')
+                            else:
+                                Logger.error('known_bug_id is None, aborting TFS => KARMA sync')
+                    except:
+                        pass
             else:
                 Logger.error('Failed to parse some of fields, aborting bug analyze')
         else:

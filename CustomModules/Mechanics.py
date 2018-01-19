@@ -58,26 +58,30 @@ class ContributionComparator:
     def incremental_compare(self, current_page_instance):
         # compares all existing version from current_page_instance.dbVersion to the current_page_instance.versions
         for index, VersionContent in enumerate(current_page_instance.PageVersionsDict):
-            if self.logging_mode != 'silent': print('Iteration number', index)
+            logger = logging.getLogger()
+            if self.logging_mode != 'silent':
+                logger.debug('Iteration number' + str(index))
             if index == len(current_page_instance.PageVersionsDict) - 1:
                 break
             stage_first = VersionContent
             stage_next = current_page_instance.PageVersionsDict[index + 1]
             try:
                 if self.logging_mode != 'silent':
-                    print(stage_first)
-                    print(stage_next)
+                    logger.debug('Stage first \n' + str(stage_first))
+                    logger.debug('Stage next \n' + str(stage_next))
                 array_to_compare = difflib.ndiff(stage_first[1], stage_next[1])
                 for i, s in enumerate(
                         array_to_compare):  # TODO: each s[0] == ' ' extends loop. Need to find a way to ignore them
                     if s[0] == '+':
-                        if self.logging_mode != 'silent': print(u'Add "{}" to position {}'.format(s[-1], i))
+                        if self.logging_mode != 'silent':
+                            logger.debug('Add "' + str(s[-1]) + '" to position ' + str(i))
                         current_page_instance.VersionsGlobalArray.insert(i, [s[-1], stage_next[0]])
                     elif s[0] == '-':
-                        if self.logging_mode != 'silent': print(u'Delete "{}" from position {}'.format(s[-1], i))
+                        if self.logging_mode != 'silent':
+                            logger.debug('Delete "'+ str(s[-1]) +'" from position ' + str(i))
                         current_page_instance.VersionsGlobalArray[i] = None
                 if self.logging_mode != 'silent':
-                    print('Done with compare, removing deleted characters...')
+                    logger.debug('Done with compare, removing deleted characters...')
                 self.temp_array[:] = []
                 self.some_other_array[:] = []
                 self.temp_array = copy.deepcopy(current_page_instance.VersionsGlobalArray)
@@ -85,14 +89,14 @@ class ContributionComparator:
                 self.some_other_array = [x for x in self.temp_array if x is not None]
                 current_page_instance.VersionsGlobalArray = copy.deepcopy(self.some_other_array)
             except Exception as error:
-                print('Incremental compare of page was failed with error:', error)
+                logger.critical('Incremental compare of page was failed with error:' + str(error))
                 for each in current_page_instance.VersionsGlobalArray:
                     if each is None:
-                        print(each, 'is none, but WTF?')
+                        logger.critical(str(each) + 'is none, but WTF?')
                         break
-                print('current_page_instance.VersionsGlobalArray', current_page_instance.VersionsGlobalArray)
-                print('Len of array', len(current_page_instance.VersionsGlobalArray))
-                exit()
+                logger.critical('current_page_instance.VersionsGlobalArray' + str(current_page_instance.VersionsGlobalArray))
+                logger.critical('Len of array'+ str(len(current_page_instance.VersionsGlobalArray)))
+                exit(1)
 
 
 class MysqlConnector(object):

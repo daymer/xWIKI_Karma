@@ -322,6 +322,15 @@ class SQLConnector:
             return existence_check
         return None
 
+    def select_custom_select(self, select: str):
+        if not select.lower().startswith('select'):
+            return None
+        self.cursor.execute(select)
+        row = self.cursor.fetchall()
+        if row:
+            return row
+        return None
+
     def insert_into_dbo_knownpages(self, page_object: PageMechanics.PageGlobal):
         if isinstance(page_object, PageMechanics.PageXWiki):
             page_platform = 'xwiki'
