@@ -76,6 +76,9 @@ Task = {
     #  'StagingWiki': 'xWIKI'
     # 'StagingWiki': 'xWIKI'
 }
+
+
+
 TaskExclusions = ExclusionsDict()
 TaskExclusions['Confluence'] = 'List of all KBs'
 TaskExclusions['MediaWIKI'] = 'Found Bugs'
@@ -90,6 +93,9 @@ TaskExclusions['MediaWIKI'] = 'Team Members'
 TaskExclusions['xWIKI'] = 'Main.WebHome'
 TaskExclusions['xWIKI'] = 'StagingWiki.WebHome'
 TaskExclusions['xWIKI'] = 'StagingWiki.Personal Spaces%'
+
+#select = None
+select = "select page_id, page_title, bug_id from [dbo].[KnownPages] inner join [dbo].[KnownBugs] on [dbo].[KnownPages].id =[dbo].[KnownBugs].KnownPages_id where [dbo].[KnownPages].id in(select KnownPages_id from [dbo].[KnownBugs] where id not in (select [KnownBug_ID] FROM [Karma].[dbo].[KnownBugs_TFS_state]) and bug_id != '0')"
 
 
 def build_task_array(task_dict: dict, task_exclusions_dict: Mechanics.ExclusionsDict, logger):
@@ -152,6 +158,18 @@ def build_task_array(task_dict: dict, task_exclusions_dict: Mechanics.Exclusions
     logger.info(str(total_size) + ' pages were found in all spaces')
     return task_pages_dict, TaskStartTime
 
+def build_task_array_by_sql_select(select: str, logger, SQL_Connector_inst):
+    task_pages_dict = {}
+    TaskStartTime = datetime.now()
+    pages = SQL_Connector_inst.select_custom_select(select)
+    for page in pages:
+        page = page[0]
+        if str(page).startswith('xwiki:'):
+            page = str(page).replace('xwiki:', '')
+        task_pages_dict.update({page: 'xwiki'})
+    total_size = len(task_pages_dict)
+    logger.info(str(total_size) + ' pages were found in all spaces')
+    return task_pages_dict, TaskStartTime
 
 def start_core_as_subprocess(dict_to_pickle: dict):
     pickled_data = pickle.dumps(dict_to_pickle, 0)
@@ -161,8 +179,10 @@ def start_core_as_subprocess(dict_to_pickle: dict):
     # print('---------sub process started-------------')
     subprocess.call("python C:/Projects/xWIKI_Karma/CCv2_1.py INFO True -b" + temp_id, shell=True)
 
-task_pages_dict, TaskStartTime = build_task_array(task_dict=Task, task_exclusions_dict=TaskExclusions, logger=Logger)
-
+if select is None:
+    task_pages_dict, TaskStartTime = build_task_array(task_dict=Task, task_exclusions_dict=TaskExclusions, logger=Logger)
+else:
+    task_pages_dict, TaskStartTime = build_task_array_by_sql_select(select=select, logger=Logger, SQL_Connector_inst=SQL_Connector_inst)
 # starting main process
 Logger.info('Re-indexing started')
 
