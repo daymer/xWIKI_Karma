@@ -499,11 +499,11 @@ class WebPostRequest:
                     elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Agent for Linux.'):
                         page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Agent for Linux.',
                                                       'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/Veeam%20Agent%20for%20Linux/')
-                    elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Agent for Microsoft Windows.2\.1'):
-                        page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Agent for Microsoft Windows.2\.1',
+                    elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Agent for Microsoft Windows.2\.1.'):
+                        page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Agent for Microsoft Windows.2\.1.',
                                                       'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/Veeam%20Agent%20for%20Microsoft%20Windows/2.1/')
-                    elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Agent for Microsoft Windows.2\.0'):
-                        page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Agent for Microsoft Windows.2\.0',
+                    elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Agent for Microsoft Windows.2\.0.'):
+                        page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Agent for Microsoft Windows.2\.0.',
                                                       'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/Veeam%20Agent%20for%20Microsoft%20Windows/2.0/')
                     elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.VAW.'):
                         page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.VAW.',
