@@ -20,6 +20,8 @@ class WebPostRequest:
         self.sql_connector_instance = SQL_Connector.SQLConnector(sql_config)
         self.last_indexed_page = None
         self.re_index_timeout = 3  # sec
+        self.veeam_versions_inst = Configuration.VeeamVersions()
+        self.versions_dict = self.veeam_versions_inst.versions_dict
 
     def invoke(self, method: str, request: dict, requested_by_url: str):
         """Invokes proper method depending on request"""
@@ -509,7 +511,25 @@ class WebPostRequest:
                     elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.vac.'):
                         page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.vac.',
                                                   'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/vac/')
-                    answer['bugs'].update({row.RowNumber: {'bug_id': row.bug_id, 'title': row.page_title, 'product': row.product, 'tbfi': row.tbfi, 'components': components, 'path': page_path}})
+                    # adding TFS bug state
+                    fixed_in_ga_build = None
+                    # SQL_DB_ID = self.sql_connector_instance.select_id_from_knownbugs(row.bug_id)
+                    sql_db_bug_record_id = row.id
+                    if sql_db_bug_record_id is not None:
+                        state, status = self.sql_connector_instance.select_state_status_from_knownbugs_fts_state(knownbug_id=sql_db_bug_record_id)
+                        # suppressing states to true or false
+                        if state is None:
+                            state = 'INTERNAL ERROR'
+                            status = 'INTERNAL ERROR'
+                        elif state == 'Finished' or state == 'In Inspecting':
+                            state = 'Fixed'
+                            fixed_in_ga_build = self.find_ga_build(self.sql_connector_instance.select_build_from_knownbugs_fts_state(knownbug_id=sql_db_bug_record_id))
+                        else:
+                            state = 'Not Fixed'
+                    else:
+                        state = 'INTERNAL ERROR'
+                        status = 'INTERNAL ERROR'
+                    answer['bugs'].update({row.RowNumber: {'bug_id': row.bug_id, 'title': row.page_title, 'product': row.product, 'tbfi': row.tbfi, 'components': components, 'path': page_path, 'state': state, 'fixed_in_build': fixed_in_ga_build, 'status': status}})
                 return self.valid_answer(answer)
             else:
                 # raise Exceptions.NothingFound('NothingFound', {'Query:': [components_filer, product_filter, tbfi_filter, start, end]})
@@ -580,6 +600,24 @@ class WebPostRequest:
                 'Unable to register a request, insert failed with the following error:' + error)
             pass
 
+    def find_ga_build(self, build_to_compare: str) -> str:
+        build_major = build_to_compare[:3]
+        regex = r".*\.(.*)"
+        matches = re.match(regex, build_to_compare)
+        try:
+            build_minor = int(matches.group(1))
+        except ValueError:
+            match_with_no_str = re.sub('[^0-9]', '', matches.group(1))
+            build_minor = int(match_with_no_str)
+        try:
+            selected_build_versions = self.versions_dict[build_major]
+            selected_build_versions = filter(lambda x: int(x) >= int(build_minor), selected_build_versions)
+            minor_build_prod = min(selected_build_versions, key=lambda x: (int(x) - build_minor))
+            result = build_major + '.0.' + minor_build_prod
+        except KeyError:
+            # logically shown if submitted build is > current Veeam version
+            result = build_to_compare
+        return result
 
 def start_core_as_subprocess(dict_to_pickle: dict):
     try:

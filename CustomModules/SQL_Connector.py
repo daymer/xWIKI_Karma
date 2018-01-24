@@ -125,7 +125,7 @@ class SQLConnector:
 
         query = "WITH OrderedRecords AS" \
                 "(" \
-                "SELECT case when [dbo].[KnownBugs].[bug_title] is NULL then [dbo].[KnownPages].[page_title] when [dbo].[KnownBugs].[bug_title] is not NULL then [dbo].[KnownBugs].[bug_title] end as page_title, [dbo].[KnownBugs].[bug_id], [dbo].[KnownBugs].[product], [dbo].[KnownBugs].[tbfi], [dbo].[KnownBugs].[components], [dbo].[KnownPages].page_id," \
+                "SELECT case when [dbo].[KnownBugs].[bug_title] is NULL then [dbo].[KnownPages].[page_title] when [dbo].[KnownBugs].[bug_title] is not NULL then [dbo].[KnownBugs].[bug_title] end as page_title, [dbo].[KnownBugs].id, [dbo].[KnownBugs].[bug_id], [dbo].[KnownBugs].[product], [dbo].[KnownBugs].[tbfi], [dbo].[KnownBugs].[components], [dbo].[KnownPages].page_id," \
                 "ROW_NUMBER() OVER (ORDER BY [dbo].[KnownBugs].bug_id) AS 'RowNumber' " \
                 "FROM [dbo].[KnownBugs] " \
                 "left join [dbo].[KnownPages] on [dbo].[KnownBugs].KnownPages_id = [dbo].[KnownPages].id " \
@@ -157,7 +157,7 @@ class SQLConnector:
                     query += " and "
                 query += "(Charindex('" + component + "',CAST(components AS VARCHAR(MAX)))>0)"
         query += ")"
-        query += "SELECT [page_title], [bug_id], [product], [tbfi], [components], [page_id], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
+        query += "SELECT [id], [page_title], [bug_id], [product], [tbfi], [components], [page_id], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
         logger = logging.getLogger()
         # logger.critical(query)
         self.cursor.execute(query)
@@ -329,6 +329,20 @@ class SQLConnector:
         row = self.cursor.fetchall()
         if row:
             return row
+        return None
+
+    def select_state_status_from_knownbugs_fts_state(self, knownbug_id: str):
+        self.cursor.execute('select state, status from [dbo].[KnownBugs_TFS_state] where KnownBug_ID=?', knownbug_id)
+        row = self.cursor.fetchone()
+        if row:
+            return row.state, row.status
+        return None, None
+
+    def select_build_from_knownbugs_fts_state(self, knownbug_id: str):
+        self.cursor.execute('select build from [dbo].[KnownBugs_TFS_state] where KnownBug_ID=?', knownbug_id)
+        row = self.cursor.fetchone()
+        if row:
+            return row.build
         return None
 
     def insert_into_dbo_knownpages(self, page_object: PageMechanics.PageGlobal):
