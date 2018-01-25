@@ -529,7 +529,10 @@ class WebPostRequest:
                             status = 'INTERNAL ERROR'
                         elif state == 'Finished' or state == 'In Inspecting':
                             state = 'Fixed'
-                            fixed_in_ga_build = self.find_ga_build(self.sql_connector_instance.select_build_from_knownbugs_fts_state(knownbug_id=sql_db_bug_record_id))
+                            try:
+                                fixed_in_ga_build = self.find_ga_build(self.sql_connector_instance.select_build_from_knownbugs_fts_state(knownbug_id=sql_db_bug_record_id))
+                            except Exception:
+                                fixed_in_ga_build = 'INTERNAL ERROR'
                         else:
                             state = 'Not Fixed'
                     else:
