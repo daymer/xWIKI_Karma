@@ -125,6 +125,13 @@ def re_info_for_bug_page(page_content_func: str, page_title: str):
         matches = re.search(regex, page_content_func)
         if matches:
             style = 'mwiki'
+        else:
+            # extra check for moved space
+            regex = r"\*\*Components: \*\*(.*)"
+            matches = re.search(regex, page_content_func)
+            if matches:
+                style = 'xmwiki_moved_space'
+    logger.debug('Bug style is: ' + str(style))
     if style is None:
         return False
     elif style == 'xwiki':
@@ -143,6 +150,31 @@ def re_info_for_bug_page(page_content_func: str, page_title: str):
         if matches:
             tbfi_func = matches.group(1).replace('\r', '')
         regex = r"\*\*Components:\*\* (.*)"
+        matches = re.search(regex, page_content_func)
+        if matches:
+            components_func = matches.group(1).replace('\r', '')
+    elif style == 'xmwiki_moved_space':
+        regex = r"\*\*Bug ID: \*\*(.*)"
+        matches = re.search(regex, page_content_func)
+        if matches:
+            bug_id_func = matches.group(1).replace('\r', '')
+        else:
+            regex = r"Bug (.*) -"
+            matches = re.search(regex, page_title)
+            if matches:
+                bug_id_func = matches.group(1).replace('\r', '')
+                logger.debug('bug_id_func: ' + str(bug_id_func))
+        regex = r"\*\*Product: \*\*(.*)"
+        matches = re.search(regex, page_content_func)
+        if matches:
+            product_func = matches.group(1).replace('\r', '')
+        else:
+            product_func = 'Undefined'
+        regex = r"\*\*To be fixed in: \*\*(.*)"
+        matches = re.search(regex, page_content_func)
+        if matches:
+            tbfi_func = matches.group(1).replace('\r', '')
+        regex = r"\*\*Components: \*\*(.*)"
         matches = re.search(regex, page_content_func)
         if matches:
             components_func = matches.group(1).replace('\r', '')
