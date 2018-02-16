@@ -70,6 +70,9 @@
         <input type="button" id="btn11" value="get_bugs_form_content">
         <br>
         <br>
+        <input type="button" id="btn12" value="get_bugs_form_content_by_product">
+        <br>
+        <br>
         <div id="servermsg"><h1>Message log:</h1></div>
         <script>
         function EpochToDate(epoch) {
@@ -95,6 +98,27 @@
                            servermsg.innerHTML = servermsg.innerHTML  + "data.products: <br>"+data.products;
                            servermsg.innerHTML = servermsg.innerHTML  + "<br>data.tbfi: <br>"+data.tbfi;
                            servermsg.innerHTML = servermsg.innerHTML  + "<br>data.components: <br>"+data.components;
+                        }
+                    }
+                });
+            });
+        $('#btn12').click(function(e) {
+                var data = {
+                        "method": "get_bugs_form_content_by_product",
+                    };
+                console.log(data);
+                $.ajax({
+                    type: 'GET',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8081',
+                    data: data,
+                    dataType: 'json',
+                    success: function (data) {
+                        console.log(data);
+                        servermsg.innerHTML = servermsg.innerHTML + "<br>Requested: <b>get_bugs_form_content_by_product</b><br>"
+                        if (data.error == 0) {
+                           servermsg.innerHTML = servermsg.innerHTML  + "data.products: <br>"+data.products;
+                           servermsg.innerHTML = servermsg.innerHTML  + "<br>data.tbfi: <br>"+data.tbfi;
+                           servermsg.innerHTML = servermsg.innerHTML  + "<br>data.components_by_products: <br>"+data.components_by_products;
                         }
                     }
                 });

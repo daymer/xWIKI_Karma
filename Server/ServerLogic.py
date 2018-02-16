@@ -76,6 +76,9 @@ class WebPostRequest:
         elif method == 'check_if_bug_exists':
             return self.check_if_bug_exists(request=request)
 
+        elif method == 'get_bugs_form_content_by_product':
+            return self.get_bugs_form_content_by_product()
+
         else:
             raise Exceptions.MethodNotSupported(message='WebPostRequest has no requested method', arguments={'requested method': method})
 
@@ -554,6 +557,22 @@ class WebPostRequest:
                 'products': products,
                 'tbfi': tbfis,
                 'components': components,
+            }
+            return self.valid_answer(answer)
+        except Exception as error:
+            raise Exceptions.NothingFound('Unable to get distincts from SQL',
+                                          {'error:': error})
+
+    def get_bugs_form_content_by_product(self) -> str:
+        try:
+            products = self.sql_connector_instance.select_distinct_product_from_dbo_known_bugs()
+            tbfis = self.sql_connector_instance.select_distinct_tbfi_from_dbo_known_bugs()
+            components = self.sql_connector_instance.select_distinct_components_by_product_from_dbo_known_bugs()
+            answer = {
+                'error': 0,
+                'products': products,
+                'tbfi': tbfis,
+                'components_by_products': components,
             }
             return self.valid_answer(answer)
         except Exception as error:

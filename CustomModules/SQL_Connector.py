@@ -266,6 +266,33 @@ class SQLConnector:
             return result
         return None
 
+    def select_distinct_components_by_product_from_dbo_known_bugs(self)->dict:
+        self.cursor.execute(
+            "SELECT distinct [components].value('(./components/component/name)[1]', 'VARCHAR(300)') as nodeName, product FROM [dbo].[KnownBugs]")
+        rows = self.cursor.fetchall()
+        if rows:
+            result = {
+                'BNR': [],
+                'EM': [],
+                'VAW': [],
+                'VAL': [],
+                'VBO365': [],
+                'VONE': [],
+                'Undefined': [],
+                'other': []
+            }
+            for line in rows:
+                component_was_added = False
+                for product in result.keys():
+                    if line.product.startswith(product):
+                        component_was_added = True
+                        if line.nodeName not in result[product]:
+                            result[product].append(line.nodeName)
+                if component_was_added is False:
+                    result['other'].append(line.product + ':' + line.nodeName)
+            return result
+        return None
+
     def select_top_x_requested_url_from_web_requests(self, user: str = 'global', count: str = '10'):
         if user != 'global':
             # personalized request
