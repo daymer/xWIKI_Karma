@@ -94,8 +94,8 @@ TaskExclusions['xWIKI'] = 'Main.WebHome'
 TaskExclusions['xWIKI'] = 'StagingWiki.WebHome'
 TaskExclusions['xWIKI'] = 'StagingWiki.Personal Spaces%'
 
-#select = None
-select = "select page_id, page_title, bug_id from [dbo].[KnownPages] inner join [dbo].[KnownBugs] on [dbo].[KnownPages].id =[dbo].[KnownBugs].KnownPages_id where [dbo].[KnownPages].id in(select KnownPages_id from [dbo].[KnownBugs] where id not in (select [KnownBug_ID] FROM [Karma].[dbo].[KnownBugs_TFS_state]) and bug_id != '0')"
+select = None
+#select = "select page_id from [dbo].[KnownPages] inner join [dbo].[KnownBugs] on [dbo].[KnownPages].id =[dbo].[KnownBugs].KnownPages_id where [dbo].[KnownPages].id in(select KnownPages_id from [dbo].[KnownBugs] where id not in (select [KnownBug_ID] FROM [Karma].[dbo].[KnownBugs_TFS_state]) and bug_id != '0')"
 
 
 def build_task_array(task_dict: dict, task_exclusions_dict: Mechanics.ExclusionsDict, logger):
