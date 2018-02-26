@@ -644,7 +644,8 @@ class WebPostRequest:
             result = build_major + '.0.' + minor_build_prod
         except KeyError:
             # logically shown if submitted build is > current Veeam version
-            result = build_to_compare
+            #result = build_to_compare
+            result = '10.0 Next'
         return result
 
 def start_core_as_subprocess(dict_to_pickle: dict):
