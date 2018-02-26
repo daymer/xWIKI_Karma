@@ -644,13 +644,13 @@ class WebPostRequest:
         try:
             selected_build_versions = self.versions_dict[build_major]
             selected_build_versions = filter(lambda x: int(x) >= int(build_minor), selected_build_versions)
-            if len(list(selected_build_versions)) == 0:
-                return self.next_VBR_version
             minor_build_prod = min(selected_build_versions, key=lambda x: (int(x) - build_minor))
             result = build_major + '.0.' + minor_build_prod
         except KeyError as error:
             # logically shown if submitted build is > current Veeam version
             #result = build_to_compare
+            result = self.next_VBR_version
+        except ValueError:
             result = self.next_VBR_version
         return result
 
