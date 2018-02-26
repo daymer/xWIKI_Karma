@@ -22,6 +22,7 @@ class WebPostRequest:
         self.re_index_timeout = 3  # sec
         self.veeam_versions_inst = Configuration.VeeamVersions()
         self.versions_dict = self.veeam_versions_inst.versions_dict
+        self.next_VBR_version = self.veeam_versions_inst.next_version
 
     def invoke(self, method: str, request: dict, requested_by_url: str):
         """Invokes proper method depending on request"""
@@ -525,6 +526,8 @@ class WebPostRequest:
                     # SQL_DB_ID = self.sql_connector_instance.select_id_from_knownbugs(row.bug_id)
                     sql_db_bug_record_id = row.id
                     if sql_db_bug_record_id is not None:
+                        logging_inst = logging.getLogger()
+                        logging_inst.debug('Searching for GA build....')
                         state, status = self.sql_connector_instance.select_state_status_from_knownbugs_fts_state(knownbug_id=sql_db_bug_record_id)
                         # suppressing states to true or false
                         if state is None:
@@ -533,6 +536,7 @@ class WebPostRequest:
                         elif state == 'Finished' or state == 'In Inspecting' or state == 'Fixed':
                             state = 'Fixed'
                             try:
+                                logging_inst.debug('invoking find_ga_build, vars:' + str(sql_db_bug_record_id))
                                 fixed_in_ga_build = self.find_ga_build(self.sql_connector_instance.select_build_from_knownbugs_fts_state(knownbug_id=sql_db_bug_record_id))
                             except Exception:
                                 fixed_in_ga_build = 'INTERNAL ERROR'
@@ -640,12 +644,14 @@ class WebPostRequest:
         try:
             selected_build_versions = self.versions_dict[build_major]
             selected_build_versions = filter(lambda x: int(x) >= int(build_minor), selected_build_versions)
+            if len(list(selected_build_versions)) == 0:
+                return self.next_VBR_version
             minor_build_prod = min(selected_build_versions, key=lambda x: (int(x) - build_minor))
             result = build_major + '.0.' + minor_build_prod
-        except KeyError:
+        except KeyError as error:
             # logically shown if submitted build is > current Veeam version
             #result = build_to_compare
-            result = '10.0 Next'
+            result = self.next_VBR_version
         return result
 
 def start_core_as_subprocess(dict_to_pickle: dict):
