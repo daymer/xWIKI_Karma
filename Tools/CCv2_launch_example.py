@@ -5,7 +5,7 @@ import uuid
 import Configuration
 os.supports_bytes_environ = True
 
-dict_to_pickle = {'Main.Bugs and Fixes.Found Bugs.Veeam Agent for Microsoft Windows.Bug 125279': 'xwiki'}
+dict_to_pickle = {'Main.Bugs and Fixes.Found Bugs.Veeam Agent for Microsoft Windows.2\.1.Bug 123445 - Merge fails with Banks pool is full on a very large job': 'xwiki'}
 #dict_to_pickle = {'StagingWiki.New_articles.Notepad Basics and Useful Hints and Tips.WebHome': 'xwiki'}
 #Main.Bugs and Fixes.Found Bugs.Migrated from mediaWIKI.2e4e87d48d264d80ecbf8a2a5831fa3e
 # dict_to_pickle = {'Patch 1 cannot be installed with "This Veeam Backup & Replication installation cannot be updated automatically"': 'mediawiki'}

@@ -641,18 +641,21 @@ class WebPostRequest:
         except ValueError:
             match_with_no_str = re.sub('[^0-9]', '', matches.group(1))
             build_minor = int(match_with_no_str)
-        try:
-            selected_build_versions = self.versions_dict[build_major]
-            selected_build_versions = filter(lambda x: int(x) >= int(build_minor), selected_build_versions)
-            minor_build_prod = min(selected_build_versions, key=lambda x: (int(x) - build_minor))
-            result = build_major + '.0.' + minor_build_prod
-        except KeyError as error:
-            # logically shown if submitted build is > current Veeam version
-            #result = build_to_compare
-            result = self.next_VBR_version
-        except ValueError:
-            result = self.next_VBR_version
-        return result
+        if int(build_major[:1]) > 6:
+            try:
+                selected_build_versions = self.versions_dict[build_major]
+                selected_build_versions = filter(lambda x: int(x) >= int(build_minor), selected_build_versions)
+                minor_build_prod = min(selected_build_versions, key=lambda x: (int(x) - build_minor))
+                result = build_major + '.0.' + minor_build_prod
+            except KeyError as error:
+                # logically shown if submitted build is > current Veeam version
+                #result = build_to_compare
+                result = self.next_VBR_version
+            except ValueError:
+                result = self.next_VBR_version
+            return result
+        else:
+            return build_to_compare
 
 def start_core_as_subprocess(dict_to_pickle: dict):
     try:
