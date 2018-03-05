@@ -536,8 +536,8 @@ class WebPostRequest:
                         elif state == 'Finished' or state == 'In Inspecting' or state == 'Fixed':
                             state = 'Fixed'
                             try:
-                                logging_inst.debug('invoking find_ga_build, vars:' + str(sql_db_bug_record_id))
-                                if not page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Agent for Linux'):
+                                if not page_path.startswith('http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/Veeam%20Agent%20for%20Linux/'):
+                                    logging_inst.debug('invoking find_ga_build, vars:' + str(sql_db_bug_record_id))
                                     fixed_in_ga_build = self.find_ga_build(self.sql_connector_instance.select_build_from_knownbugs_fts_state(knownbug_id=sql_db_bug_record_id))
                                 else:
                                     fixed_in_ga_build = self.sql_connector_instance.select_build_from_knownbugs_fts_state(knownbug_id=sql_db_bug_record_id)
