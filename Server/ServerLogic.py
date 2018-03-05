@@ -537,7 +537,10 @@ class WebPostRequest:
                             state = 'Fixed'
                             try:
                                 logging_inst.debug('invoking find_ga_build, vars:' + str(sql_db_bug_record_id))
-                                fixed_in_ga_build = self.find_ga_build(self.sql_connector_instance.select_build_from_knownbugs_fts_state(knownbug_id=sql_db_bug_record_id))
+                                if not page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.Veeam Agent for Linux'):
+                                    fixed_in_ga_build = self.find_ga_build(self.sql_connector_instance.select_build_from_knownbugs_fts_state(knownbug_id=sql_db_bug_record_id))
+                                else:
+                                    fixed_in_ga_build = self.sql_connector_instance.select_build_from_knownbugs_fts_state(knownbug_id=sql_db_bug_record_id)
                             except Exception:
                                 fixed_in_ga_build = 'INTERNAL ERROR'
                         else:
@@ -641,7 +644,7 @@ class WebPostRequest:
         except ValueError:
             match_with_no_str = re.sub('[^0-9]', '', matches.group(1))
             build_minor = int(match_with_no_str)
-        if int(build_major[:1]) > 6:
+        if int(build_major[:1]) > 1:
             try:
                 selected_build_versions = self.versions_dict[build_major]
                 selected_build_versions = filter(lambda x: int(x) >= int(build_minor), selected_build_versions)
