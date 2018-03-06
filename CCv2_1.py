@@ -115,6 +115,8 @@ def re_info_for_bug_page(page_content_func: str, page_title: str):
     components_func = None
     style = None
     bug_title = None
+    added_to_wiki_func = None
+    added_to_wiki_by_func = None
     # determination of page syntax
     regex = r"\*\*Components:\*\* (.*)"
     matches = re.search(regex, page_content_func)
@@ -153,6 +155,14 @@ def re_info_for_bug_page(page_content_func: str, page_title: str):
         matches = re.search(regex, page_content_func)
         if matches:
             components_func = matches.group(1).replace('\r', '')
+        regex = r"\*\*Added:\*\* (.*) by"
+        matches = re.search(regex, page_content_func)
+        if matches:
+            added_to_wiki_func = matches.group(1).replace('\r', '')
+        regex = r"\*\*Added:\*\* .* by \[\[(.*)>>"
+        matches = re.search(regex, page_content_func)
+        if matches:
+            added_to_wiki_by_func = matches.group(1).replace('\r', '')
     elif style == 'xmwiki_moved_space':
         regex = r"\*\*Bug ID: \*\*(.*)"
         matches = re.search(regex, page_content_func)
@@ -178,6 +188,14 @@ def re_info_for_bug_page(page_content_func: str, page_title: str):
         matches = re.search(regex, page_content_func)
         if matches:
             components_func = matches.group(1).replace('\r', '')
+        regex = r"\*\*Added: \*\*(.*) by"
+        matches = re.search(regex, page_content_func)
+        if matches:
+            added_to_wiki_func = matches.group(1).replace('\r', '')
+        regex = r"\*\*Added: \*\*.* by \[\[(.*)>>"
+        matches = re.search(regex, page_content_func)
+        if matches:
+            added_to_wiki_by_func = matches.group(1).replace('\r', '')
     elif style == 'mwiki':
         regex = r"bug\W*(\d*)\W*"
         matches = re.search(regex, page_title, re.IGNORECASE)
@@ -201,11 +219,19 @@ def re_info_for_bug_page(page_content_func: str, page_title: str):
         matches = re.search(regex, page_content_func)
         if matches:
             components_func = matches.group(1).replace('\r', '')
+        regex = r"'''Added: '''(.*) by"
+        matches = re.search(regex, page_content_func)
+        if matches:
+            added_to_wiki_func = matches.group(1).replace('\r', '')
+        regex = r"'''Added: '''.* by \[\[User:(.*)\|"
+        matches = re.search(regex, page_content_func)
+        if matches:
+            added_to_wiki_by_func = matches.group(1).replace('\r', '')
     try:
         bug_id_func = int(bug_id_func)
     except ValueError as error:
         bug_id_func = 0
-    return bug_id_func, product_func, tbfi_func, components_func, bug_title
+    return bug_id_func, product_func, tbfi_func, components_func, bug_title, added_to_wiki_func, added_to_wiki_by_func
 
 
 for title, platform in task_pages_dict.items():
@@ -407,7 +433,7 @@ for title, platform in task_pages_dict.items():
         page_content = ''.join(content_as_list)
         result = re_info_for_bug_page(page_content_func=page_content, page_title=CurrentPage.page_title)
         if result is not False:
-            bug_id, product, tbfi, components, bug_title = result
+            bug_id, product, tbfi, components, bug_title, added_to_wiki, added_to_wiki_by = result
             if bug_id is not None and product is not None and tbfi is not None and components is not None:
                 Logger.info('Bug info is parsed, pushing it to DB')
                 # here we push the data into [dbo].[KnownBugs]
@@ -421,12 +447,15 @@ for title, platform in task_pages_dict.items():
                 byte_xml = bytearray()
                 byte_xml.extend(map(ord, xml))
                 result = SQL_Connector_inst.exec_update_or_add_bug_page(known_pages_id=CurrentPage.SQL_id, bug_id=bug_id,
-                                                                        product=product, tbfi=tbfi, xml=byte_xml, bug_title=bug_title)
+                                                                        product=product, tbfi=tbfi, xml=byte_xml, bug_title=bug_title, added_to_wiki=added_to_wiki, added_to_wiki_by=added_to_wiki_by)
                 if result is True:
                     Logger.info('Bug info updated')
+                    Logger.info(
+                        'Inserted into DB: known_pages_id:' + CurrentPage.SQL_id + ' bug_id: ' +  str(bug_id) + ' product: ' + product + ' tbfi: ' + tbfi + ' xml: ' + str(xml) + ' added_to_wiki: ' + str(added_to_wiki) + ' added_to_wiki_by: ' + str(added_to_wiki_by))
+
                 else:
                     Logger.error(
-                        'Unable to update bug info in SQL, query params: known_pages_id:' + CurrentPage.SQL_id + ' bug_id: ' + bug_id + ' product: ' + product + ' tbfi: ' + tbfi + ' xml: ' + xml)
+                        'Unable to update bug info in SQL, query params: known_pages_id:' + CurrentPage.SQL_id + ' bug_id: ' +  str(bug_id) + ' product: ' + product + ' tbfi: ' + tbfi + ' xml: ' + str(xml) + ' added_to_wiki: ' + added_to_wiki + ' added_to_wiki_by: ' + added_to_wiki_by)
                 # TFS => KARMA sync
                 tfs_session = requests.session()
                 try:

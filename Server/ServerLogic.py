@@ -548,7 +548,17 @@ class WebPostRequest:
                     else:
                         state = 'INTERNAL ERROR'
                         status = 'INTERNAL ERROR'
-                    answer['bugs'].update({row.RowNumber: {'bug_id': row.bug_id, 'title': row.page_title, 'product': row.product, 'tbfi': row.tbfi, 'components': components, 'path': page_path, 'state': state, 'fixed_in_build': fixed_in_ga_build, 'status': status}})
+                    answer['bugs'].update({row.RowNumber: {'bug_id': row.bug_id,
+                                                           'title': row.page_title,
+                                                           'product': row.product,
+                                                           'tbfi': row.tbfi,
+                                                           'components': components,
+                                                           'path': page_path,
+                                                           'state': state,
+                                                           'fixed_in_build': fixed_in_ga_build,
+                                                           'status': status,
+                                                           'added_date': str(row.added_to_wiki),
+                                                           'added_by': row.added_by}})
                 return self.valid_answer(answer)
             else:
                 # raise Exceptions.NothingFound('NothingFound', {'Query:': [components_filer, product_filter, tbfi_filter, start, end]})

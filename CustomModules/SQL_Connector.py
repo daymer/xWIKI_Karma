@@ -125,7 +125,7 @@ class SQLConnector:
 
         query = "WITH OrderedRecords AS" \
                 "(" \
-                "SELECT case when [dbo].[KnownBugs].[bug_title] is NULL then [dbo].[KnownPages].[page_title] when [dbo].[KnownBugs].[bug_title] is not NULL then [dbo].[KnownBugs].[bug_title] end as page_title, [dbo].[KnownBugs].id, [dbo].[KnownBugs].[bug_id], [dbo].[KnownBugs].[product], [dbo].[KnownBugs].[tbfi], [dbo].[KnownBugs].[components], [dbo].[KnownPages].page_id," \
+                "SELECT case when [dbo].[KnownBugs].[bug_title] is NULL then [dbo].[KnownPages].[page_title] when [dbo].[KnownBugs].[bug_title] is not NULL then [dbo].[KnownBugs].[bug_title] end as page_title, [dbo].[KnownBugs].id, [dbo].[KnownBugs].[bug_id], [dbo].[KnownBugs].[product], [dbo].[KnownBugs].[tbfi], [dbo].[KnownBugs].[components], [dbo].[KnownPages].page_id, [dbo].[KnownBugs].[added_to_wiki], [dbo].[KnownBugs].[added_by]," \
                 "ROW_NUMBER() OVER (ORDER BY [dbo].[KnownBugs].bug_id) AS 'RowNumber' " \
                 "FROM [dbo].[KnownBugs] " \
                 "left join [dbo].[KnownPages] on [dbo].[KnownBugs].KnownPages_id = [dbo].[KnownPages].id " \
@@ -157,9 +157,9 @@ class SQLConnector:
                     query += " and "
                 query += "(Charindex('" + component + "',CAST(components AS VARCHAR(MAX)))>0)"
         query += ")"
-        query += "SELECT [id], [page_title], [bug_id], [product], [tbfi], [components], [page_id], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
+        query += "SELECT [id], [page_title], [bug_id], [product], [tbfi], [components], [page_id],[added_to_wiki], [added_by], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
         logger = logging.getLogger()
-        # logger.critical(query)
+        #logger.critical(query)
         self.cursor.execute(query)
         raw = self.cursor.fetchall()
         if raw is None:
@@ -694,21 +694,23 @@ class SQLConnector:
             return raw.result
         return None
 
-    def exec_update_or_add_bug_page(self, known_pages_id: str, bug_id: str, product: str, tbfi: str, xml: bytearray, bug_title) -> bool:
+    def exec_update_or_add_bug_page(self, known_pages_id: str, bug_id: str, product: str, tbfi: str, xml: bytearray, bug_title: str, added_to_wiki: str, added_to_wiki_by: str) -> bool:
         if bug_title is None:
             bug_title = 'NULL'
         try:
             if bug_title != 'NULL':
                 self.cursor.execute(
-                    "EXEC [dbo].[update_or_add_bug_page] ?, ?, ?, ?, ?, ?", known_pages_id, bug_id, product, tbfi, xml, bug_title)
+                    "EXEC [dbo].[update_or_add_bug_page] ?, ?, ?, ?, ?, ?, ?, ?", known_pages_id, bug_id, product, tbfi, xml, bug_title, added_to_wiki, added_to_wiki_by)
                 self.connection.commit()
             elif bug_title == 'NULL':
                 self.cursor.execute(
-                    "EXEC [dbo].[update_or_add_bug_page] ?, ?, ?, ?, ?, NULL", known_pages_id, bug_id, product, tbfi, xml)
+                    "EXEC [dbo].[update_or_add_bug_page] ?, ?, ?, ?, ?, NULL, ?, ?", known_pages_id, bug_id, product, tbfi, xml, added_to_wiki, added_to_wiki_by)
                 self.connection.commit()
             return True
-        except:
+        except Exception as error:
             self.connection.rollback()
+            logging_func = logging.getLogger()
+            logging.critical(error)
             return False
 
     def exec_get_user_karma_raw(self, user_id):
