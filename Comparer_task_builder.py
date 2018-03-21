@@ -16,7 +16,7 @@ import CustomModules.Mechanics as Mechanics
 GlobalStartTime = datetime.now()
 
 
-def initialize(logging_mode: str = 'INFO', log_to_file: bool = True):
+def initialize(logging_mode: str = 'DEBUG', log_to_file: bool = True):
     ###################################################################################################################
     # Contrib_Compare_inst                                                                                            #
     # Main instance, used to analyze pages and create page contribution maps based on the content,                    #
@@ -70,7 +70,7 @@ Task = {
      # 'GZ': 'Confluence',
      # 'ALL mWIKI': 'MediaWIKI'
      #'Main': 'xWIKI',
-     'Main.Bugs and Fixes.Found Bugs': 'xWIKI',
+     'Main.Bugs and Fixes.Found Bugs.Veeam ONE': 'xWIKI',
     # 'Migration pool': 'xWIKI',
     # 'Migrated bugs': 'xWIKI'
     #  'StagingWiki': 'xWIKI'

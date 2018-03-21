@@ -1,0 +1,17 @@
+# Version: 3.0
+# docker build -f ‪C:\Projects\xWIKI_Karma\karma_dockerfile C:\Projects\xWIKI_Karma\
+FROM python:3.6.2
+MAINTAINER Dmitry Rozhdestvenskiy <dremsama@gmail.com>
+RUN apt-get update
+RUN apt-get install freetds-dev
+RUN apt-get install unixodbc-dev
+RUN apt-get update
+RUN apt-get install git
+RUN mkdir /xWIKI_Karma
+ADD ‪C:\Projects\xWIKI_Karma\Configuration.py /xWIKI_Karma/
+RUN cd /xWIKI_Karma
+RUN git clone https://github.com/daymer/xWIKI_Karma 
+RUN pip install  -r requirements.txt
+CMD ["python", "/xWIKI_Karma/CustomModules/mysql-connector-python-2.1.7/setup.py"]
+EXPOSE 8081
+RUN /xWIKI_Karma/launch_web_server.sh
