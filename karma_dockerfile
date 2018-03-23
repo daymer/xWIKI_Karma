@@ -13,5 +13,8 @@ RUN cd /xWIKI_Karma
 RUN git clone https://github.com/daymer/xWIKI_Karma 
 RUN pip install  -r requirements.txt
 CMD ["python", "/xWIKI_Karma/CustomModules/mysql-connector-python-2.1.7/setup.py install"]
+RUN mkdir /var/log/karma
+RUN mkdir /var/log/karma/WebServer
+RUN mkdir /var/log/karma/CC
 EXPOSE 8081
 RUN /xWIKI_Karma/launch_web_server.sh
