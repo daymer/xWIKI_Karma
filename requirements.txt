@@ -18,3 +18,4 @@ requests-oauthlib
 setuptools
 six
 urllib3
+future
