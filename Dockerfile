@@ -1,5 +1,5 @@
 # Version: 3.0
-# docker build -f ‪C:\Projects\xWIKI_Karma\karma_dockerfile C:\Projects\xWIKI_Karma\ -t karma:3.0
+# docker build -t karma:3.0 -f ‪C:\Projects\xWIKI_Karma\karma_dockerfile C:\Projects\xWIKI_Karma\
 # docker build -t karma:3.0 -f /home/drozhd/xWiki_Karma/Dockerfile /home/drozhd/xWiki_Karma
 FROM python:3.6.2
 MAINTAINER Dmitry Rozhdestvenskiy <dremsama@gmail.com>
