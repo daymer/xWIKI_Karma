@@ -14,6 +14,7 @@ import uuid
 from ldap3 import Server, Connection, ALL, NTLM, ObjectDef, Reader
 import ldap3.core.exceptions as ldap3exceptions
 
+
 class WebPostRequest:
     def __init__(self, mysql_config: Configuration.MySQLConfig, sql_config: Configuration.SQLConfig):
         self.mysql_connector_instance = Mechanics.MysqlConnector(mysql_config)
@@ -679,7 +680,7 @@ def start_core_as_subprocess(dict_to_pickle: dict):
         os.environ[temp_id] = pickled_and_decoded_dict
         logger = logging.getLogger()
         logger.info('---------sub process started,' + str(locality.cc_path)+'CCv2_1.py-------------')
-        subprocess.call("python " + str(locality.cc_path)+"CCv2_1.py INFO True -b" + temp_id, shell=True)
+        subprocess.call("python " + str(locality.cc_path)+"CCv2_1.py DEBUG True -b" + temp_id, shell=True)
         return True
     except:
         return False

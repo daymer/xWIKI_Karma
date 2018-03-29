@@ -417,6 +417,10 @@ class SQLConnector:
             raise Exception('Initial add of user' + user_name + ' rolled back due to the following error:\n' + traceback.format_exc())
 
     def insert_into_dbo_knownpages_datagrams(self, page_object: PageMechanics.PageGlobal):
+        logger_inst = logging.getLogger()
+        if page_object.SQL_id is None:
+            logger_inst.critical('Critical failure: page_object.SQL_id cannot be NONE')
+            exit(1)
         binary_global_array = pickle.dumps(page_object.VersionsGlobalArray, 4)
         binary_contributors = pickle.dumps(page_object.contributors, 4)
         try:
@@ -431,8 +435,8 @@ class SQLConnector:
                 page_object.SQL_id)
             self.connection.commit()
             error_handler = traceback.format_exc()
-            print(datetime.now(),
-                   'Initial add of ' + page_object.page_title + ' rolled back due to the following error while adding its datagram:\n' + error_handler)
+            logger_inst.error('Initial add of ' + page_object.page_title + ' rolled back due to the following error while adding its datagram:\n' + error_handler)
+            logger_inst.error('Values: page_object.SQL_id ' + str(page_object.SQL_id))
 
     def insert_into_dbo_knownpages_contribution(self, page_object: PageMechanics.PageGlobal):
         binary_total_contribute = pickle.dumps(page_object.TotalContribute, 4)
