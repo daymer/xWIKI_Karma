@@ -47,8 +47,12 @@ def initialize(logging_mode: str = 'DEBUG', log_to_file: bool = True):
     contrib_compare_inst = ContributionComparator()
     SQL_config_inst = Configuration.SQLConfig()
     confluence_config_inst = Configuration.ConfluenceConfig()
-    media_w_i_k_i__config_inst = Configuration.MediaWIKIConfig()
-    media_wiki_api_inst = Site((media_w_i_k_i__config_inst.Protocol, media_w_i_k_i__config_inst.URL), path=media_w_i_k_i__config_inst.APIPath, clients_useragent=media_w_i_k_i__config_inst.UserAgent)
+    try:
+        media_w_i_k_i__config_inst = Configuration.MediaWIKIConfig()
+        media_wiki_api_inst = Site((media_w_i_k_i__config_inst.Protocol, media_w_i_k_i__config_inst.URL), path=media_w_i_k_i__config_inst.APIPath, clients_useragent=media_w_i_k_i__config_inst.UserAgent,retry_timeout=1,
+                 max_retries=1)
+    except Exception:
+        media_wiki_api_inst = None
     xWiki_Config_inst = Configuration.XWikiConfig(['Migration pool', 'Sandbox', 'Main', 'StagingWiki'])
     MySQL_Config_inst = Configuration.MySQLConfig()
     Mysql_connector_inst = MysqlConnector(MySQL_Config_inst)
@@ -58,8 +62,10 @@ def initialize(logging_mode: str = 'DEBUG', log_to_file: bool = True):
                                        confluence_config_inst.ULR)
     return contrib_compare_inst, Mysql_connector_inst, confluenceAPI_inst, SQL_connector_inst, logger_inst, media_wiki_api_inst
 
-Contrib_Compare_inst, Mysql_Connector_inst, ConfluenceAPI_inst, SQL_Connector_inst, Logger, MediaWIKI_api_inst = initialize('INFO')
+Contrib_Compare_inst, Mysql_Connector_inst, ConfluenceAPI_inst, SQL_Connector_inst, Logger, MediaWIKI_api_inst = initialize('INFO', False)
 Logger.info('Initialization finished, job started at ' + str(GlobalStartTime))
+
+
 # Task:
 #    Confluence: VB (Veeam B&R Basic knowledge), WB (Veeam Support Hints and Tricks), GZ (Ground Zero)
 #    MediaWIKI: just all
@@ -69,14 +75,13 @@ Task = {
      # 'WB': 'Confluence',
      # 'GZ': 'Confluence',
      # 'ALL mWIKI': 'MediaWIKI'
-     #'Main': 'xWIKI',
-     'Main.Bugs and Fixes.Found Bugs.Veeam ONE': 'xWIKI',
+     'Main': 'xWIKI',
+    # 'Main.Bugs and Fixes.Found Bugs.Veeam ONE': 'xWIKI',
     # 'Migration pool': 'xWIKI',
     # 'Migrated bugs': 'xWIKI'
     #  'StagingWiki': 'xWIKI'
-    # 'StagingWiki': 'xWIKI'
+     'StagingWiki': 'xWIKI'
 }
-
 
 
 TaskExclusions = ExclusionsDict()
@@ -124,20 +129,23 @@ def build_task_array(task_dict: dict, task_exclusions_dict: Mechanics.Exclusions
                     task_pages_dict.update({page['title']: platform})
                     size += 1
         if platform.lower() == 'mediawiki':
-            size = 0
-            for page in MediaWIKI_api_inst.allpages():
-                if task_exclusions_dict[platform] is not None:
-                    if not Mechanics.check_exclusions(page.name, platform, task_exclusions_dict):
-                        logger.debug(page.name + ' was excluded')
-                        continue
+            if MediaWIKI_api_inst is not None:
+                size = 0
+                for page in MediaWIKI_api_inst.allpages():
+                    if task_exclusions_dict[platform] is not None:
+                        if not Mechanics.check_exclusions(page.name, platform, task_exclusions_dict):
+                            logger.debug(page.name + ' was excluded')
+                            continue
+                        else:
+                            task_pages_dict.update({page.name: platform})
+                            size += 1
                     else:
                         task_pages_dict.update({page.name: platform})
                         size += 1
-                else:
-                    task_pages_dict.update({page.name: platform})
-                    size += 1
-            logger.info(str(size) + ' MediaWIKI pages were found in space "' + space + '"')
-            total_size += size
+                logger.info(str(size) + ' MediaWIKI pages were found in space "' + space + '"')
+                total_size += size
+            else:
+                logger.critical('Unable to connect to mWiki, skipping')
         if platform.lower() == 'xwiki':
             size = 0
             logger.debug('Looking for pages in the following xWIKI space: "' + space + '"')
