@@ -400,8 +400,19 @@ class SQLConnector:
                          + "','" + str(page_object.page_author) + "','Null',getdate(),getdate()," + str(
                 page_object.page_versions) + ",getdate(),'1','" + str(
                 page_object.TotalCharacters) + "','" + page_platform + "')")
-            self.connection.rollback()
             logger.error('Initial add of ' + str(page_object.page_title) + ' rolled back due to the following error: page with this [page_id] already exists, need to make incremental run')
+            raise Exception('Initial add of ' + page_object.page_title + ' rolled back due to the following error:\n' + traceback.format_exc())
+        except Exception as error:
+            self.connection.rollback()
+            logger.error(
+                  'Initial add of ' + str(page_object.page_title) + ' rolled back due to the following error:\n' + str(traceback.format_exc()))
+            logger.error("insert into [dbo].[KnownPages] ([ID],[page_title],[page_id],[author],[author_ID],[added],"\
+                  "[last_modified],[version],[last_check],[is_uptodate], [characters_total], [platform]) values (NEWID(),'" + str(page_object.page_title) + "','" + str(page_object.page_id)
+                         + "','" + str(page_object.page_author) + "','Null',getdate(),getdate()," + str(
+                page_object.page_versions) + ",getdate(),'1','" + str(
+                page_object.TotalCharacters) + "','" + page_platform + "')")
+            
+
             raise Exception('Initial add of ' + page_object.page_title + ' rolled back due to the following error:\n' + traceback.format_exc())
 
     def insert_into_dbo_knownpages_users(self, user_name: str):
