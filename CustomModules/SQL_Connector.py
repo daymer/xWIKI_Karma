@@ -11,7 +11,7 @@ import logging
 class SQLConnector:
     def __init__(self, sql_config: Configuration.SQLConfig):
         self.connection = pyodbc.connect(
-            'DRIVER=' + sql_config.Driver + ';PORT=1433;SERVER=' + sql_config.Server + ';PORT=1443;DATABASE='
+            'DRIVER=' + sql_config.Driver + ';SERVER=' + sql_config.Server + ';DATABASE='
             + sql_config.Database + ';UID=' + sql_config.Username + ';PWD=' + sql_config.Password)
         self.cursor = self.connection.cursor()
 
@@ -411,7 +411,7 @@ class SQLConnector:
                          + "','" + str(page_object.page_author) + "','Null',getdate(),getdate()," + str(
                 page_object.page_versions) + ",getdate(),'1','" + str(
                 page_object.TotalCharacters) + "','" + page_platform + "')")
-            
+
 
             raise Exception('Initial add of ' + page_object.page_title + ' rolled back due to the following error:\n' + traceback.format_exc())
 
