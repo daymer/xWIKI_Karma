@@ -374,6 +374,7 @@ class SQLConnector:
 
     def insert_into_dbo_knownpages(self, page_object: PageMechanics.PageGlobal):
         logger = logging.getLogger()
+        logger.debug('page_object.TotalCharacters: ' + str(type(page_object.TotalCharacters)) + ', ' + str(page_object.TotalCharacters))
         if isinstance(page_object, PageMechanics.PageXWiki):
             page_platform = 'xwiki'
         elif isinstance(page_object, PageMechanics.PageConfluence):
@@ -386,8 +387,7 @@ class SQLConnector:
             self.cursor.execute(
                 "insert into [dbo].[KnownPages] ([ID],[page_title],[page_id],[author],[author_ID],[added],"
                 "[last_modified],[version],[last_check],[is_uptodate], [characters_total], [platform]) values (NEWID(),?,?,?,?,getdate(),getdate(),?,getdate(),'1',?,?)",
-                page_object.page_title, page_object.page_id, page_object.page_author, 'Null', page_object.page_versions,
-                page_object.TotalCharacters, page_platform)
+                page_object.page_title, page_object.page_id, page_object.page_author, 'Null', page_object.page_versions, page_object.TotalCharacters, page_platform)
             self.connection.commit()
             id_of_new_known_page = self.select_id_from_dbo_knownpages(platform=page_platform, page_id=page_object.page_id)
             return id_of_new_known_page
