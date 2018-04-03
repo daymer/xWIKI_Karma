@@ -373,6 +373,7 @@ class SQLConnector:
         return None
 
     def insert_into_dbo_knownpages(self, page_object: PageMechanics.PageGlobal):
+        logger = logging.getLogger()
         if isinstance(page_object, PageMechanics.PageXWiki):
             page_platform = 'xwiki'
         elif isinstance(page_object, PageMechanics.PageConfluence):
@@ -392,15 +393,15 @@ class SQLConnector:
             return id_of_new_known_page
         except pyodbc.DataError:
             self.connection.rollback()
-            print(datetime.now(),
-                  'Initial add of ' + page_object.page_title + ' rolled back due to the following error:\n' + traceback.format_exc())
-            print("insert into [dbo].[KnownPages] ([ID],[page_title],[page_id],[author],[author_ID],[added],"
-                  "[last_modified],[version],[last_check],[is_uptodate], [characters_total], [platform]) values (NEWID(),'" + page_object.page_title + "','" + page_object.page_id + "','" + page_object.page_author + "','Null',getdate(),getdate()," + str(
+            logger.error(
+                  'Initial add of ' + str(page_object.page_title) + ' rolled back due to the following error:\n' + str(traceback.format_exc()))
+            logger.error("insert into [dbo].[KnownPages] ([ID],[page_title],[page_id],[author],[author_ID],[added],"\
+                  "[last_modified],[version],[last_check],[is_uptodate], [characters_total], [platform]) values (NEWID(),'" + str(page_object.page_title) + "','" + str(page_object.page_id)
+                         + "','" + str(page_object.page_author) + "','Null',getdate(),getdate()," + str(
                 page_object.page_versions) + ",getdate(),'1','" + str(
                 page_object.TotalCharacters) + "','" + page_platform + "')")
             self.connection.rollback()
-            print(datetime.now(),
-                  'Initial add of ' + page_object.page_title + ' rolled back due to the following error: page with this [page_id] already exists, need to make incremental run')
+            logger.error('Initial add of ' + str(page_object.page_title) + ' rolled back due to the following error: page with this [page_id] already exists, need to make incremental run')
             raise Exception('Initial add of ' + page_object.page_title + ' rolled back due to the following error:\n' + traceback.format_exc())
 
     def insert_into_dbo_knownpages_users(self, user_name: str):
