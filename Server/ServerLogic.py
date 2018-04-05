@@ -525,6 +525,10 @@ class WebPostRequest:
                     elif page_path.startswith('xwiki:Main.Bugs and Fixes.Found Bugs.vac.'):
                         page_path = page_path.replace('xwiki:Main.Bugs and Fixes.Found Bugs.vac.',
                                                   'http://xwiki.support2.veeam.local/bin/view/Main/Bugs%20and%20Fixes/Found%20Bugs/vac/')
+
+                    if page_path.endswith('.WebHome'):
+                        page_path = page_path.replace('.WebHome', '')
+
                     # adding TFS bug state
                     fixed_in_ga_build = None
                     # SQL_DB_ID = self.sql_connector_instance.select_id_from_knownbugs(row.bug_id)
