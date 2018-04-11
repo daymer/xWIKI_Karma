@@ -81,6 +81,9 @@ class WebPostRequest:
         elif method == 'get_bugs_form_content_by_product':
             return self.get_bugs_form_content_by_product()
 
+        elif method == 'get_bugs_form_content_dynamic':
+            return self.get_bugs_form_content_dynamic()
+
         else:
             raise Exceptions.MethodNotSupported(message='WebPostRequest has no requested method', arguments={'requested method': method})
 
@@ -604,6 +607,18 @@ class WebPostRequest:
             raise Exceptions.NothingFound('Unable to get distincts from SQL',
                                           {'error:': error})
 
+    def get_bugs_form_content_dynamic(self) -> str:
+        try:
+            products = self.sql_connector_instance.select_dynamic_dbo_known_bugs()
+            answer = {
+                'error': 0,
+                'products': products,
+            }
+            return self.valid_answer(answer)
+        except Exception as error:
+            raise Exceptions.NothingFound('Unable to get distincts from SQL',
+                                          {'error:': error})
+
     def check_if_bug_exists(self, request: dict)-> str:
         try:  # zero title exception
             bug_id = request['bug_id']
@@ -677,6 +692,7 @@ class WebPostRequest:
             return result
         else:
             return build_to_compare
+
 
 def start_core_as_subprocess(dict_to_pickle: dict):
     try:

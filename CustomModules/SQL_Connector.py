@@ -255,7 +255,7 @@ class SQLConnector:
             return result
         return None
 
-    def select_distinct_components_from_dbo_known_bugs(self)->list:
+    def select_distinct_components_from_dbo_known_bugs(self)->list:  # deprecated
         self.cursor.execute(
             "  SELECT distinct [components].value('(./components/component/name)[1]', 'VARCHAR(300)') as nodeName FROM [dbo].[KnownBugs] order by nodeName")
         row = self.cursor.fetchall()
@@ -266,7 +266,7 @@ class SQLConnector:
             return result
         return None
 
-    def select_distinct_components_by_product_from_dbo_known_bugs(self)->dict:
+    def select_distinct_components_by_product_from_dbo_known_bugs(self)->dict:  # deprecated
         self.cursor.execute(
             "SELECT distinct [components].value('(./components/component/name)[1]', 'VARCHAR(300)') as nodeName, product FROM [dbo].[KnownBugs]")
         rows = self.cursor.fetchall()
@@ -290,6 +290,25 @@ class SQLConnector:
                             result[product].append(line.nodeName)
                 if component_was_added is False:
                     result['other'].append(line.product + ':' + line.nodeName)
+            return result
+        return None
+
+    def select_dynamic_dbo_known_bugs(self)->dict:
+        result = {}
+        # loading products
+        self.cursor.execute(
+            "SELECT distinct product FROM [dbo].[KnownBugs]")
+        rows = self.cursor.fetchall()
+        if rows:
+            for line in rows:
+                product = line.product
+                result.update({product: []})
+        self.cursor.execute(
+            "SELECT distinct [components].value('(./components/component/name)[1]', 'VARCHAR(300)') as nodeName, product FROM [dbo].[KnownBugs]")
+        rows = self.cursor.fetchall()
+        if rows:
+            for line in rows:
+                result[line.product].append(line.nodeName)
             return result
         return None
 
