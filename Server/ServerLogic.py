@@ -415,7 +415,7 @@ class WebPostRequest:
             # Analyze of xwd_fullname
             if not str(xwd_fullname).lower().startswith('main') and not str(xwd_fullname).lower().startswith('staging'):
                 raise Exceptions.DeprecatedPage('DeprecatedPage', {'Indexing of non-main and non-staging pages using this request is not allowed': xwd_fullname})
-            if xwd_fullname.lower() == 'stagingwiki.webhome' or xwd_fullname.lower() == 'main.webhome' or xwd_fullname.lower() == 'stagingwiki.personal spaces%' or xwd_fullname.lower().endswith('.webpreferences'):
+            if xwd_fullname.lower() == 'stagingwiki.webhome' or xwd_fullname.lower() == 'main.webhome' or xwd_fullname.lower().startswith('stagingwiki.personal spaces') or xwd_fullname.lower().endswith('.webpreferences'):
                 raise Exceptions.DeprecatedPage('DeprecatedPage', {'Indexing of page you requested is deprecated': xwd_fullname})
             dict_to_pickle = {xwd_fullname: platform}
             if self.last_indexed_page[0] == xwd_fullname and (datetime.now()-self.last_indexed_page[1]) < allowed_tdelta:
