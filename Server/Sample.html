@@ -36,9 +36,9 @@
         <input type="button" id="btn7" value="Get all karma slices between two dates by user name">
         <br>
         <br>
-        <input type="text" name="text" placeholder='page_id' id="reindex_page_by_title_or_id">
-        <input type="text" name="text" id="reindex_page_by_title_or_id_platform" placeholder='xwiki'>
-        <input type="button" id="btn8" value="reindex_page_by_title_or_id">
+        <input type="text" name="text" placeholder='XWD_FULLNAME' id="reindex_page_by_id_id">
+        <input type="text" name="text" id="reindex_page_by_id_platform" placeholder='xwiki'>
+        <input type="button" id="btn8" value="reindex_page_by_XWD_FULLNAME">
         <br>
         <br>
         <input type="button" id="btn9" value="get_karma_score_global">
@@ -178,11 +178,11 @@
                 });
             });
         $('#btn8').click(function(e) {
-                var page_id = $('#reindex_page_by_title_or_id').val();
-                var page_platform = $('#reindex_page_by_title_or_id_platform').val();
+                var page_id = $('#reindex_page_by_id_id').val();
+                var page_platform = $('#reindex_page_by_id_platform').val();
                 var data = {
-                        method: "reindex_page_by_title_or_id",
-                        id: page_id,
+                        method: "reindex_page_by_XWD_FULLNAME",
+                        XWD_FULLNAME: page_id,
                         platform: page_platform
                     };
                 $.ajax({

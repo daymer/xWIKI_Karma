@@ -140,7 +140,7 @@ class MysqlConnector(object):
     def get_XWD_FULLNAME(self, XWD_ID: str):
         logger = logging.getLogger()
         query = ("select XWD_FULLNAME from xwikidoc where XWD_ID = %(XWD_ID)s")
-        logger.debug('XWD_ID:' + str(XWD_ID))
+        # logger.debug('XWD_ID:' + str(XWD_ID))
         data = {
             'XWD_ID': XWD_ID
         }
@@ -149,7 +149,7 @@ class MysqlConnector(object):
         XWD_FULLNAME = None
         if self.cursor.rowcount != 0:
             for row in self.cursor:
-                logger.debug('row:' + str(row))
+                # logger.debug('row:' + str(row))
                 XWD_FULLNAME = row[0].decode("utf-8")
             return XWD_FULLNAME
         elif self.cursor.rowcount == 0:

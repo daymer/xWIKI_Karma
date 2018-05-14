@@ -62,8 +62,7 @@ mysql_config = Configuration.MySQLConfig()
 sql_config = Configuration.SQLConfig()
 '''
 # It was an idea to resolve user nave by LDAP, but xWIki lacks DNS to make it real. 
-So, we have an ip of page requester's pc, but nobody want's to spent 1-3 secs waiting for an answer from DNS. 
-ldap_conf = Configuration.LdapConfig()
+So, we have an IP of page requester's pc, but nobody wants to spend 1-3 secs waiting for an answer from DNS. 
 ldap_server = Server(ldap_conf.ad_server, get_info=ALL)
 CONN_TO_LDAP = Connection(ldap_server, user=ldap_conf.username, password=ldap_conf.password, authentication=NTLM,
                   auto_bind=True)

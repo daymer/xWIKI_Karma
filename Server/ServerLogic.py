@@ -1,4 +1,5 @@
 import logging
+import copy
 import re
 import json
 import Configuration
@@ -24,6 +25,25 @@ class WebPostRequest:
         self.veeam_versions_inst = Configuration.VeeamVersions()
         self.versions_dict = self.veeam_versions_inst.versions_dict
         self.next_VBR_version = self.veeam_versions_inst.next_version
+        self.logger = logging.getLogger()
+
+    def log_request_to_db(self, method: str, request: dict):
+        if method == 'vote_for_page_as_user':
+            xwd_fullname = self.mysql_connector_instance.get_XWD_FULLNAME(XWD_ID=request['id'][0])
+            direction = int(request['direction'][0])
+            user_name = str(request['user_name'][0]).replace('XWiki.', '')
+            link = xwd_fullname_to_link(xwd_fullname)
+            token_id = self.sql_connector_instance.insert_into_dbo_webrequests_vote_for_page_as_user(xwd_fullname, direction, user_name, link)
+            return token_id
+        elif method == 'reindex_page_by_XWD_FULLNAME':
+            xwd_fullname = request['XWD_FULLNAME'][0]
+            link = xwd_fullname_to_link(xwd_fullname)
+            token_id = self.sql_connector_instance.insert_into_dbo_webrequests_reindex_page_by_xwd_fullname(xwd_fullname, link)
+            return token_id
+        elif method == 'delete_page_by_XWD_FULLNAME':
+            xwd_fullname = request['XWD_FULLNAME'][0]
+            link = xwd_fullname_to_link(xwd_fullname)
+            pass
 
     def invoke(self, method: str, request: dict, requested_by_url: str):
         """Invokes proper method depending on request"""
@@ -34,7 +54,7 @@ class WebPostRequest:
             return self.get_stat_by_user(request=request)
 
         elif method == 'vote_for_page_as_user':
-            return self.vote_for_page_as_user(request=request)
+            return self.vote_for_page_as_user(request=request, token=self.log_request_to_db(method=method, request=request))
 
         elif method == 'get_simple_votes':
             return self.get_simple_votes(request=request)
@@ -55,9 +75,11 @@ class WebPostRequest:
             return self.make_new_karma_slice_by_user(request=request)
 
         elif method == 'reindex_page_by_XWD_FULLNAME':
-            return self.reindex_page_by_xwd_fullname(request=request)
+            self.log_request_to_db(method=method, request=request)
+            return self.reindex_page_by_xwd_fullname(request=request, token=self.log_request_to_db(method=method, request=request))
 
         elif method == 'delete_page_by_XWD_FULLNAME':
+            self.log_request_to_db(method=method, request=request)
             return self.delete_page_by_xwd_fullname(request=request)
 
         elif method == 'make_new_global_karma_slice':
@@ -241,7 +263,7 @@ class WebPostRequest:
             answer['raw_karma'].update({'"' + row.page_title + '"': row.percent})
         return self.valid_answer(answer)
 
-    def vote_for_page_as_user(self, request: dict)->str:
+    def vote_for_page_as_user(self, request: dict, token)->str:
             try:
                 user_name = request['user_name'][0]
                 direction = request['direction'][0]
@@ -265,8 +287,10 @@ class WebPostRequest:
             if result.startswith('Error'):
                 error = result
                 result = 'Already voted'
+                self.sql_connector_instance.update_dbo_webrequests_vote_for_page_as_user(token_id=token, result=False)
             else:
                 error = 0
+                self.sql_connector_instance.update_dbo_webrequests_vote_for_page_as_user(token_id=token, result=True)
             answer = {
                 'Error': error,
                 'result': result,
@@ -402,7 +426,7 @@ class WebPostRequest:
             }
             return self.valid_answer(answer)
 
-    def reindex_page_by_xwd_fullname(self, request: dict)->str:
+    def reindex_page_by_xwd_fullname(self, request: dict, token)->str:
             allowed_tdelta = timedelta(seconds=self.re_index_timeout)
             if self.last_indexed_page is None:
                 self.last_indexed_page = [None, datetime.now()]
@@ -414,17 +438,17 @@ class WebPostRequest:
                                                      {'Missing 1 required positional argument': str(error)})
             # Analyze of xwd_fullname
             if not str(xwd_fullname).lower().startswith('main') and not str(xwd_fullname).lower().startswith('staging'):
-                raise Exceptions.DeprecatedPage('DeprecatedPage', {'Indexing of non-main and non-staging pages using this request is not allowed': xwd_fullname})
+                raise Exceptions.DeprecatedPage('DeprecatedPage', {'Indexing of non-main/non-staging pages using this request is not allowed': xwd_fullname})
             if xwd_fullname.lower() == 'stagingwiki.webhome' or xwd_fullname.lower() == 'main.webhome' or xwd_fullname.lower().startswith('stagingwiki.personal spaces') or xwd_fullname.lower().endswith('.webpreferences'):
                 raise Exceptions.DeprecatedPage('DeprecatedPage', {'Indexing of page you requested is deprecated': xwd_fullname})
             if xwd_fullname.lower().startswith('main.internal technical docs.veeam one.veeam-one\:-database'):
                 raise Exceptions.DeprecatedPage('DeprecatedPage', {'Indexing of page "%veeam-one\:-database%" is deprecated': xwd_fullname})
             dict_to_pickle = {xwd_fullname: platform}
             if self.last_indexed_page[0] == xwd_fullname and (datetime.now()-self.last_indexed_page[1]) < allowed_tdelta:
-                raise Exceptions.IndexingTimeOut('IndexingTimeOut', {'Indexing request for the same page before ' + str(self.re_index_timeout) + ' sec. Sec to wait: ': datetime.now()-self.last_indexed_page[1]})
+                raise Exceptions.IndexingTimeOut('IndexingTimeOut', {'Indexing request for the same page before ' + str(self.re_index_timeout) + ' sec.'})
             else:
                 self.last_indexed_page = [xwd_fullname, datetime.now()]
-            result = start_core_as_subprocess(dict_to_pickle)
+            result = start_core_as_subprocess(dict_to_pickle, token)
             if result is True:
                 answer = {'Success': 'Added to processing'}
             else:
@@ -696,19 +720,22 @@ class WebPostRequest:
             return build_to_compare
 
 
-def start_core_as_subprocess(dict_to_pickle: dict):
-    try:
-        locality = Configuration.Integration()
-        pickled_data = pickle.dumps(dict_to_pickle, 0)
-        pickled_and_decoded_dict = pickled_data.decode('latin1')
-        temp_id = str(uuid.uuid4())
-        os.environ[temp_id] = pickled_and_decoded_dict
-        logger = logging.getLogger()
-        logger.info('---------sub process started,' + str(locality.cc_path)+'CCv2_1.py-------------')
-        subprocess.call("python " + str(locality.cc_path)+"CCv2_1.py DEBUG True -b" + temp_id, shell=True)
-        return True
-    except:
-        return False
+def start_core_as_subprocess(dict_to_pickle: dict, token: str):
+    logger = logging.getLogger()
+    #try:
+    locality = Configuration.Integration()
+    pickled_data = pickle.dumps(dict_to_pickle, 0)
+    pickled_and_decoded_dict = pickled_data.decode('latin1')
+    temp_id = str(uuid.uuid4())
+    os.environ[temp_id] = pickled_and_decoded_dict
+    logger.info('Subprocess started ' + str(locality.cc_path)+'CCv2_1.py on "' + str(list(dict_to_pickle)[0]) + '"')
+    call_str = "python " + str(locality.cc_path)+"CCv2_1.py INFO True " + str(token) + " -b " + temp_id
+    logger.info(call_str)
+    subprocess.call(call_str, shell=True)
+    return True
+    #except Exception as error:
+    #    logger.error('An Exception occured while starting of CC core: ' + str(error))
+    #    return False
 
 
 def get_ad_host_description(connection_to_ldap,  requested_hostname: str) -> str:
@@ -725,3 +752,19 @@ def get_ad_host_description(connection_to_ldap,  requested_hostname: str) -> str
         logger.error('An error occurred:' + error)
         return 'unknown'
 
+
+def xwd_fullname_to_link(xwd_fullname: str) -> str:
+    xwd_fullname = xwd_fullname.replace('\\.', '$dot_hack$')
+    xwd_fullname_array = xwd_fullname.split('.')
+    xwd_fullname_array_copy = copy.deepcopy(xwd_fullname_array)
+    for idx, val in enumerate(xwd_fullname_array_copy):
+        if '$dot_hack$' in val:
+            xwd_fullname_array[idx]=xwd_fullname_array[idx].replace('$dot_hack$', '.')
+    try:
+        xwd_fullname_array.remove('WebHome')
+    except:
+        pass
+    url = 'http://xwiki.support2.veeam.local/bin/view'
+    for val in xwd_fullname_array:
+        url = url + '/' + val
+    return url

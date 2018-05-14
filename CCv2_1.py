@@ -21,6 +21,7 @@ GlobalStartTime = datetime.now()
 log_level = None
 task_pages_dict = None
 log_to_file = None
+token = None
 
 ##############################################################
 #                      Test variables                        #
@@ -41,18 +42,20 @@ else:
     parser = argparse.ArgumentParser()
     parser.add_argument("log_level", type=str)
     parser.add_argument("log_to_file", type=str)
+    parser.add_argument("token", type=str)
     parser.add_argument("-t", "--title", type=str)
     parser.add_argument("-p", "--platform", type=str)
     parser.add_argument("-b", "--binary_dict_id", type=str)
     args = parser.parse_args()
     log_level = args.log_level
     log_to_file = bool(eval(args.log_to_file))
+    token = args.token
     if args.title and args.platform:
         task_pages_dict = {args.title: args.platform}
     elif args.binary_dict_id:
         str_environ = os.environ[args.binary_dict_id]
         task_pages_dict = pickle.loads(str_environ.encode('latin1'))
-if log_level is None or task_pages_dict is None or log_to_file is None:
+if log_level is None or task_pages_dict is None or log_to_file is None or token is None:
     exit(1)
 
 
@@ -101,8 +104,7 @@ def initialize(task_pages_dict: dict, logging_mode: str = 'INFO', log_to_file_va
     return contrib_compare_inst, mysql_connector_inst, confluence_api_inst, sql_connector_inst, logger_inst, x_wiki_api_inst, m_wiki_api_instance, search_config_inst
 
 Contrib_Compare_inst, Mysql_Connector_inst, ConfluenceAPI_inst, SQL_Connector_inst, Logger, xWikiAPI_inst, mWikiAPI_instance, Search_Config = initialize(task_pages_dict, logging_mode=log_level, log_to_file_var=log_to_file)
-Logger.info('Initialization finished, job started at ' + str(GlobalStartTime))
-
+Logger.info('Initialization finished, job started at ' + str(GlobalStartTime) + ', token: ' + token)
 TaskStartTime = datetime.now()
 
 
@@ -299,9 +301,11 @@ for title, platform in task_pages_dict.items():
             exit(0)
 
     CurrentPage.dbVersion = SQL_Connector_inst.select_version_from_dbo_knownpages(page_id=CurrentPage.page_id)
+    SQL_Connector_inst.update_dbo_webrequests_reindex_page_by_xwd_fullname(result=0, is_full='pass', token_id=token)
 
     # FULL MODE:
     if CurrentPage.dbVersion is None:
+        SQL_Connector_inst.update_dbo_webrequests_reindex_page_by_xwd_fullname(result=0, is_full=1, token_id=token)
         Logger.info('"' + CurrentPage.page_title + '" will be processed in FULL mode')
         PageAnalysisEndTime = datetime.now()
         Logger.debug('Page "' + CurrentPage.page_title + '" with ID ' + str(
@@ -516,7 +520,7 @@ for title, platform in task_pages_dict.items():
                 Logger.info('Page title was updated')
             elif result is False:
                 Logger.error('Failed to update page title')
-
+    SQL_Connector_inst.update_dbo_webrequests_reindex_page_by_xwd_fullname(result=1, is_full='pass', token_id=token)
 
 TaskEndTime = datetime.now()
 TotalElapsed = TaskEndTime - TaskStartTime
