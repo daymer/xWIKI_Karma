@@ -669,6 +669,39 @@ class SQLConnector:
             logger.error('Unable to update state in WebRequests_reindex_page_by_XWD_FULLNAME due to the following error: ' + error)
             return False
 
+    def insert_into_dbo_webrequests_delete_page_by_xwd_fullname(self, xwd_fullname, link):
+        logger = logging.getLogger()
+        current_id = None
+        try:
+            self.cursor.execute('select NEWID()')
+            raw = self.cursor.fetchone()
+            if raw:
+                current_id = raw[0]
+            if current_id is not None:
+                self.cursor.execute(
+                    "insert into [dbo].[WebRequests_delete_page_by_XWD_FULLNAME] values (?, GETDATE(), ?, ?, 0)",
+                    current_id, link, xwd_fullname)
+                self.connection.commit()
+                return current_id
+            else:
+                raise Exception
+        except Exception as error:
+            self.connection.rollback()
+            logger = logging.getLogger()
+            logger.error('Unable to insert new [WebRequests_delete_page_by_XWD_FULLNAME] due to the following error: ' + error)
+            return False
+
+    def update_dbo_webrequests_delete_page_by_xwd_fullname(self, token_id: str, result: bool):
+        try:
+            self.cursor.execute(
+                    "update [dbo].[WebRequests_vote_for_page_as_user] set [committed] = 1, result = ? where ID = ?", token_id, result)
+            self.connection.commit()
+            return True
+        except Exception as error:
+            self.connection.rollback()
+            logger = logging.getLogger()
+            logger.error('Unable to update state in [WebRequests_delete_page_by_XWD_FULLNAME] due to the following error: ' + error)
+            return False
 
     def update_dbo_knownpages_is_uptodate(self, page_id: str, up_to_date: bool):
         if up_to_date is True:

@@ -43,7 +43,9 @@ class WebPostRequest:
         elif method == 'delete_page_by_XWD_FULLNAME':
             xwd_fullname = request['XWD_FULLNAME'][0]
             link = xwd_fullname_to_link(xwd_fullname)
-            pass
+            token_id = self.sql_connector_instance.insert_into_dbo_webrequests_reindex_page_by_xwd_fullname(
+                xwd_fullname, link)
+            return token_id
 
     def invoke(self, method: str, request: dict, requested_by_url: str):
         """Invokes proper method depending on request"""
@@ -75,12 +77,10 @@ class WebPostRequest:
             return self.make_new_karma_slice_by_user(request=request)
 
         elif method == 'reindex_page_by_XWD_FULLNAME':
-            self.log_request_to_db(method=method, request=request)
             return self.reindex_page_by_xwd_fullname(request=request, token=self.log_request_to_db(method=method, request=request))
 
         elif method == 'delete_page_by_XWD_FULLNAME':
-            self.log_request_to_db(method=method, request=request)
-            return self.delete_page_by_xwd_fullname(request=request)
+            return self.delete_page_by_xwd_fullname(request=request, token=self.log_request_to_db(method=method, request=request))
 
         elif method == 'make_new_global_karma_slice':
             return self.make_new_global_karma_slice()
@@ -455,7 +455,7 @@ class WebPostRequest:
                 raise Exceptions.IndexingFailure('IndexingFailure', {'Failed to add to processing': dict_to_pickle})
             return self.valid_answer(answer)
 
-    def delete_page_by_xwd_fullname(self, request: dict)->str:
+    def delete_page_by_xwd_fullname(self, request: dict, token: str)->str:
             try:
                 xwd_fullname = request['XWD_FULLNAME'][0]
             except KeyError as error:
@@ -467,8 +467,12 @@ class WebPostRequest:
             if xwd_fullname is not None:
                 result = self.sql_connector_instance.exec_delete_page_by_page_id('xwiki:' + xwd_fullname)
                 if result is True:
+                    self.sql_connector_instance.update_dbo_webrequests_delete_page_by_xwd_fullname(token_id=token,
+                                                                                             result=True)
                     answer = {'Success': 'Deleted'}
                 else:
+                    self.sql_connector_instance.update_dbo_webrequests_delete_page_by_xwd_fullname(token_id=token,
+                                                                                                   result=False)
                     raise Exceptions.PageDeleteFailure('PageDeleteFailure',
                                                      {'Unable to delete page from DB': xwd_fullname})
                 return self.valid_answer(answer)
