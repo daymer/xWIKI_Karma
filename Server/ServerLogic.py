@@ -43,8 +43,7 @@ class WebPostRequest:
         elif method == 'delete_page_by_XWD_FULLNAME':
             xwd_fullname = request['XWD_FULLNAME'][0]
             link = xwd_fullname_to_link(xwd_fullname)
-            token_id = self.sql_connector_instance.insert_into_dbo_webrequests_reindex_page_by_xwd_fullname(
-                xwd_fullname, link)
+            token_id = self.sql_connector_instance.insert_into_dbo_webrequests_delete_page_by_xwd_fullname(xwd_fullname, link)
             return token_id
 
     def invoke(self, method: str, request: dict, requested_by_url: str):
