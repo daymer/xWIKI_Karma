@@ -41,6 +41,11 @@
         <input type="button" id="btn8" value="reindex_page_by_XWD_FULLNAME">
         <br>
         <br>
+        <input type="text" name="text" placeholder='XWD_FULLNAME' id="delete_page_by_XWD_FULLNAME">
+        <input type="text" name="text" id="delete_page_by_XWD_FULLNAME_platform" placeholder='xwiki'>
+        <input type="button" id="btn81" value="delete_page_by_XWD_FULLNAME">
+        <br>
+        <br>
         <input type="button" id="btn9" value="get_karma_score_global">
         <br>
         <br>
@@ -182,6 +187,28 @@
                 var page_platform = $('#reindex_page_by_id_platform').val();
                 var data = {
                         method: "reindex_page_by_XWD_FULLNAME",
+                        XWD_FULLNAME: page_id,
+                        platform: page_platform
+                    };
+                $.ajax({
+                    type: 'POST',
+                    url: 'http://SUP-A1631.AMUST.LOCAL:8081',
+                    data: data,
+                    dataType: 'json',
+                    success: function (data) {
+                        console.log(data);
+                        servermsg.innerHTML = servermsg.innerHTML + "<br>Requested re-index of: <b> " + page_id+"</b> platform <b>"+page_platform+" </b>:</b>";
+                        if (data.Error != 0) {
+                            servermsg.innerHTML = servermsg.innerHTML  +  "<br>Result: <b>" + data[Object.keys(data)[0]]+"</b>"
+                        }
+                    }
+                });
+            });
+        $('#btn81').click(function(e) {
+                var page_id = $('#delete_page_by_XWD_FULLNAME').val();
+                var page_platform = $('#delete_page_by_XWD_FULLNAME_platform').val();
+                var data = {
+                        method: "delete_page_by_XWD_FULLNAME",
                         XWD_FULLNAME: page_id,
                         platform: page_platform
                     };
