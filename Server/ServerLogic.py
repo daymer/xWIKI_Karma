@@ -466,6 +466,8 @@ class WebPostRequest:
             if xwd_fullname is not None:
                 result = self.sql_connector_instance.exec_delete_page_by_page_id('xwiki:' + xwd_fullname)
                 if result is True:
+                    logger = logging.getLogger()
+                    logger.debug('Deleting page, result is: ' + str(result))
                     self.sql_connector_instance.update_dbo_webrequests_delete_page_by_xwd_fullname(token_id=token,
                                                                                              result=True)
                     answer = {'Success': 'Deleted'}

@@ -694,7 +694,7 @@ class SQLConnector:
     def update_dbo_webrequests_delete_page_by_xwd_fullname(self, token_id: str, result: bool):
         try:
             self.cursor.execute(
-                    "update [dbo].[WebRequests_vote_for_page_as_user] set [committed] = 1, result = ? where ID = ?", result, token_id)
+                    "update [dbo].[WebRequests_delete_page_by_XWD_FULLNAME] set [committed] = 1, result = ? where ID = ?", result, token_id)
             self.connection.commit()
             return True
         except Exception as error:
