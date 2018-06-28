@@ -725,7 +725,7 @@ class WebPostRequest:
             return build_to_compare
 
 
-def start_core_as_subprocess(dict_to_pickle: dict, token: str):
+def start_core_as_subprocess(dict_to_pickle: dict, token: str, log_level: str='INFO'):
     logger = logging.getLogger()
     #try:
     locality = Configuration.Integration()
@@ -734,7 +734,7 @@ def start_core_as_subprocess(dict_to_pickle: dict, token: str):
     temp_id = str(uuid.uuid4())
     os.environ[temp_id] = pickled_and_decoded_dict
     logger.info('Subprocess started ' + str(locality.cc_path)+'CCv2_1.py on "' + str(list(dict_to_pickle)[0]) + '"')
-    call_str = "python " + str(locality.cc_path)+"CCv2_1.py INFO True " + str(token) + " -b " + temp_id
+    call_str = "python " + str(locality.cc_path)+"CCv2_1.py "+log_level+" True " + str(token) + " -b " + temp_id
     logger.info(call_str)
     subprocess.call(call_str, shell=True)
     return True

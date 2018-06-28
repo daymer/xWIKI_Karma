@@ -122,6 +122,7 @@ class PageMediaWiki(PageGlobal):
             return None
         return version_number, version_content, contributor
 
+
 class PageXWiki(PageGlobal):
     def __init__(self, page: str, page_title: str, client_instance: Mechanics.XWikiClient):
         PageGlobal.__init__(self)

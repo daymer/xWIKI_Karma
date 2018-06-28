@@ -8,6 +8,7 @@ import Configuration
 import logging
 
 
+
 class SQLConnector:
     def __init__(self, sql_config: Configuration.SQLConfig):
         self.connection = pyodbc.connect(
@@ -257,7 +258,7 @@ class SQLConnector:
 
     def select_distinct_components_from_dbo_known_bugs(self)->list:  # deprecated
         self.cursor.execute(
-            "  SELECT distinct [components].value('(./components/component/name)[1]', 'VARCHAR(300)') as nodeName FROM [dbo].[KnownBugs] order by nodeName")
+            "select distinct T.N.value('.','varchar(300)') as nodeName from [dbo].[KnownBugs] cross apply components.nodes('./components/component/name') as T(N) order by nodeName")
         row = self.cursor.fetchall()
         if row:
             result = []
@@ -268,7 +269,7 @@ class SQLConnector:
 
     def select_distinct_components_by_product_from_dbo_known_bugs(self)->dict:  # deprecated
         self.cursor.execute(
-            "SELECT distinct [components].value('(./components/component/name)[1]', 'VARCHAR(300)') as nodeName, product FROM [dbo].[KnownBugs]")
+            "select distinct T.N.value('.','varchar(300)') as nodeName, product from [dbo].[KnownBugs] cross apply components.nodes('./components/component/name') as T(N)")
         rows = self.cursor.fetchall()
         if rows:
             result = {
@@ -304,7 +305,7 @@ class SQLConnector:
                 product = line.product
                 result.update({product: []})
         self.cursor.execute(
-            "SELECT distinct [components].value('(./components/component/name)[1]', 'VARCHAR(300)') as nodeName, product FROM [dbo].[KnownBugs]")
+            "select distinct T.N.value('.','varchar(300)') as nodeName, product from [dbo].[KnownBugs] cross apply components.nodes('./components/component/name') as T(N)")
         rows = self.cursor.fetchall()
         if rows:
             for line in rows:
