@@ -442,6 +442,8 @@ class WebPostRequest:
                 raise Exceptions.DeprecatedPage('DeprecatedPage', {'Indexing of page you requested is deprecated': xwd_fullname})
             if xwd_fullname.lower().startswith('main.internal technical docs.veeam one.veeam-one\:-database'):
                 raise Exceptions.DeprecatedPage('DeprecatedPage', {'Indexing of page "%veeam-one\:-database%" is deprecated': xwd_fullname})
+            if xwd_fullname.lower().startswith('main.internal technical docs.veeam one.faq'):
+                raise Exceptions.DeprecatedPage('DeprecatedPage', {'Indexing of page "%veeam-one.FAQ%" is deprecated': xwd_fullname})
             dict_to_pickle = {xwd_fullname: platform}
             if self.last_indexed_page[0] == xwd_fullname and (datetime.now()-self.last_indexed_page[1]) < allowed_tdelta:
                 raise Exceptions.IndexingTimeOut('IndexingTimeOut', {'Indexing request for the same page before ' + str(self.re_index_timeout) + ' sec.'})
