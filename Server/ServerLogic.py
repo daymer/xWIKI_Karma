@@ -134,7 +134,7 @@ class WebPostRequest:
                                                  {'date_start = date_end'})
         user_id = self.sql_connector_instance.select_id_from_dbo_knownpages_users(username=username)
         if user_id is None:
-            return json.dumps({'Error': 'bad request - username not found'}, separators=(',', ':'))
+            return json.dumps({'Error': 'bad request - this username isn\'t indexed yet, maybe the username is incorrect or user has no contribution'}, separators=(',', ':'))
         result = self.sql_connector_instance.select_karma_score_from_userkarma_slice(user_id, date_start, date_end)
         answer = {
             'Error': 0,
