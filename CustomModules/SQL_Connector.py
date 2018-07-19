@@ -123,7 +123,6 @@ class SQLConnector:
                 '"exec [dbo].[select_karma_diff_between_dates] ?,?,?",user_id, str(date_start_year)+"-"+str(date_start_month)+"-"+str(date_start_day), str(date_end_year)+"-"+str(date_end_month)+"-"+str(date_end_day))')
 
     def select_from_known_bugs_by_filter(self, components_filer: list, product_filter: list, tbfi_filter: list, start: str, end: str) -> list:
-
         query = "WITH OrderedRecords AS" \
                 "(" \
                 "SELECT case when [dbo].[KnownBugs].[bug_title] is NULL then [dbo].[KnownPages].[page_title] when [dbo].[KnownBugs].[bug_title] is not NULL then [dbo].[KnownBugs].[bug_title] end as page_title, [dbo].[KnownBugs].id, [dbo].[KnownBugs].[bug_id], [dbo].[KnownBugs].[product], [dbo].[KnownBugs].[tbfi], [dbo].[KnownBugs].[components], [dbo].[KnownPages].page_id, [dbo].[KnownBugs].[added_to_wiki], [dbo].[KnownBugs].[added_by]," \
@@ -158,9 +157,9 @@ class SQLConnector:
                     query += " and "
                 query += "(Charindex('" + component + "',CAST(components AS VARCHAR(MAX)))>0)"
         query += ")"
-        query += "SELECT [id], [page_title], [bug_id], [product], [tbfi], [components], [page_id],[added_to_wiki], [added_by], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by bug_id"
+        query += "SELECT [id], [page_title], [bug_id], [product], [tbfi], [components], [page_id],[added_to_wiki], [added_by], [RowNumber] FROM OrderedRecords WHERE RowNumber BETWEEN " + start + " and " + end + " order by added_to_wiki desc"  # moving to added_to_wiki from order by bug_id due to http://git.support2.veeam.local/internal-dev/internal-knowledgebase-engine/issues/65
         logger = logging.getLogger()
-        #logger.critical(query)
+        logger.debug(query)
         self.cursor.execute(query)
         raw = self.cursor.fetchall()
         if raw is None:

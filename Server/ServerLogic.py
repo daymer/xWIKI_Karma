@@ -682,6 +682,8 @@ class WebPostRequest:
         return json.dumps(content)
 
     def valid_answer(self, content: dict)->str:
+        logger_inst = logging.getLogger()
+        logger_inst.debug(content)
         return json.dumps(content)
 
     def register_web_request(self, known_page_id: str, user_id: str, source_platform_id: str, requested_url: str, result: str):
