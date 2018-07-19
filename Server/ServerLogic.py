@@ -519,7 +519,9 @@ class WebPostRequest:
                     'len': len(result),
                     'bugs': {}
                 }
+                counter = 0
                 for row in result:
+                    counter += 1
                     regex = r"<component><name>(.[^<]*)</name></component>"
                     components = []
                     matches = re.finditer(regex, row.components, re.IGNORECASE)
@@ -592,7 +594,7 @@ class WebPostRequest:
                     else:
                         state = 'INTERNAL ERROR'
                         status = 'INTERNAL ERROR'
-                    answer['bugs'].update({row.RowNumber: {'bug_id': row.bug_id,
+                    answer['bugs'].update({counter: {'bug_id': row.bug_id,  # row.number was replaced by request in http://git.support2.veeam.local/internal-dev/internal-knowledgebase-engine/issues/65
                                                            'title': row.page_title,
                                                            'product': row.product,
                                                            'tbfi': row.tbfi,
