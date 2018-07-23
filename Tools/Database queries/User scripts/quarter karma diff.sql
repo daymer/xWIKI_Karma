@@ -8,8 +8,8 @@ declare @user_id uniqueidentifier,
  @karma_start float,
  @karma_stop float,
  @CURSOR CURSOR,
- @date_start date = '2017-10-01',
- @date_end date = '2018-01-6'
+ @date_start date = '2018-04-01',
+ @date_end date = '2018-06-30'
 SET @CURSOR = CURSOR SCROLL
 FOR
   select distinct [user_id] FROM [Karma].[dbo].[UserKarma_slice]
