@@ -12,6 +12,9 @@ import Configuration
 from CustomModules.Mechanics import ContributionComparator, ExclusionsDict, MysqlConnector
 from CustomModules.SQL_Connector import SQLConnector
 import CustomModules.Mechanics as Mechanics
+from Server.ServerLogic import xwd_fullname_to_link as xwd_fullname_to_link
+from Server.ServerLogic import start_core_as_subprocess as start_core_as_subprocess
+
 
 GlobalStartTime = datetime.now()
 
@@ -75,12 +78,12 @@ Task = {
      # 'WB': 'Confluence',
      # 'GZ': 'Confluence',
      # 'ALL mWIKI': 'MediaWIKI'
-     'Main': 'xWIKI',
-    # 'Main.Bugs and Fixes.Found Bugs.Veeam ONE': 'xWIKI',
+     #'Main': 'xWIKI',
+     'Main.Bugs and Fixes.Found Bugs.Veeam ONE': 'xWIKI',
     # 'Migration pool': 'xWIKI',
     # 'Migrated bugs': 'xWIKI'
-    #  'StagingWiki': 'xWIKI'
-     'StagingWiki': 'xWIKI'
+    #'StagingWiki': 'xWIKI',
+    #'Main': 'xWIKI'
 }
 
 
@@ -179,13 +182,6 @@ def build_task_array_by_sql_select(select: str, logger, SQL_Connector_inst):
     logger.info(str(total_size) + ' pages were found in all spaces')
     return task_pages_dict, TaskStartTime
 
-def start_core_as_subprocess(dict_to_pickle: dict):
-    pickled_data = pickle.dumps(dict_to_pickle, 0)
-    pickled_and_decoded_dict = pickled_data.decode('latin1')
-    temp_id = str(uuid.uuid4())
-    os.environ[temp_id] = pickled_and_decoded_dict
-    # print('---------sub process started-------------')
-    subprocess.call("python C:/Projects/xWIKI_Karma/CCv2_1.py INFO True -b" + temp_id, shell=True)
 
 if select is None:
     task_pages_dict, TaskStartTime = build_task_array(task_dict=Task, task_exclusions_dict=TaskExclusions, logger=Logger)
@@ -194,13 +190,16 @@ else:
 # starting main process
 Logger.info('Re-indexing started')
 
-for title, platform in task_pages_dict.items():
+for xwd_fullname, platform in task_pages_dict.items():
     try:
         dict_to_pickle = {
-            title: platform
+            xwd_fullname: platform
         }
-        Logger.info('Re-indexing of "' + title + '" platform: ' + platform + ' started')
-        start_core_as_subprocess(dict_to_pickle)
+        Logger.info('Re-indexing of "' + xwd_fullname + '" platform: ' + platform + ' started')
+        link = xwd_fullname_to_link(xwd_fullname)
+        token_id = SQL_Connector_inst.insert_into_dbo_webrequests_reindex_page_by_xwd_fullname(xwd_fullname, link)
+        Logger.info('Starting CC_core')
+        start_core_as_subprocess(dict_to_pickle, token_id, 'DEBUG')
     except:  # all unhandled exceptions
         error = sys.exc_info()[0]
         Logger.error('Re-indexing unexpectedly failed with: ' + str(error))
