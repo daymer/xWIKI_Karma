@@ -5,11 +5,13 @@ from Server.ServerLogic import xwd_fullname_to_link as xwd_fullname_to_link
 from Server.ServerLogic import start_core_as_subprocess as start_core_as_subprocess
 import logging
 from sys import platform
+from datetime import datetime
+
 
 os.supports_bytes_environ = True
 
 
-def logging_config(logging_mode: str= 'INFO', log_to_file: bool=False) -> object:
+def logging_config(logging_mode: str= 'DEBUG', log_to_file: bool=False) -> object:
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     logger_inst = logging.getLogger()
     logger_inst.setLevel(logging_mode)
@@ -41,7 +43,7 @@ def logging_config(logging_mode: str= 'INFO', log_to_file: bool=False) -> object
 Logger = logging_config(logging_mode='DEBUG', log_to_file=False)
 Logger.info('Test started')
 
-dict_to_pickle = {'Main.Bugs and Fixes.Found Bugs.Veeam ONE.Bug-128750': 'xwiki'}
+dict_to_pickle = {'Main.Bugs and Fixes.Found Bugs.Veeam ONE.Bug-110451': 'xwiki'}
 #dict_to_pickle = {'StagingWiki.New_articles.Notepad Basics and Useful Hints and Tips.WebHome': 'xwiki'}
 #Main.Bugs and Fixes.Found Bugs.Migrated from mediaWIKI.2e4e87d48d264d80ecbf8a2a5831fa3e
 # dict_to_pickle = {'Patch 1 cannot be installed with "This Veeam Backup & Replication installation cannot be updated automatically"': 'mediawiki'}
@@ -54,5 +56,5 @@ xwd_fullname = list(dict_to_pickle)[0]
 link = xwd_fullname_to_link(xwd_fullname)
 token_id = sql_connector_instance.insert_into_dbo_webrequests_reindex_page_by_xwd_fullname(xwd_fullname, link)
 Logger.info('Starting CC_core')
-start_core_as_subprocess(dict_to_pickle, token_id)
+start_core_as_subprocess(dict_to_pickle, token_id, 'DEBUG')
 
