@@ -79,10 +79,10 @@ Task = {
      # 'GZ': 'Confluence',
      # 'ALL mWIKI': 'MediaWIKI'
      #'Main': 'xWIKI',
-     'Main.Bugs and Fixes.Found Bugs.Veeam ONE': 'xWIKI',
+     'Main': 'xWIKI',
     # 'Migration pool': 'xWIKI',
     # 'Migrated bugs': 'xWIKI'
-    #'StagingWiki': 'xWIKI',
+    'StagingWiki': 'xWIKI'
     #'Main': 'xWIKI'
 }
 
@@ -101,6 +101,9 @@ TaskExclusions['MediaWIKI'] = 'Team Members'
 TaskExclusions['xWIKI'] = 'Main.WebHome'
 TaskExclusions['xWIKI'] = 'StagingWiki.WebHome'
 TaskExclusions['xWIKI'] = 'StagingWiki.Personal Spaces%'
+TaskExclusions['xWIKI'] = 'Main.Internal Technical Docs.Veeam ONE.Veeam-One\:-Database%'
+TaskExclusions['xWIKI'] = 'Internal Technical Docs.Veeam ONE.FAQ%'
+
 
 select = None
 #select = "select page_id from [dbo].[KnownPages] inner join [dbo].[KnownBugs] on [dbo].[KnownPages].id =[dbo].[KnownBugs].KnownPages_id where [dbo].[KnownPages].id in(select KnownPages_id from [dbo].[KnownBugs] where id not in (select [KnownBug_ID] FROM [Karma].[dbo].[KnownBugs_TFS_state]) and bug_id != '0')"

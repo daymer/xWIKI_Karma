@@ -43,7 +43,7 @@ def logging_config(logging_mode: str= 'DEBUG', log_to_file: bool=False) -> objec
 Logger = logging_config(logging_mode='DEBUG', log_to_file=False)
 Logger.info('Test started')
 
-dict_to_pickle = {'Main.Bugs and Fixes.Found Bugs.Veeam ONE.Bug-110451': 'xwiki'}
+dict_to_pickle = {'Main.Bugs and Fixes.Found Bugs.Veeam Agent for Linux.Bug-134340': 'xwiki'}
 #dict_to_pickle = {'StagingWiki.New_articles.Notepad Basics and Useful Hints and Tips.WebHome': 'xwiki'}
 #Main.Bugs and Fixes.Found Bugs.Migrated from mediaWIKI.2e4e87d48d264d80ecbf8a2a5831fa3e
 # dict_to_pickle = {'Patch 1 cannot be installed with "This Veeam Backup & Replication installation cannot be updated automatically"': 'mediawiki'}
