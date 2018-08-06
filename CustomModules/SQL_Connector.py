@@ -359,6 +359,14 @@ class SQLConnector:
             return row
         return None
 
+    def select_bug_fix_link(self, known_pages_id: str):
+        self.cursor.execute(
+            "SELECT [fix_link]  FROM [dbo].[KnownBugs] where [KnownPages_id] = ?", known_pages_id)
+        row = self.cursor.fetchone()
+        if row:
+            return row.fix_link
+        return None
+
     def select_count_id_from_knownbugs_tfs_state(self, known_bug_id: str):
         self.cursor.execute(
             "SELECT count([KnownBug_ID]) as essentia FROM [dbo].[KnownBugs_TFS_state] where [KnownBug_ID] = ?", known_bug_id)
@@ -641,7 +649,7 @@ class SQLConnector:
                 current_id = raw[0]
             if current_id is not None:
                 self.cursor.execute(
-                    "insert into [dbo].[WebRequests_reindex_page_by_XWD_FULLNAME] values (?, GETDATE(), ?, ?, 0, 0, 0)",
+                    "insert into [dbo].[WebRequests_reindex_page_by_XWD_FULLNAME] values (?, GETDATE(), ?, ?, 0, 0, 0, 0, Null, Null)",
                     current_id, link, xwd_fullname)
                 self.connection.commit()
                 return current_id
@@ -653,11 +661,16 @@ class SQLConnector:
             logger.error('Unable to insert new [WebRequests_reindex_page_by_XWD_FULLNAME] due to the following error: ' + error)
             return False
 
-    def update_dbo_webrequests_reindex_page_by_xwd_fullname(self, token_id, result, is_full):
+    def update_dbo_webrequests_reindex_page_by_xwd_fullname(self, token_id, result, is_full, is_bug: bool=False, fix_link:str=None, fix_link_has_changed:bool=None):
         try:
             if is_full == 'pass':
-                self.cursor.execute(
-                        "update [dbo].[WebRequests_reindex_page_by_XWD_FULLNAME] set [committed] = 1, [result] = ? where ID = ?", result, token_id)
+                if is_bug is True:
+                    self.cursor.execute(
+                        "update [dbo].[WebRequests_reindex_page_by_XWD_FULLNAME] set [committed] = 1, [result] = ?, [is_bug] = 1, fix_link = ?, fix_link_updated = ?  where ID = ?",
+                        result, fix_link, fix_link_has_changed, token_id)
+                else:
+                    self.cursor.execute(
+                            "update [dbo].[WebRequests_reindex_page_by_XWD_FULLNAME] set [committed] = 1, [result] = ? where ID = ?", result, token_id)
             else:
                 self.cursor.execute(
                         "update [dbo].[WebRequests_reindex_page_by_XWD_FULLNAME] set [committed] = 1, [result] = ?, [full] = ?  where ID = ?", result, is_full, token_id)
@@ -666,7 +679,7 @@ class SQLConnector:
         except Exception as error:
             self.connection.rollback()
             logger = logging.getLogger()
-            logger.error('Unable to update state in WebRequests_reindex_page_by_XWD_FULLNAME due to the following error: ' + error)
+            logger.error('Unable to update state in WebRequests_reindex_page_by_XWD_FULLNAME due to the following error: ' + str(error))
             return False
 
     def insert_into_dbo_webrequests_delete_page_by_xwd_fullname(self, xwd_fullname, link):
@@ -835,17 +848,27 @@ class SQLConnector:
             return raw.result
         return None
 
-    def exec_update_or_add_bug_page(self, known_pages_id: str, bug_id: str, product: str, tbfi: str, xml: bytearray, bug_title: str, added_to_wiki: str, added_to_wiki_by: str) -> bool:
+    def exec_update_or_add_bug_page(self, known_pages_id: str, bug_id: str, product: str, tbfi: str, xml: bytearray, bug_title: str, added_to_wiki: str, added_to_wiki_by: str, fix_link: str) -> bool:
+        logger = logging.getLogger()
+        logger.debug('exec_update_or_add_bug_page arguments: known_pages_id: ' + known_pages_id
+                      + ' bug_id: ' + str(bug_id)
+                      + ' product: ' + str(product)
+                      + ' tbfi: ' + str(tbfi)
+                      + ' xml: ' +str(xml)
+                      + ' bug_title: ' + str(bug_title)
+                      + ' added_to_wiki: ' + str(added_to_wiki)
+                      + ' added_to_wiki_by: ' + str(added_to_wiki_by)
+                      + ' fix_link: ' + str(fix_link))
         if bug_title is None:
             bug_title = 'NULL'
         try:
             if bug_title != 'NULL':
                 self.cursor.execute(
-                    "EXEC [dbo].[update_or_add_bug_page] ?, ?, ?, ?, ?, ?, ?, ?", known_pages_id, bug_id, product, tbfi, xml, bug_title, added_to_wiki, added_to_wiki_by)
+                    "EXEC [dbo].[update_or_add_bug_page] ?, ?, ?, ?, ?, ?, ?, ?, ?", known_pages_id, bug_id, product, tbfi, xml, bug_title, added_to_wiki, added_to_wiki_by, fix_link)
                 self.connection.commit()
             elif bug_title == 'NULL':
                 self.cursor.execute(
-                    "EXEC [dbo].[update_or_add_bug_page] ?, ?, ?, ?, ?, NULL, ?, ?", known_pages_id, bug_id, product, tbfi, xml, added_to_wiki, added_to_wiki_by)
+                    "EXEC [dbo].[update_or_add_bug_page] ?, ?, ?, ?, ?, NULL, ?, ?, ?", known_pages_id, bug_id, product, tbfi, xml, added_to_wiki, added_to_wiki_by, fix_link)
                 self.connection.commit()
             return True
         except Exception as error:

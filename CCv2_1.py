@@ -119,55 +119,108 @@ def re_info_for_bug_page(page_content_func: str, page_title: str):
     bug_title = None
     added_to_wiki_func = None
     added_to_wiki_by_func = None
+    fix_link = None
     # determination of page syntax
-    regex = r"\*\*Components:\*\* (.*)"
-    matches = re.search(regex, page_content_func)
+    # checking if a page has syntax version comment
+    regex = r"{{comment}}\nVersion=(.*)\n{{\/comment}}"
+    matches = re.search(regex, page_content_func, re.IGNORECASE)
     if matches:
-        style = 'xwiki'
-    else:
-        regex = r"'''Components: '''(.*)"
-        matches = re.search(regex, page_content_func)
-        if matches:
-            style = 'mwiki'
+        syntax_version = matches.group(1).replace('\r', '')
+        if syntax_version == '1.0':
+            style = 'xwiki_versioning'
         else:
-            # extra check for moved space
-            regex = r"\*\*Components: \*\*(.*)"
+            logger.critical('syntax_version of bug is not supported, syntax version: ' + str(syntax_version))
+            return False
+    else:
+        # determination of legacy style
+        regex = r"\*\*Components:\*\* (.*)"
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
+        if matches:
+            style = 'xwiki'
+        else:
+            regex = r"'''Components: '''(.*)"
             matches = re.search(regex, page_content_func)
             if matches:
-                style = 'xmwiki_moved_space'
+                style = 'mwiki'
+            else:
+                # extra check for moved space
+                regex = r"\*\*Components: \*\*(.*)"
+                matches = re.search(regex, page_content_func)
+                if matches:
+                    style = 'xmwiki_moved_space'
     logger.debug('Bug style is: ' + str(style))
     if style is None:
         return False
+    elif style == 'xwiki_versioning':
+        if syntax_version == '1.0':
+            regex = r"Bug \d* - (.*)$"
+            matches = re.search(regex, page_title, re.IGNORECASE)
+            if matches:
+                bug_title = matches.group(1).replace('\r', '')
+            logger.debug('bug_title:' + str(bug_title))
+            regex = r"\*\*Bug ID:\*\* (.*)"
+            matches = re.search(regex, page_content_func, re.IGNORECASE)
+            if matches:
+                bug_id_func = matches.group(1).replace('\r', '')
+            regex = r"\*\*Product:\*\* (.*)"
+            matches = re.search(regex, page_content_func, re.IGNORECASE)
+            if matches:
+                product_func = matches.group(1).replace('\r', '')
+            regex = r"\*\*To be fixed in:\*\* (.*)"
+            matches = re.search(regex, page_content_func, re.IGNORECASE)
+            if matches:
+                tbfi_func = matches.group(1).replace('\r', '')
+            regex = r"\*\*Components:\*\* (.*)"
+            matches = re.search(regex, page_content_func, re.IGNORECASE)
+            if matches:
+                components_func = matches.group(1).replace('\r', '')
+            regex = r"\*\*Added:\*\* (.*) by"
+            matches = re.search(regex, page_content_func, re.IGNORECASE)
+            if matches:
+                added_to_wiki_func = matches.group(1).replace('\r', '')
+            regex = r"\*\*Added:\*\* .* by \[\[(.*)>>"
+            matches = re.search(regex, page_content_func, re.IGNORECASE)
+            if matches:
+                added_to_wiki_by_func = matches.group(1).replace('\r', '')
+            regex = r"\*\*Private fix external URL \(it IS accessible to customers!\):\*\* (.*)"
+            matches = re.search(regex, page_content_func, re.IGNORECASE)
+            if matches:
+                fix_link = matches.group(1).replace('\r', '')
+                logger.debug('re_info_for_bug_page: fix_link: ' + str(fix_link))
     elif style == 'xwiki':
-        regex = r"\*\*Bug ID:\*\* (.*)"
         bug_title = page_content_func.split('\n')[1]
         logger.debug('bug_title:' + bug_title)
-        matches = re.search(regex, page_content_func)
+        regex = r"\*\*Bug ID:\*\* (.*)"
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             bug_id_func = matches.group(1).replace('\r', '')
         regex = r"\*\*Product:\*\* (.*)"
-        matches = re.search(regex, page_content_func)
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             product_func = matches.group(1).replace('\r', '')
         regex = r"\*\*To be fixed in:\*\* (.*)"
-        matches = re.search(regex, page_content_func)
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             tbfi_func = matches.group(1).replace('\r', '')
         regex = r"\*\*Components:\*\* (.*)"
-        matches = re.search(regex, page_content_func)
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             components_func = matches.group(1).replace('\r', '')
         regex = r"\*\*Added:\*\* (.*) by"
-        matches = re.search(regex, page_content_func)
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             added_to_wiki_func = matches.group(1).replace('\r', '')
         regex = r"\*\*Added:\*\* .* by \[\[(.*)>>"
-        matches = re.search(regex, page_content_func)
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             added_to_wiki_by_func = matches.group(1).replace('\r', '')
+        regex = r"\*\*Private fix external URL \(it IS accessible to customers!\):\*\* (.*)"
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
+        if matches:
+            fix_link = matches.group(1).replace('\r', '')
     elif style == 'xmwiki_moved_space':
         regex = r"\*\*Bug ID: \*\*(.*)"
-        matches = re.search(regex, page_content_func)
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             bug_id_func = matches.group(1).replace('\r', '')
         else:
@@ -177,27 +230,31 @@ def re_info_for_bug_page(page_content_func: str, page_title: str):
                 bug_id_func = matches.group(1).replace('\r', '')
                 logger.debug('bug_id_func: ' + str(bug_id_func))
         regex = r"\*\*Product: \*\*(.*)"
-        matches = re.search(regex, page_content_func)
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             product_func = matches.group(1).replace('\r', '')
         else:
             product_func = 'Undefined'
         regex = r"\*\*To be fixed in: \*\*(.*)"
-        matches = re.search(regex, page_content_func)
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             tbfi_func = matches.group(1).replace('\r', '')
         regex = r"\*\*Components: \*\*(.*)"
-        matches = re.search(regex, page_content_func)
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             components_func = matches.group(1).replace('\r', '')
         regex = r"\*\*Added: \*\*(.*) by"
-        matches = re.search(regex, page_content_func)
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             added_to_wiki_func = matches.group(1).replace('\r', '')
         regex = r"\*\*Added: \*\*.* by \[\[(.*)>>"
-        matches = re.search(regex, page_content_func)
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             added_to_wiki_by_func = matches.group(1).replace('\r', '')
+        regex = r"\*\*Private fix external URL \(it IS accessible to customers!\): \*\* (.*)"
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
+        if matches:
+            fix_link = matches.group(1).replace('\r', '')
     elif style == 'mwiki':
         regex = r"bug\W*(\d*)\W*"
         matches = re.search(regex, page_title, re.IGNORECASE)
@@ -207,33 +264,39 @@ def re_info_for_bug_page(page_content_func: str, page_title: str):
             bug_id_func = 'Undefined'
         product_func = 'Undefined'
         regex = r"'''To be fixed in: '''(.*)"
-        matches = re.search(regex, page_content_func)
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             tbfi_func = matches.group(1).replace('\r', '')
         else:
             regex = r"'''Fixed in: '''(.*)"
-            matches = re.search(regex, page_content_func)
+            matches = re.search(regex, page_content_func, re.IGNORECASE)
             if matches:
                 tbfi_func = matches.group(1).replace('\r', '')
             else:
                 tbfi_func = 'Undefined'
         regex = r"'''Components: '''(.*)"
-        matches = re.search(regex, page_content_func)
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             components_func = matches.group(1).replace('\r', '')
         regex = r"'''Added: '''(.*) by"
-        matches = re.search(regex, page_content_func)
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             added_to_wiki_func = matches.group(1).replace('\r', '')
         regex = r"'''Added: '''.* by \[\[User:(.*)\|"
-        matches = re.search(regex, page_content_func)
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
         if matches:
             added_to_wiki_by_func = matches.group(1).replace('\r', '')
+        regex = r"'''Private fix external URL \(it IS accessible to customers!\):'''(.*)"
+        matches = re.search(regex, page_content_func, re.IGNORECASE)
+        if matches:
+            fix_link = matches.group(1).replace('\r', '')
     try:
         bug_id_func = int(bug_id_func)
     except ValueError as error:
         bug_id_func = 0
-    return bug_id_func, product_func, tbfi_func, components_func, bug_title, added_to_wiki_func, added_to_wiki_by_func
+    if fix_link == 'n/a':
+        fix_link = None
+    return bug_id_func, product_func, tbfi_func, components_func, bug_title, added_to_wiki_func, added_to_wiki_by_func, fix_link
 
 
 for title, platform in task_pages_dict.items():
@@ -421,7 +484,10 @@ for title, platform in task_pages_dict.items():
         SQL_Connector_inst.update_dbo_knownpages_is_uptodate(page_id=CurrentPage.page_id, up_to_date=True)
     # ----------------BUG ADD TO DB----------------------------------------------------------
     # now we need to check, if it's a bug page to update [dbo].[KnownBugs] if needed
+    page_is_a_bug = False
     if CurrentPage.page_id.lower().startswith('xwiki:main.bugs and fixes.found bugs'):
+        page_is_a_bug = True
+        fix_link = None
         Logger.info('Starting bug analyze sequence')
         # ---it's a bug, need to find it's product and other fields (migrated bugs have invalid paths)
         if len(CurrentPage.VersionsGlobalArray) == 0:
@@ -437,7 +503,7 @@ for title, platform in task_pages_dict.items():
         page_content = ''.join(content_as_list)
         result = re_info_for_bug_page(page_content_func=page_content, page_title=CurrentPage.page_title)
         if result is not False:
-            bug_id, product, tbfi, components, bug_title, added_to_wiki, added_to_wiki_by = result
+            bug_id, product, tbfi, components, bug_title, added_to_wiki, added_to_wiki_by, fix_link = result
             if bug_id is not None and product is not None and tbfi is not None and components is not None:
                 Logger.info('Bug info is parsed, pushing it to DB')
                 # here we push the data into [dbo].[KnownBugs]
@@ -450,8 +516,15 @@ for title, platform in task_pages_dict.items():
                 xml += '</components>'
                 byte_xml = bytearray()
                 byte_xml.extend(map(ord, xml))
+                # prior to update a bug, we need to check if fix_link has changed for Elisa
+                old_fix_link = SQL_Connector_inst.select_bug_fix_link(known_pages_id=CurrentPage.SQL_id)
+                Logger.debug('old_fix_link: '+ str(old_fix_link))
+                if old_fix_link == fix_link:
+                    fix_link_has_changed = False
+                else:
+                    fix_link_has_changed = True
                 result = SQL_Connector_inst.exec_update_or_add_bug_page(known_pages_id=CurrentPage.SQL_id, bug_id=bug_id,
-                                                                        product=product, tbfi=tbfi, xml=byte_xml, bug_title=bug_title, added_to_wiki=added_to_wiki, added_to_wiki_by=added_to_wiki_by)
+                                                                        product=product, tbfi=tbfi, xml=byte_xml, bug_title=bug_title, added_to_wiki=added_to_wiki, added_to_wiki_by=added_to_wiki_by, fix_link=fix_link)
                 if result is True:
                     Logger.info('Bug info updated')
                     Logger.info(
@@ -520,7 +593,11 @@ for title, platform in task_pages_dict.items():
                 Logger.info('Page title was updated')
             elif result is False:
                 Logger.error('Failed to update page title')
-    SQL_Connector_inst.update_dbo_webrequests_reindex_page_by_xwd_fullname(result=1, is_full='pass', token_id=token)
+    if page_is_a_bug is True:
+        SQL_Connector_inst.update_dbo_webrequests_reindex_page_by_xwd_fullname(result=1, is_full='pass', token_id=token,
+                                                                               is_bug=True, fix_link=fix_link, fix_link_has_changed=fix_link_has_changed )
+    else:
+        SQL_Connector_inst.update_dbo_webrequests_reindex_page_by_xwd_fullname(result=1, is_full='pass', token_id=token)
 
 TaskEndTime = datetime.now()
 TotalElapsed = TaskEndTime - TaskStartTime
