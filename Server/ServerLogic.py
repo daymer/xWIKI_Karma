@@ -440,6 +440,8 @@ class WebPostRequest:
                 raise Exceptions.DeprecatedPage('DeprecatedPage', {'Indexing of non-main/non-staging pages using this request is not allowed': xwd_fullname})
             if xwd_fullname.lower() == 'stagingwiki.webhome' or xwd_fullname.lower() == 'main.webhome' or xwd_fullname.lower().startswith('stagingwiki.personal spaces') or xwd_fullname.lower().endswith('.webpreferences'):
                 raise Exceptions.DeprecatedPage('DeprecatedPage', {'Indexing of page you requested is deprecated': xwd_fullname})
+            if xwd_fullname.lower().startswith('main.licensing and order processing'):
+                raise Exceptions.DeprecatedPage('DeprecatedPage',{'Indexing of page you requested is deprecated': xwd_fullname})
             if xwd_fullname.lower().startswith('main.internal technical docs.veeam one.veeam-one\:-database'):
                 raise Exceptions.DeprecatedPage('DeprecatedPage', {'Indexing of page "%veeam-one\:-database%" is deprecated': xwd_fullname})
             if xwd_fullname.lower().startswith('main.internal technical docs.veeam one.faq'):
