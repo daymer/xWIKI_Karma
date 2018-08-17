@@ -11,10 +11,27 @@ import logging
 
 class SQLConnector:
     def __init__(self, sql_config: Configuration.SQLConfig):
+        self.logger = logging.getLogger()
         self.connection = pyodbc.connect(
             'DRIVER=' + sql_config.Driver + ';SERVER=' + sql_config.Server + ';DATABASE='
             + sql_config.Database + ';UID=' + sql_config.Username + ';PWD=' + sql_config.Password)
         self.cursor = self.connection.cursor()
+
+    def select_bugs_between_dates(self, user_id: str, date_start: datetime, date_end: datetime):
+        date_start = str(date_start.date())
+        date_end = str(date_end.date())
+
+        try:
+            self.cursor.execute(
+                "exec [dbo].[count_bugs_between_dates] ?, ?, ?", user_id, date_start, date_end)
+            raw = self.cursor.fetchone()
+            if raw:
+                return raw
+            else:
+                return 0
+        except:
+            self.logger.error("Invalid query \n exec [dbo].[count_bugs_between_dates] ?, ?, ? " + str(user_id) + ', ' + str(date_start) + ', ' + str(date_end))
+            return None
 
     def select_page_id_from_dbo_knownpages(self, page_title: str, platform: str):
         self.cursor.execute(
