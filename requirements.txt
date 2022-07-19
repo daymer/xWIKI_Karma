@@ -55,7 +55,7 @@ pytz==2017.2
 pywin32-ctypes==0.1.2
 pywinusb==0.4.2
 recordtype==1.1
-requests==2.18.4
+requests==2.20.0
 requests-futures==0.9.7
 requests-oauthlib==0.8.0
 s2sphere==0.2.4
